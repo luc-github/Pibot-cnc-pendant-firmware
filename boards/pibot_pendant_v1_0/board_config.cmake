@@ -1,0 +1,7 @@
+if (ESP32_PIBOT_CNC_PENDANT_V1)
+    set(TFT_TARGET "ESP32_PIBOT_CNC_PENDANT_V1")
+    set(SDKCONFIG ${CMAKE_SOURCE_DIR}/hardware/common/sdkconfig/ESP32/no_PSRAM/4MB_Flash)    
+    list(APPEND EXTRA_COMPONENT_DIRS ${CMAKE_SOURCE_DIR}/boards/pibot_pendant_v1_0/components)
+    add_compile_options("-I${CMAKE_SOURCE_DIR}/boards/pibot_pendant_v1_0/components/bsp")
+    set (RESOLUTION_SCREEN "res_320_240")
+endif()
