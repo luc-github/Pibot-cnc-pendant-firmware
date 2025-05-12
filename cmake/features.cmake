@@ -75,7 +75,6 @@ if(SERIAL_SERVICE)
     add_compile_options(-DESP3D_SERIAL_FEATURE=1)
 endif()
 
-
 # ===========================================
 # Network Services
 # ===========================================
@@ -154,6 +153,52 @@ add_compile_options(-DTFT_TARGET="${TFT_TARGET}")
 # Configuration Check
 # ===========================================
 include(cmake/sanity_check.cmake)
+
+# ===========================================
+# Component Versions
+# ===========================================
+message(STATUS "")
+message(STATUS "${BoldCyan}Components Versions:${ColourReset}")
+message(STATUS "${Cyan}------------------------${ColourReset}")
+
+# Path to components
+set(COMPONENTS_PATH "${CMAKE_SOURCE_DIR}/components")
+
+# CHeck if exists
+if(EXISTS ${COMPONENTS_PATH} AND IS_DIRECTORY ${COMPONENTS_PATH})
+    # List all sub directories
+    file(GLOB SUBDIRS "${COMPONENTS_PATH}/*")
+    
+    foreach(SUBDIR ${SUBDIRS})
+        # Is directory
+        if(IS_DIRECTORY ${SUBDIR})
+            # Extract name
+            get_filename_component(SUBDIR_NAME ${SUBDIR} NAME)
+            # path to library.json
+            set(LIBRARY_JSON "${COMPONENTS_PATH}/${SUBDIR_NAME}/library.json")
+            if(EXISTS ${LIBRARY_JSON})
+                # Lit le fichier JSON
+                file(READ ${LIBRARY_JSON} JSON_CONTENT)
+                # looking for entries 'name' et 'version'
+                string(JSON COMPONENT_NAME ERROR_VARIABLE NAME_ERROR GET ${JSON_CONTENT} name)
+                string(JSON COMPONENT_VERSION ERROR_VARIABLE VERSION_ERROR GET ${JSON_CONTENT} version)
+                if(NOT NAME_ERROR AND NOT VERSION_ERROR)
+                    string(JSON COMPONENT_NAME GET ${JSON_CONTENT} name)
+                    string(JSON COMPONENT_VERSION GET ${JSON_CONTENT} version)
+                    message(STATUS "${Cyan}${COMPONENT_NAME}: ${White}${COMPONENT_VERSION}${ColourReset}")
+                else()
+                    message(STATUS "${Cyan}Skipping ${SUBDIR_NAME}: ${White}Missing 'name' or 'version' in library.json${ColourReset}")
+                endif()
+            else()
+                message(STATUS "${Cyan}Skipping ${SUBDIR_NAME}: ${White}No library.json found${ColourReset}")
+            endif()
+        endif()
+    endforeach()
+else()
+    message(STATUS "${Cyan}Directory not found: ${White}${COMPONENTS_PATH}${ColourReset}")
+endif()
+
+message(STATUS "${Cyan}------------------------${ColourReset}")
 
 # ===========================================
 # Configuration Summary
