@@ -20,6 +20,12 @@
 #if ESP3D_TFT_LOG || ESP3D_TFT_BENCHMARK
 #include  "esp3d_log.h"
 
+void esp3d_log_init()
+{
+    esp_log_level_set("*", ESP_LOG_NONE);
+    esp_log_level_set("[ESP3D-TFT]", ESP_LOG_ERROR);
+}
+
 const char * pathToFileName(const char * path)
 {
     size_t i = 0;
@@ -34,4 +40,6 @@ const char * pathToFileName(const char * path)
     }
     return path+pos;
 }
+#else
+void esp3d_log_init(){};
 #endif //ESP3D_TFT_LOG

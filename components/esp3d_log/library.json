@@ -1,6 +1,6 @@
 {
   "name": "esp3d_log",
-  "version": "1.0",
+  "version": "1.1",
   "description": "ESP3D log component.",
   "frameworks": "espidf",
   "platforms": "*",

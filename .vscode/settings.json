@@ -5,10 +5,12 @@
     "idf.openOcdConfigs": [
         "board/esp32-wrover-kit-3.3v.cfg"
     ],
-    "idf.portWin": "COM17",
+    "idf.portWin": "COM4",
     "idf.toolsPathWin": "C:\\Users\\luc\\.espressif",
     "idf.flashType": "UART",
     "files.associations": {
-        "display_def.h": "c"
+        "display_def.h": "c",
+        "format": "c",
+        "thread": "c"
     }
 }

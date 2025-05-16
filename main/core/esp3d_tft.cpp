@@ -59,7 +59,9 @@
  *  STATIC PROTOTYPES
  **********************/
 
-ESP3DTft::ESP3DTft() {}
+ESP3DTft::ESP3DTft() {
+ esp3d_log_init();
+}
 
 ESP3DTft::~ESP3DTft() {}
 
