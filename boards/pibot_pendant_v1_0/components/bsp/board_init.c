@@ -48,7 +48,7 @@ esp_err_t board_init(void)
 {
     esp_err_t ret = ESP_OK;
     
-    esp3d_log("Initializing %s %s", BOARD_NAME, BOARD_VERSION);
+    esp3d_log("Initializing %s %s", BOARD_NAME_STR, BOARD_VERSION_STR);
  
 #if ESP3D_DISPLAY_FEATURE   
     // Initialize display
@@ -100,11 +100,11 @@ static esp_err_t init_lvgl(void)
 // Get board name
 const char* board_get_name(void)
 {
-    return BOARD_NAME;
+    return BOARD_NAME_STR;
 }
 
 // Get board version
 const char* board_get_version(void)
 {
-    return BOARD_VERSION;
+    return BOARD_VERSION_STR;
 }

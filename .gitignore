@@ -37,3 +37,5 @@ sdkconfig.old
 # ESP-IDF
 # ESP-IDF build directory
 build/
+
+**/managed_components

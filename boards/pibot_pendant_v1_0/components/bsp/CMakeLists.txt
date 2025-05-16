@@ -20,7 +20,6 @@ set(BSP_REQUIRES
 # Check if TFT UI service is enabled
 if(TFT_UI_SERVICE)
     list(APPEND BSP_REQUIRES
-        "esp_lvgl_port"
         "lvgl"
         "esp_lcd"
         "display_ili9341_spi"
@@ -35,6 +34,5 @@ idf_component_register(
     REQUIRES ${BSP_REQUIRES}
 )
 
-message(STATUS "BSP component configuration for PiBot CNC Pendant:")
-message(STATUS "Source files: ${BSP_SRCS}")
-message(STATUS "TFT UI Service: ${TFT_UI_SERVICE}")
+message(STATUS "\n${Cyan}BSP component configuration for PiBot CNC Pendant:${ColourReset}\n")
+message(STATUS "${Cyan}Source files:${White} ${BSP_SRCS}${ColourReset}\n\n")

@@ -33,7 +33,7 @@
 #include "esp3d_client.h"
 #include "esp3d_log.h"
 #include "esp_system.h"
-#include "serial_def.h"
+#include "board_config.h"
 
 #if ESP3D_USB_SERIAL_FEATURE
 #include "usb_serial_def.h"
@@ -83,7 +83,7 @@ const ESP3DSettingDescription ESP3DSettingsData[] = {
     {ESP3DSettingIndex::esp3d_version, ESP3DSettingType::string_t,
      SIZE_OF_SETTING_VERSION, "Invalid data"},  // Version
     {ESP3DSettingIndex::esp3d_baud_rate, ESP3DSettingType::integer_t, 4,
-     ESP3D_SERIAL_BAUDRATE},  // BaudRate
+     UART_BAUD_RATE_STR},  // BaudRate
     {ESP3DSettingIndex::esp3d_ui_language, ESP3DSettingType::string_t,
      SIZE_OF_UI_LANGUAGE, "default"},  // Language
 

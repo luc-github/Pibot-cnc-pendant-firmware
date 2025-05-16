@@ -24,6 +24,7 @@
 
 #include "esp3d_client.h"
 #include "esp3d_log.h"
+#include "esp3d_serial_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,6 +34,7 @@ class ESP3DSerialClient : public ESP3DClient {
  public:
   ESP3DSerialClient();
   ~ESP3DSerialClient();
+  bool configure(esp3d_serial_config_t* config);
   bool begin();
   void handle();
   void end();
@@ -44,6 +46,7 @@ class ESP3DSerialClient : public ESP3DClient {
   void readSerial();
 
  private:
+  esp3d_serial_config_t * _config;
   TaskHandle_t _xHandle;
   bool _started;
   pthread_mutex_t _tx_mutex;
