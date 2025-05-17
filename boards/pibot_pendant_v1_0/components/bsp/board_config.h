@@ -9,6 +9,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+// Helpers for stringification
+// This is used to convert macros to string literals
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
 
 /* Board Identification */
 #define BOARD_NAME_STR      "PiBot CNC Pendant"
@@ -49,7 +53,7 @@ extern "C" {
 #define TOUCH_SDA_PIN        GPIO_NUM_32
 #define TOUCH_SCL_PIN        GPIO_NUM_25
 #define TOUCH_IRQ_PIN        GPIO_NUM_36
-#define TOUCH_RST_PIN        -1  // No dedicated reset pin
+#define TOUCH_RST_PIN        GPIO_NUM_NC  // No dedicated reset pin
 
 // Touch controller I2C configuration
 #define TOUCH_I2C_PORT_IDX   I2C_NUM_0
@@ -74,15 +78,24 @@ extern "C" {
 #define BACKLIGHT_PWM_CHANNEL_IDX   0       // Channel to use
 
 /* SD Card Configuration */
+#define SD_INTERFACE_TYPE   0  // 0: SPI, 1: SDIO
 #define SD_MISO_PIN         GPIO_NUM_19
 #define SD_MOSI_PIN         GPIO_NUM_23
 #define SD_CLK_PIN          GPIO_NUM_18
 #define SD_CS_PIN           GPIO_NUM_5
 
+#define SD_DETECT_PIN       GPIO_NUM_NC   // Card detect pin
+#define SD_DETECT_VALUE     0             // Card detect value (0 = LOW, 1 = HIGH)
+
+
 // SD Card SPI configuration
-#define SD_SPI_HOST_IDX     SPI3_HOST
-#define SD_SPI_FREQ_HZ      (25 * 1000 * 1000)  // 25 MHz
+#define SD_SPI_HOST_IDX     HSPI_HOST
+#define SD_SPI_FREQ_HZ      (20 * 1000 * 1000)  // 20 MHz
 #define SD_SPI_MODE_IDX     0
+#define SD_SPI_SPEED_DIVIDER  1  // SPI speed divider (1 = 25 MHz, 2 = 12.5 MHz, etc.)
+#define SD_MAX_TRANSFER_SIZE 4096
+#define SD_ALLOCATION_SIZE   (4 * 1024)  // Allocation size for SD card
+
 
 /* Button Matrix Configuration */
 #define BUTTON_1_PIN        GPIO_NUM_4
@@ -121,8 +134,6 @@ extern "C" {
 #define UART_TX_PIN         GPIO_NUM_1
 #define UART_RX_PIN         GPIO_NUM_3
 #define UART_BAUD_RATE_BPS  115200
-#define STR_HELPER(x) #x
-#define STR(x) STR_HELPER(x)
 #define UART_BAUD_RATE_STR STR(UART_BAUD_RATE_BPS)
 #define UART_PORT_IDX       UART_NUM_0
 #define UART_DATA_BITS UART_DATA_8_BITS

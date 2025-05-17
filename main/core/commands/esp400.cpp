@@ -22,10 +22,8 @@
 #include "esp3d_commands.h"
 #include "esp3d_string.h"
 #include "translations/esp3d_translation_service.h"
+#include "board_config.h"
 
-#if ESP3D_SD_CARD_FEATURE
-#include "sd_def.h"
-#endif  // ESP3D_SD_CARD_FEATURE
 
 #define COMMAND_ID 400
 const char* BaudRateList[] = {"9600",   "19200",  "38400",  "57600",  "74880",
@@ -434,7 +432,7 @@ void ESP3DCommands::ESP400(int cmd_params_pos, ESP3DMessage* msg) {
     esp3d_log_e("Error sending response to clients");
   }
 #if ESP3D_SD_CARD_FEATURE
-#if ESP3D_SD_IS_SPI
+#if SD_INTERFACE_TYPE == 0
   // SPI Divider factor
   if (!dispatchSetting(json, "device/sd", ESP3DSettingIndex::esp3d_spi_divider,
                        "speedx", SPIDivider, SPIDivider,
@@ -442,7 +440,7 @@ void ESP3DCommands::ESP400(int cmd_params_pos, ESP3DMessage* msg) {
                        false, target, requestId)) {
     esp3d_log_e("Error sending response to clients");
   }
-#endif  // ESP3D_SD_IS_SPI
+#endif  // SD_INTERFACE_TYPE == 0
 #if ESP3D_UPDATE_FEATURE
   // SD updater
   if (!dispatchSetting(json, "device/sd",

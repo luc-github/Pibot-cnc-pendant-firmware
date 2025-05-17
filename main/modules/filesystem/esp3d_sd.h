@@ -25,6 +25,7 @@
 
 #include "esp3d_fs_types.h"
 #include "esp_vfs.h"
+#include "esp3d_sd_config.h"
 
 enum class ESP3DSdState : uint8_t {
   idle,
@@ -36,13 +37,18 @@ enum class ESP3DSdState : uint8_t {
 class ESP3DSd final {
  public:
   ESP3DSd();
+  bool configure(esp3d_sd_config_t *config);
   bool begin();
   bool mount();
   void unmount();
   bool isMounted() { return _mounted; };
-  uint8_t getSPISpeedDivider() { return _spi_speed_divider; }
-  void setSPISpeedDivider(uint8_t speeddivider) {
-    _spi_speed_divider = speeddivider;
+  uint8_t getSPISpeedDivider() { if(_config) return _config->spi.speed_divider; return 0; }
+  bool setSPISpeedDivider(uint8_t speeddivider) {
+    if (_config){
+       _config->spi.speed_divider = speeddivider;
+        return true;
+    }
+    return false;
   }
   const char *getFileSystemName();
   uint maxPathLength();
@@ -75,7 +81,7 @@ class ESP3DSd final {
   bool _mounted;
   bool _started;
   ESP3DSdState _state;
-  uint8_t _spi_speed_divider;
+  esp3d_sd_config_t *_config;
 };
 
 extern ESP3DSd sd;

@@ -22,9 +22,8 @@
 #include "esp3d_commands.h"
 #include "esp3d_settings.h"
 #include "esp3d_string.h"
-#if ESP3D_SD_CARD_FEATURE
-#include "sd_def.h"
-#endif  // ESP3D_SD_CARD_FEATURE
+#include "board_config.h"
+
 #if ESP3D_SD_CARD_FEATURE
 #include "filesystem/esp3d_sd.h"
 #endif  // ESP3D_SD_CARD_FEATURE
@@ -222,11 +221,11 @@ void ESP3DCommands::ESP401(int cmd_params_pos, ESP3DMessage* msg) {
           break;
 #endif  // ESP3D_TIMESTAMP_FEATURE
 #if ESP3D_SD_CARD_FEATURE
-#if ESP3D_SD_IS_SPI
+#if SD_INTERFACE_TYPE == 0
         case ESP3DSettingIndex::esp3d_spi_divider:
           sd.setSPISpeedDivider(valueb);
           break;
-#endif  // ESP3D_SD_IS_SPI
+#endif  // SD_INTERFACE_TYPE == 0
 #endif  // ESP3D_SD_CARD_FEATURE
 #if ESP3D_AUTHENTICATION_FEATURE
         case ESP3DSettingIndex::esp3d_admin_password:

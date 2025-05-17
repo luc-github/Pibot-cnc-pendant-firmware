@@ -29,9 +29,9 @@
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "board_config.h"
 #if ESP3D_SD_CARD_FEATURE
 #include "filesystem/esp3d_sd.h"
-#include "sd_def.h"
 #endif  // ESP3D_SD_CARD_FEATURE
 #if ESP3D_TIMESTAMP_FEATURE
 #include "time/esp3d_time_service.h"
@@ -231,9 +231,9 @@ const char *ServbyteKeysVal[] = {
     "Sesion_timeout",
 #endif  // #if ESP3D_AUTHENTICATION_FEATURE
 #if ESP3D_SD_CARD_FEATURE
-#if ESP3D_SD_IS_SPI
+#if SD_INTERFACE_TYPE == 0
     "SD_SPEED"
-#endif  // ESP3D_SD_IS_SPI
+#endif  // SD_INTERFACE_TYPE == 0
 #endif  // ESP3D_SD_CARD_FEATURE
 
     //"Time_DST"
@@ -245,9 +245,9 @@ const ESP3DSettingIndex ServbyteKeysPos[] = {
     ESP3DSettingIndex::esp3d_session_timeout,
 #endif  // #if ESP3D_AUTHENTICATION_FEATURE
 #if ESP3D_SD_CARD_FEATURE
-#if ESP3D_SD_IS_SPI
+#if SD_INTERFACE_TYPE == 0
     ESP3DSettingIndex::esp3d_spi_divider
-#endif  // ESP3D_SD_IS_SPI
+#endif  // SD_INTERFACE_TYPE == 0
 #endif  // ESP3D_SD_CARD_FEATURE
 
     // ESP_TIME_DST

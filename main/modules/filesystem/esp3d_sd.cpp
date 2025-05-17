@@ -24,15 +24,25 @@
 
 #include "esp3d_log.h"
 #include "esp3d_string.h"
-#include "sd_def.h"
 
 ESP3DSd sd;
+
+extern esp3d_sd_config_t esp3dSdConfig;
 
 ESP3DSd::ESP3DSd() {
   _mounted = false;
   _started = false;
-  _spi_speed_divider = 0;
   _state = ESP3DSdState::unknown;
+  _config = NULL;
+  configure(&esp3dSdConfig);
+}
+
+bool ESP3DSd::configure(esp3d_sd_config_t *config) {
+  if (config) {
+    _config = config;
+    return true;
+  }
+  return false;
 }
 
 ESP3DFileSystemType ESP3DSd::getFSType(const char* path) {

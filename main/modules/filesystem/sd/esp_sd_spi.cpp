@@ -18,9 +18,9 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "sd_def.h"
+#include "board_config.h"
 
-#if ESP3D_SD_IS_SPI
+#if SD_INTERFACE_TYPE == 0
 #include <string.h>
 #include <sys/unistd.h>
 
@@ -66,27 +66,35 @@ bool ESP3DSd::mount() {
   if (_mounted) {
     unmount();
   }
-  // set SPI speed
+  // Set SPI speed
 
   // This initializes the slot without card detect (CD) and write protect (WP)
   // signals. Modify slot_config.gpio_cd and slot_config.gpio_wp if your board
   // has these signals.
   sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
-  slot_config.gpio_cs = (gpio_num_t)ESP3D_SD_CS_PIN;
-  slot_config.host_id = (spi_host_device_t)host.slot;
-  esp3d_log("CS pin %d, host_id %d , Max Freq %d", slot_config.gpio_cs,
+  slot_config.gpio_cs = (gpio_num_t)_config->spi.cs_pin;
+  slot_config.host_id = (spi_host_device_t) host.slot;
+
+    // Set card detect pin if available
+  if (_config->detect_pin != GPIO_NUM_NC) {
+      slot_config.gpio_cd = _config->detect_pin;
+  } 
+  host.max_freq_khz = ((_config->freq)/1000) / _config->spi.speed_divider;
+  esp3d_log_d("CS pin %d, host_id %d , Max Freq %d", slot_config.gpio_cs,
             slot_config.host_id, host.max_freq_khz);
-  host.max_freq_khz = ESP3D_SD_FREQ / _spi_speed_divider;
   esp_vfs_fat_sdmmc_mount_config_t mount_config = {
       .format_if_mount_failed = false,
       .max_files = 2,
-      .allocation_unit_size = SPI_ALLOCATION_SIZE,
+      .allocation_unit_size = _config->spi.allocation_size,
       /** New IDF 5.0, Try to enable if you need to handle situations when SD
        * cards are not unmounted properly before physical removal or you are
        * experiencing issues with SD cards.*/
-      .disk_status_check_enable = true};
+      .disk_status_check_enable = true,
+      .use_one_fat=false};
 
-  esp3d_log("Mounting filesystem cd:%d, wp:%d", slot_config.gpio_cd,
+
+
+  esp3d_log_d("Mounting filesystem cd:%d, wp:%d", slot_config.gpio_cd,
             slot_config.gpio_wp);
   esp_err_t ret = esp_vfs_fat_sdspi_mount(mount_point(), &host, &slot_config,
                                           &mount_config, &card);
@@ -100,7 +108,7 @@ bool ESP3DSd::mount() {
     }
     return false;
   }
-  esp3d_log("Filesystem mounted");
+  esp3d_log_d("Filesystem mounted");
   _mounted = true;
   _state = ESP3DSdState::idle;
   return _mounted;
@@ -109,47 +117,56 @@ bool ESP3DSd::mount() {
 const char *ESP3DSd::getFileSystemName() { return "SDFat native"; }
 
 bool ESP3DSd::begin() {
+  esp3d_log_d("Starting SD Card");
   _started = false;
+  if (!_config) {
+    esp3d_log_e("SD Card not configured.");
+    return false;
+  }
+  
   esp_err_t ret;
-  esp3d_log("Initializing SD card");
-#if ESP3D_TFT_LOG && ESP3D_TFT_LOG == ESP3D_TFT_LOG_LEVEL_ALL
+  esp3d_log_d("Initializing SD card");
+#if ESP3D_TFT_LOG 
   const char *spi_names[] = {"SPI1_HOST", "SPI2_HOST", "SPI3_HOST"};
 #endif  // ESP3D_TFT_LOG
-#if defined(SD_SPI_HOST)
-  host.slot = SD_SPI_HOST;
-#endif  //
-  esp3d_log("Configuring SPI host %s", spi_names[host.slot]);
-  esp3d_log(
+
+  host.slot = (spi_host_device_t)_config->spi.host;
+  
+  esp3d_log_d("Configuring SPI host %s", spi_names[host.slot]);
+  esp3d_log_d(
       "MISO pin: %d, MOSI pin: %d, SCLK pin: %d, IO2/WP pin: %d, IO3/HD pin: "
       "%d",
-      ESP3D_SD_MISO_PIN, ESP3D_SD_MOSI_PIN, ESP3D_SD_CLK_PIN, -1, -1);
+      _config->spi.miso_pin, _config->spi.mosi_pin, _config->spi.clk_pin, -1, -1);
 
-  esp3d_log("Max transfer size: %d (bytes)", MAX_TRANSFER_SZ);
+  esp3d_log_d("Max transfer size: %d (bytes)", _config->spi.max_transfer_sz);
   spi_bus_config_t bus_cfg = {
-      .mosi_io_num = (gpio_num_t)ESP3D_SD_MOSI_PIN,
-      .miso_io_num = (gpio_num_t)ESP3D_SD_MISO_PIN,
-      .sclk_io_num = (gpio_num_t)ESP3D_SD_CLK_PIN,
+      .mosi_io_num = _config->spi.mosi_pin,
+      .miso_io_num = _config->spi.miso_pin,
+      .sclk_io_num = _config->spi.clk_pin,
       .quadwp_io_num = -1,
       .quadhd_io_num = -1,
       .data4_io_num = -1,
       .data5_io_num = -1,
       .data6_io_num = -1,
       .data7_io_num = -1,
-      .max_transfer_sz = MAX_TRANSFER_SZ,
+      .data_io_default_level = false,
+      .max_transfer_sz = _config->spi.max_transfer_sz,
       .flags = 0,
-      .isr_cpu_id = INTR_CPU_ID_AUTO,
+      .isr_cpu_id = ESP_INTR_CPU_AFFINITY_AUTO,
       .intr_flags = 0,
   };
 
-  _spi_speed_divider =
+  // Get SPI speed divider from settings if needed
+  _config->spi.speed_divider = 
       esp3dTftsettings.readByte(ESP3DSettingIndex::esp3d_spi_divider);
+  
   ret = spi_bus_initialize((spi_host_device_t)host.slot, &bus_cfg,
-                           SPI_DMA_CH_AUTO);
+                           SDSPI_DEFAULT_DMA);
   if (ret != ESP_OK) {
     esp3d_log_e("Failed to initialize bus. %s", esp_err_to_name(ret));
-
     return false;
   }
+  esp3d_log_d("SPI bus initialized");
   _started = true;
   return true;
 }
@@ -161,7 +178,7 @@ bool ESP3DSd::getSpaceInfo(uint64_t *totalBytes, uint64_t *usedBytes,
   static uint64_t _totalBytes = 0;
   static uint64_t _usedBytes = 0;
   static uint64_t _freeBytes = 0;
-  esp3d_log("Try to get total and free space");
+  esp3d_log_d("Try to get total and free space");
   // if not mounted reset values
   if (!_mounted) {
     esp3d_log_e("Failed to get total and free space because not mounted");
@@ -209,7 +226,7 @@ DIR *ESP3DSd::opendir(const char *dirpath) {
     }
     dir_path += dirpath;
   }
-  esp3d_log("openDir %s", dir_path.c_str());
+  esp3d_log_d("openDir %s", dir_path.c_str());
   return ::opendir(dir_path.c_str());
 }
 
@@ -223,7 +240,7 @@ int ESP3DSd::stat(const char *filepath, struct stat *entry_stat) {
     }
     dir_path += filepath;
   }
-  // esp3d_log("Stat %s, %d", dir_path.c_str(), ::stat(dir_path.c_str(),
+  // esp3d_log_d("Stat %s, %d", dir_path.c_str(), ::stat(dir_path.c_str(),
   // entry_stat));
   return ::stat(dir_path.c_str(), entry_stat);
 }
@@ -308,4 +325,4 @@ void ESP3DSd::rewinddir(DIR *dir) { ::rewinddir(dir); }
 
 void ESP3DSd::close(FILE *fd) { fclose(fd); }
 
-#endif  // ESP3D_SD_IS_SPI
+#endif  // SD_INTERFACE_TYPE == 0

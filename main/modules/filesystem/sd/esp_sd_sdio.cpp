@@ -18,15 +18,14 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "sd_def.h"
+#include "board_config.h"
 
-#if defined(ESP3D_SD_IS_SDIO) && ESP3D_SD_IS_SDIO
-#include <string.h>
+#if SD_INTERFACE_TYPE == 1
 #include <sys/unistd.h>
 
 #include <cstring>
 #include <string>
-
+#include "sd_def.h"
 #include "driver/sdmmc_host.h"
 #include "esp3d_log.h"
 #include "esp3d_string.h"
@@ -58,22 +57,37 @@ bool ESP3DSd::mount() {
   if (_mounted) {
     unmount();
   }
-  esp3d_log("Initializing SD card");
-  sdmmc_host_t host = SDMMC_HOST_DEFAULT();
-  host.max_freq_khz = ESP3D_SD_FREQ;
-  sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
-  slot_config.width = ESP3D_SDIO_BIT_WIDTH;
-#if SOC_SDMMC_USE_GPIO_MATRIX
-  slot_config.clk = (gpio_num_t)ESP3D_SDIO_CLK_PIN;
-  slot_config.cmd = (gpio_num_t)ESP3D_SDIO_CMD_PIN;
-  slot_config.d0 = (gpio_num_t)ESP3D_SDIO_D0_PIN;
-  slot_config.d1 = (gpio_num_t)ESP3D_SDIO_D1_PIN;
-  slot_config.d2 = (gpio_num_t)ESP3D_SDIO_D2_PIN;
-  slot_config.d3 = (gpio_num_t)ESP3D_SDIO_D3_PIN;
+  
+  if (!_config) {
+    esp3d_log_e("SD Card not configured.");
+    return false;
+  }
 
+  esp3d_log_d("Initializing SD card");
+  sdmmc_host_t host = SDMMC_HOST_DEFAULT();
+  host.max_freq_khz = _config->freq / 1000; // freq is in Hz, max_freq_khz expects kHz
+  
+  // Configure the slot
+  sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
+  slot_config.width = _config->sdio.bit_width;
+  
+#if SOC_SDMMC_USE_GPIO_MATRIX
+  // ESP32-S3 and some other chips allow GPIO matrix for SDMMC
+  slot_config.clk = _config->sdio.clk_pin;
+  slot_config.cmd = _config->sdio.cmd_pin;
+  slot_config.d0 = _config->sdio.d0_pin;
+  slot_config.d1 = _config->sdio.d1_pin;
+  slot_config.d2 = _config->sdio.d2_pin;
+  slot_config.d3 = _config->sdio.d3_pin;
 #endif  // SOC_SDMMC_USE_GPIO_MATRIX
+
   slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
-  slot_config.cd = (gpio_num_t)ESP3D_SD_DETECT_PIN;
+  
+  // Configure card detect pin if available
+  if (_config->detect_pin != GPIO_NUM_NC) {
+    slot_config.cd = _config->detect_pin;
+  }
+  
   esp_vfs_fat_sdmmc_mount_config_t mount_config = {
       .format_if_mount_failed = false,
       .max_files = 5,
@@ -81,8 +95,11 @@ bool ESP3DSd::mount() {
       /** New IDF 5.0, Try to enable if you need to handle situations when SD
        * cards are not unmounted properly before physical removal or you are
        * experiencing issues with SD cards.*/
-      .disk_status_check_enable = false};
-  esp3d_log("Mounting filesystem");
+      .disk_status_check_enable = false,
+      .use_one_fat = false
+  };
+  
+  esp3d_log_d("Mounting filesystem");
   esp_err_t ret = esp_vfs_fat_sdmmc_mount(mount_point(), &host, &slot_config,
                                           &mount_config, &card);
 
@@ -95,7 +112,7 @@ bool ESP3DSd::mount() {
     }
     return false;
   }
-  esp3d_log("Filesystem mounted");
+  esp3d_log_d("Filesystem mounted");
   _mounted = true;
   _state = ESP3DSdState::idle;
   return _mounted;
@@ -104,6 +121,13 @@ bool ESP3DSd::mount() {
 const char *ESP3DSd::getFileSystemName() { return "SDFat native"; }
 
 bool ESP3DSd::begin() {
+  if (!_config) {
+    esp3d_log_e("SD Card not configured.");
+    return false;
+  }
+  
+  esp3d_log_d("Starting SD Card in SDIO mode");
+  // In SDIO mode, we don't need to initialize any bus as it's handled by the hardware
   _started = true;
   return true;
 }
@@ -115,7 +139,7 @@ bool ESP3DSd::getSpaceInfo(uint64_t *totalBytes, uint64_t *usedBytes,
   static uint64_t _totalBytes = 0;
   static uint64_t _usedBytes = 0;
   static uint64_t _freeBytes = 0;
-  esp3d_log("Try to get total and free space");
+  esp3d_log_d("Try to get total and free space");
   // if not mounted reset values
   if (!_mounted) {
     esp3d_log_e("Failed to get total and free space because not mounted");
@@ -127,7 +151,7 @@ bool ESP3DSd::getSpaceInfo(uint64_t *totalBytes, uint64_t *usedBytes,
   if ((_totalBytes == 0 || refreshStats) && _mounted) {
     FATFS *fs;
     DWORD fre_clust;
-    // we only have one SD card with one partiti0n so should be ok to use "0:"
+    // we only have one SD card with one partition so should be ok to use "0:"
     if (f_getfree("0:", &fre_clust, &fs) == FR_OK) {
       _totalBytes = (fs->n_fatent - 2) * fs->csize;
       _freeBytes = fre_clust * fs->csize;
@@ -154,6 +178,7 @@ bool ESP3DSd::getSpaceInfo(uint64_t *totalBytes, uint64_t *usedBytes,
   // if total is 0 it is a failure
   return _totalBytes != 0;
 }
+
 DIR *ESP3DSd::opendir(const char *dirpath) {
   std::string dir_path = mount_point();
   if (strlen(dirpath) != 0) {
@@ -162,7 +187,7 @@ DIR *ESP3DSd::opendir(const char *dirpath) {
     }
     dir_path += dirpath;
   }
-  esp3d_log("openDir %s", dir_path.c_str());
+  esp3d_log_d("openDir %s", dir_path.c_str());
   return ::opendir(dir_path.c_str());
 }
 
@@ -176,7 +201,7 @@ int ESP3DSd::stat(const char *filepath, struct stat *entry_stat) {
     }
     dir_path += filepath;
   }
-  // esp3d_log("Stat %s, %d", dir_path.c_str(), ::stat(dir_path.c_str(),
+  // esp3d_log_d("Stat %s, %d", dir_path.c_str(), ::stat(dir_path.c_str(),
   // entry_stat));
   return ::stat(dir_path.c_str(), entry_stat);
 }
@@ -222,6 +247,7 @@ bool ESP3DSd::rmdir(const char *path) {
   }
   return !::rmdir(dir_path.c_str());
 }
+
 bool ESP3DSd::rename(const char *oldpath, const char *newpath) {
   std::string old_path = mount_point();
   std::string new_path = mount_point();
@@ -261,4 +287,4 @@ void ESP3DSd::rewinddir(DIR *dir) { ::rewinddir(dir); }
 
 void ESP3DSd::close(FILE *fd) { fclose(fd); }
 
-#endif  // ESP3D_SD_IS_SDIO
+#endif  // SD_INTERFACE_TYPE == 1

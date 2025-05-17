@@ -24,6 +24,7 @@
 #include "serial/esp3d_serial_client.h"
 #include "websocket/esp3d_webui_service.h"
 #include "websocket/esp3d_ws_service.h"
+#include "board_config.h"
 
 #if ESP3D_TELNET_FEATURE
 #include "socket_server/esp3d_socket_server.h"
@@ -31,9 +32,7 @@
 #if ESP3D_USB_SERIAL_FEATURE
 #include "usb_serial/esp3d_usb_serial_client.h"
 #endif  // #if ESP3D_USB_SERIAL_FEATURE
-#if ESP3D_SD_CARD_FEATURE
-#include "sd_def.h"
-#endif  // ESP3D_SD_CARD_FEATURE
+
 #if ESP3D_DISPLAY_FEATURE
 #include "rendering/esp3d_rendering_client.h"
 #endif  // ESP3D_DISPLAY_FEATURE
@@ -960,11 +959,11 @@ void ESP3DCommands::execute_internal_command(int cmd, int cmd_params_pos,
     case 200:
       ESP200(cmd_params_pos, msg);
       break;
-#if ESP3D_SD_IS_SPI
+#if SD_INTERFACE_TYPE == 0
     case 202:
       ESP202(cmd_params_pos, msg);
       break;
-#endif  // ESP3D_SD_IS_SPI
+#endif  // SD_INTERFACE_TYPE == 0
 #endif  // ESP3D_SD_CARD_FEATURE
 #if ESP3D_DISPLAY_FEATURE
     case 214:

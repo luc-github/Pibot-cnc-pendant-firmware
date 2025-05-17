@@ -21,12 +21,10 @@
 
 #include <cstring>
 #include <string>
-
+#include "board_config.h"
 #include "esp3d_client.h"
 #include "esp3d_commands.h"
-#if ESP3D_SD_CARD_FEATURE
-#include "sd_def.h"
-#endif  // ESP3D_SD_CARD_FEATURE
+
 
 const char* help[] = {
     "[ESP](id) - display this help",
@@ -79,10 +77,10 @@ const char* help[] = {
 #endif  // ESP3D_HTTP_FEATURE
 #if ESP3D_SD_CARD_FEATURE
     "[ESP200](RELEASE) (REFRESH)- display/set SD Card Status",
-#if ESP3D_SD_IS_SPI
+#if SD_INTERFACE_TYPE == 0
     "[ESP202](factor) - display / set  SD Card  SD card Speed divider factor "
     "(1 2 4 6 8 16 32)",
-#endif  // ESP3D_SD_IS_SPI
+#endif  // SD_INTERFACE_TYPE == 0
 #if ESP3D_DISPLAY_FEATURE
     "[ESP214](Text) - Output to esp screen status",
 #if LV_USE_SNAPSHOT
@@ -177,9 +175,9 @@ const uint cmdlist[] = {
 #endif  // ESP3D_HTTP_FEATURE
 #if ESP3D_SD_CARD_FEATURE
     200,
-#if ESP3D_SD_IS_SPI
+#if SD_INTERFACE_TYPE == 0
     202,
-#endif  // ESP3D_SD_IS_SPI
+#endif  // SD_INTERFACE_TYPE == 0
 #if ESP3D_DISPLAY_FEATURE
     214,
 #if LV_USE_SNAPSHOT

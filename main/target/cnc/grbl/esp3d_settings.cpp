@@ -38,9 +38,6 @@
 #if ESP3D_USB_SERIAL_FEATURE
 #include "usb_serial_def.h"
 #endif  // ESP3D_USB_SERIAL_FEATURE
-#if ESP3D_SD_CARD_FEATURE
-#include "sd_def.h"
-#endif  // ESP3D_SD_CARD_FEATURE
 #include "network/esp3d_network.h"
 #if ESP3D_NOTIFICATIONS_FEATURE
 #include "notifications/esp3d_notifications_service.h"
@@ -128,10 +125,10 @@ const ESP3DSettingDescription ESP3DSettingsData[] = {
     {ESP3DSettingIndex::esp3d_target_firmware, ESP3DSettingType::byte_t, 1,
      "0"},
 #if ESP3D_SD_CARD_FEATURE
-#if ESP3D_SD_IS_SPI
+#if SD_INTERFACE_TYPE == 0
     {ESP3DSettingIndex::esp3d_spi_divider, ESP3DSettingType::byte_t, 1,
      "1"},  // SPIdivider
-#endif      // ESP3D_SD_IS_SPI
+#endif      // SD_INTERFACE_TYPE == 0
 #if ESP3D_UPDATE_FEATURE
     {ESP3DSettingIndex::esp3d_check_update_on_sd, ESP3DSettingType::byte_t, 1,
      "1"},
@@ -467,7 +464,7 @@ bool ESP3DSettings::isValidByteSetting(uint8_t value,
       }
       break;
 #if ESP3D_SD_CARD_FEATURE
-#if ESP3D_SD_IS_SPI
+#if SD_INTERFACE_TYPE == 0
     case ESP3DSettingIndex::esp3d_spi_divider:
       for (uint8_t i = 0; i < SupportedSPIDividerSize; i++) {
         if (SupportedSPIDivider[i] == value) {
@@ -475,7 +472,7 @@ bool ESP3DSettings::isValidByteSetting(uint8_t value,
         }
       }
       break;
-#endif  // ESP3D_SD_IS_SPI
+#endif  // SD_INTERFACE_TYPE == 0
 #endif  // ESP3D_SD_CARD_FEATURE
 
     case ESP3DSettingIndex::esp3d_target_firmware:
