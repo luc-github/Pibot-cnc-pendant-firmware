@@ -20,14 +20,11 @@
 
 #pragma once
 
-#include "board_config.h"
-#include "backlight_config.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-const backlight_config_t backlight_cfg = {  .pwm_control = BACKLIGHT_PWM_ENABLED_FLAG,
+ backlight_config_t backlight_cfg = {  .pwm_control = BACKLIGHT_PWM_ENABLED_FLAG,
                                             .output_invert = !(BACKLIGHT_ACTIVE_HIGH_FLAG),
                                             .gpio_num = BACKLIGHT_PIN,
                                             .timer_idx = BACKLIGHT_PWM_TIMER_IDX,

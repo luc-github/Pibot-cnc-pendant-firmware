@@ -3,7 +3,8 @@
 # Include color definitions
 include(cmake/colors.cmake)
 #global drivers
-set(EXTRA_COMPONENT_DIRS ${CMAKE_SOURCE_DIR}/hardware/common/drivers)
+message(STATUS "${BoldCyan}Adding drivers:${White}/hardware/common/drivers${ColourReset}")
+set(EXTRA_COMPONENT_DIRS "${CMAKE_SOURCE_DIR}/hardware/common/drivers")
 
 # all targets
 file(GLOB_RECURSE TARGET_FILES "${CMAKE_SOURCE_DIR}/boards/*/board_config.cmake")

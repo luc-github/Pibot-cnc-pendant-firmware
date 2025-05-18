@@ -11,6 +11,8 @@
     "files.associations": {
         "display_def.h": "c",
         "format": "c",
-        "thread": "c"
+        "thread": "c",
+        "spi_common.h": "c",
+        "backlight_def.h": "c"
     }
 }

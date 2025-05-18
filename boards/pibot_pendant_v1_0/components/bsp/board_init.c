@@ -27,9 +27,9 @@
 #if ESP3D_DISPLAY_FEATURE
 #include "driver/gpio.h"
 #include "driver/spi_common.h"
-
+#include "backlight.h"
 //#include "ili9341.h"
-//#include "backlight.h"
+#include "backlight_def.h"
 //#include "lvgl.h"
 
 // Include device configurations
@@ -51,7 +51,17 @@ esp_err_t board_init(void)
     esp3d_log("Initializing %s %s", BOARD_NAME_STR, BOARD_VERSION_STR);
  
 #if ESP3D_DISPLAY_FEATURE   
+
     // Initialize display
+    // Initialize backlight
+    ret = backlight_configure(&backlight_cfg);
+    if (ret != ESP_OK) {
+        esp3d_log_e("Backlight initialization failed");
+        return ret;
+    }
+    backlight_set(0);
+
+    
     //ret = ili9341_init(&ili9341_config);
     //if (ret != ESP_OK) {
     //    esp3d_log_e("Display driver initialization failed");
@@ -78,7 +88,7 @@ esp_err_t board_init(void)
     //    esp3d_log_e("LVGL initialization failed");
     //    return ret;
     //}
-
+    backlight_set(100);
 #endif  // ESP3D_DISPLAY_FEATURE
     
     esp3d_log("Board initialization completed successfully");
