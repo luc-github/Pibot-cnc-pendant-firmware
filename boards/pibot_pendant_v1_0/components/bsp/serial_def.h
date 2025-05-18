@@ -1,5 +1,5 @@
 /*
-  serial_def.h - Serial definitions for ESP3D
+  serial_def.h - Serial definitions for ESP3D-TFT
 
   Copyright (c) 2025 Luc LEBOSSE. All rights reserved.
 

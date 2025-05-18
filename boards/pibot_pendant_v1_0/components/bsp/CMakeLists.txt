@@ -15,6 +15,7 @@ set(BSP_REQUIRES
     "esp_timer"
     "esp3d_log"
     "nvs_flash"
+    "driver"
 )
 
 # Check if TFT UI service is enabled
@@ -22,7 +23,7 @@ if(TFT_UI_SERVICE)
     list(APPEND BSP_REQUIRES
         "lvgl"
         "esp_lcd"
-        "display_ili9341_spi"
+        "ili9341"
         "backlight"
     )
 endif()

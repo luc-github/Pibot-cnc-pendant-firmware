@@ -26,11 +26,11 @@
 #include "esp3d_log.h"
 #include "esp3d_values.h"
 #include "esp3d_version.h"
-#include "esp_freertos_hooks.h"
+//#include "esp_freertos_hooks.h"
 #include "esp_timer.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
-#include "freertos/task.h"
+//#include "freertos/FreeRTOS.h"
+//#include "freertos/semphr.h"
+//#include "freertos/task.h"
 #include "lvgl.h"
 #include "rendering/esp3d_rendering_client.h"
 #include "tasks_def.h"
@@ -44,6 +44,7 @@
  **********************/
 
 ESP3DTftUi esp3dTftui;
+/*
 #if !LV_TICK_CUSTOM
 static void lv_tick_task(void *arg);
 #endif
@@ -55,18 +56,18 @@ static void lv_tick_task(void *arg) {
 
   lv_tick_inc(LV_TICK_PERIOD_MS);
 }
-#endif  // !LV_TICK_CUSTOM
+#endif  // !LV_TICK_CUSTOM*/
 
 /* Creates a semaphore to handle concurrent call to lvgl stuff
  * If you wish to call *any* lvgl function from other threads/tasks
  * you should lock on the very same semaphore! */
-SemaphoreHandle_t xGuiSemaphore;
-
+//SemaphoreHandle_t xGuiSemaphore;
+/*
 static void guiTask(void *pvParameter) {
   (void)pvParameter;
   xGuiSemaphore = xSemaphoreCreateMutex();
 #if !LV_TICK_CUSTOM
-  /* Create and start a periodic timer interrupt to call lv_tick_inc */
+
   const esp_timer_create_args_t periodic_timer_args = {
       .callback = &lv_tick_task,
       .arg = nullptr,
@@ -81,10 +82,10 @@ static void guiTask(void *pvParameter) {
   create_application();
 
   while (1) {
-    /* Delay 1 tick (assumes FreeRTOS tick is 10ms */
+
     esp3d_hal::wait(10);
 
-    /* Try to take the semaphore, call lvgl related function on success */
+
     if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)) {
       esp3dTftValues.handle();
       lv_task_handler();
@@ -92,9 +93,9 @@ static void guiTask(void *pvParameter) {
     }
   }
 
-  /* A task should NEVER return */
+
   vTaskDelete(NULL);
-}
+}*/
 
 ESP3DTftUi::ESP3DTftUi() {}
 
@@ -105,7 +106,10 @@ bool ESP3DTftUi::begin() {
     esp3d_log_e("Rendering client not started");
     return false;
   }
+  return true;
+}
 
+/*
   // Ui creation
   TaskHandle_t xHandle = NULL;
   BaseType_t res = xTaskCreatePinnedToCore(guiTask, "tftUI", STACKDEPTH, NULL,
@@ -116,8 +120,9 @@ bool ESP3DTftUi::begin() {
   } else {
     esp3d_log_e("UI Task creation failed");
     return false;
-  }
-}
+  
+
+}  */
 
 void ESP3DTftUi::handle() {}
 

@@ -14,6 +14,7 @@ extern "C" {
 #define STREAM_TASK_PRIORITY 0
 #define STREAM_STACK_DEPTH 4096
 
+
 #define UI_TASK_CORE 1
 #define UI_TASK_PRIORITY 0
 #define UI_STACK_DEPTH 4096

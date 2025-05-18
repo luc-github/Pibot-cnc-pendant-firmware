@@ -148,6 +148,13 @@ extern "C" {
 #define UART_TASK_CORE 1
 #define UART_TASK_PRIORITY 10
 
+/* LVGL Configuration */
+#define LVGL_TICK_PERIOD_MS 10
+#define LVGL_TASK_PRIORITY 10
+#define LVGL_TASK_CORE 1
+#define LVGL_TASK_STACK_SIZE 4096
+
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

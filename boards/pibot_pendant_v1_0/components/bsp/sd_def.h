@@ -1,5 +1,5 @@
 /*
-  sd_def.h - SD Card definitions for ESP3D
+  sd_def.h - SD Card definitions for ESP3D-TFT
 
   Copyright (c) 2025 Luc LEBOSSE. All rights reserved.
 

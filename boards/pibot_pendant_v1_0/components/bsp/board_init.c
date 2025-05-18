@@ -28,19 +28,19 @@
 #include "driver/gpio.h"
 #include "driver/spi_common.h"
 
-#include "ili9341.h"
-#include "backlight.h"
-#include "lvgl.h"
+//#include "ili9341.h"
+//#include "backlight.h"
+//#include "lvgl.h"
 
 // Include device configurations
-#include "display_def.h"
-#include "backlight_def.h"
+//#include "display_def.h"
+//#include "backlight_def.h"
 
 // LVGL display handle
-static lv_disp_t* disp = NULL;
+///static lv_disp_t* disp = NULL;
 
 // Forward declarations for internal functions
-static esp_err_t init_lvgl(void);
+//static esp_err_t init_lvgl(void);
 #endif  // ESP3D_DISPLAY_FEATURE
 
 // Initialize board hardware and subsystems
@@ -52,32 +52,32 @@ esp_err_t board_init(void)
  
 #if ESP3D_DISPLAY_FEATURE   
     // Initialize display
-    ret = ili9341_init(&ili9341_config);
-    if (ret != ESP_OK) {
-        esp3d_log_e("Display driver initialization failed");
-        return ret;
-    }
+    //ret = ili9341_init(&ili9341_config);
+    //if (ret != ESP_OK) {
+    //    esp3d_log_e("Display driver initialization failed");
+    //    return ret;
+    //}
     
     // Initialize backlight
-    ret = backlight_init(&backlight_config);
-    if (ret != ESP_OK) {
-        esp3d_log_e("Backlight initialization failed");
-        return ret;
-    }
+    //ret = backlight_init(&backlight_config);
+    //if (ret != ESP_OK) {
+    //    esp3d_log_e("Backlight initialization failed");
+    //    return ret;
+   // }
     
     // Turn on backlight with default level from config
-    ret = backlight_set_level(backlight_config.default_level);
-    if (ret != ESP_OK) {
-        esp3d_log_e("Setting backlight level failed");
+    //ret = backlight_set_level(backlight_config.default_level);
+    //if (ret != ESP_OK) {
+    //    esp3d_log_e("Setting backlight level failed");
         // Non-fatal error, continue
-    }
+    //}
     
     // Initialize LVGL
-    ret = init_lvgl();
-    if (ret != ESP_OK) {
-        esp3d_log_e("LVGL initialization failed");
-        return ret;
-    }
+    ///ret = init_lvgl();
+    //if (ret != ESP_OK) {
+    //    esp3d_log_e("LVGL initialization failed");
+    //    return ret;
+    //}
 
 #endif  // ESP3D_DISPLAY_FEATURE
     
@@ -88,13 +88,13 @@ esp_err_t board_init(void)
 #if ESP3D_DISPLAY_FEATURE
 
 // Initialize LVGL
-static esp_err_t init_lvgl(void)
+/*static esp_err_t init_lvgl(void)
 {
     esp3d_log("Initializing LVGL");
  
     esp3d_log("LVGL initialized successfully");
     return ESP_OK;
-}
+}*/
 #endif // ESP3D_DISPLAY_FEATURE
 
 // Get board name

@@ -128,7 +128,7 @@ bool ESP3DTft::begin() {
   // Init translations service, no need condition as it is mandatory
   esp3dTranslationService.begin();
 #if ESP3D_DISPLAY_FEATURE
-  esp3dTftui.begin();
+  //esp3dTftui.begin();
 #endif  // ESP3D_DISPLAY_FEATURE
 #if ESP3D_UPDATE_FEATURE
   if (successSd) {

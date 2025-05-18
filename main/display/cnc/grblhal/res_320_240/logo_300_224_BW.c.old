@@ -1,0 +1,128 @@
+#include "lvgl.h"
+
+
+lv_img_dsc_t *get_splash_logo() {
+
+  return NULL;
+}
+
+// De-allocate the data we had previously allocated
+void release_splash_logo(lv_img_dsc_t *splash_logo) {
+  if (splash_logo->data != NULL) {
+    free(splash_logo->data);
+  }
+}
+
+/*
+// RLE encoder (8-bit <count, data> pairs)
+const data = [...];
+const rle = [];
+
+function push_rle(count, data) {
+  if (count > 0) {
+    rle.push(count);
+    rle.push(data);
+  }
+}
+
+let i=0;
+let ctr=0;
+let prev_d=0;
+do {
+  let d = data[i];
+  if (d == prev_d) {
+    ctr++;
+    if (ctr == 255) {
+      push_rle(ctr, prev_d);
+      ctr = 0;
+    }
+  } else {
+    push_rle(ctr, prev_d);
+    ctr = 1;
+    prev_d = d;
+  }
+} while (++i < data.length);
+push_rle(ctr, prev_d);
+
+console.log(data.length);
+console.log(rle);
+console.log(rle.length);
+*/
+
+/*
+// RLE encoder (4-bit optimized)
+const data = [...];
+const rle = [];
+
+function push_rle(count, data) {
+  if (count > 0 && count < 8) {
+    rle.push((data << 4) | count);
+  } else if (count > 0) {
+    rle.push((data << 4) | (0b1000) | (count >> 8));
+    rle.push(count & 0xFF);
+  }
+}
+
+let i=0;
+let ctr=0;
+let prev_d4=0;
+do {
+        let i4 = 0;
+  let d = data[i];
+        do {
+        const d4 = (d & 0b11110000) >> 4;
+    if (d4 == prev_d4) {
+      ctr++;
+    } else {
+      push_rle(ctr, prev_d4);
+      ctr = 1;
+      prev_d4 = d4;
+    }
+    d <<= 4;
+  } while (++i4 < 2);
+} while (++i < data.length);
+push_rle(ctr, prev_d4);
+
+console.log(data.length);
+console.log(rle);
+console.log(rle.length);
+*/
+
+/*
+// RLE encoder (2-bit optimized)
+const data = [...];
+const rle = [];
+
+function push_rle(count, data) {
+  if (count > 0 && count < 32) {
+    rle.push((data << 6) | count);
+  } else if (count > 0) {
+    rle.push((data << 6) | (0b100000) | (count >> 8));
+    rle.push(count & 0xFF);
+  }
+}
+
+let i=0;
+let ctr=0;
+let prev_d2=0;
+do {
+        let i2 = 0;
+  let d = data[i];
+        do {
+        const d2 = (d & 0b11000000) >> 6;
+    if (d2 == prev_d2) {
+      ctr++;
+    } else {
+      push_rle(ctr, prev_d2);
+      ctr = 1;
+      prev_d2 = d2;
+    }
+    d <<= 2;
+  } while (++i2 < 4);
+} while (++i < data.length);
+push_rle(ctr, prev_d2);
+
+console.log(data.length);
+console.log(rle);
+console.log(rle.length);
+*/

@@ -22,7 +22,7 @@
 
 #include "esp3d_log.h"
 #include "esp3d_string.h"
-#if ESP3D_DISPLAY_FEATURE
+#if ESP3D_DISPLAY_FEATURE1
 #include "components/status_bar_component.h"
 #include "components/wifi_status_component.h"
 #include "screens/main_screen.h"
@@ -31,7 +31,7 @@
 
 bool ESP3DValues::intialize() {
   clear();
-#if ESP3D_DISPLAY_FEATURE
+#if ESP3D_DISPLAY_FEATURE1
   // status bar label
   _values.push_back({ESP3DValuesIndex::status_bar_label,
                      ESP3DValuesType::string_t, 200, std::string(""),
