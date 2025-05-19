@@ -1,5 +1,5 @@
 /*
-  backlight.c
+  disp_backlight.c
 
   Copyright (c) 2023 Luc Lebosse. All rights reserved.
 
@@ -21,7 +21,7 @@
 /*********************
  *      INCLUDES
  *********************/
-#include "backlight.h"
+#include "disp_backlight.h"
 
 #include <driver/gpio.h>
 #include <driver/ledc.h>

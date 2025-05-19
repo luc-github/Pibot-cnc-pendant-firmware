@@ -25,7 +25,7 @@
  *********************/
 #include <esp_err.h>
 #include <stdbool.h>
-#include "backlight_config.h"
+#include "disp_backlight_config.h"
 
 #ifdef __cplusplus
 extern "C" { /* extern "C" */

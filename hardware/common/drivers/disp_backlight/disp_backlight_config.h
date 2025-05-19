@@ -1,5 +1,5 @@
 /*
-  backlight_config.h
+ disp_backlight_config.h
 
   Copyright (c) 2022 Luc Lebosse. All rights reserved.
 

@@ -13,6 +13,7 @@
         "format": "c",
         "thread": "c",
         "spi_common.h": "c",
-        "backlight_def.h": "c"
+        "backlight_def.h": "c",
+        "esp_lcd_panel_vendor.h": "c"
     }
 }

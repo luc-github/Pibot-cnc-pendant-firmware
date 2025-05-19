@@ -27,14 +27,12 @@
 #if ESP3D_DISPLAY_FEATURE
 #include "driver/gpio.h"
 #include "driver/spi_common.h"
-#include "backlight.h"
-//#include "ili9341.h"
+#include "disp_backlight.h"
 #include "backlight_def.h"
+#include "disp_ili9341_spi.h"
+#include "ili9341_def.h"
 //#include "lvgl.h"
 
-// Include device configurations
-//#include "display_def.h"
-//#include "backlight_def.h"
 
 // LVGL display handle
 ///static lv_disp_t* disp = NULL;
@@ -60,34 +58,10 @@ esp_err_t board_init(void)
         return ret;
     }
     backlight_set(0);
+    // Initialize display
+    ret = ili9341_spi_configure(&ili9341_default_config);
+    
 
-    
-    //ret = ili9341_init(&ili9341_config);
-    //if (ret != ESP_OK) {
-    //    esp3d_log_e("Display driver initialization failed");
-    //    return ret;
-    //}
-    
-    // Initialize backlight
-    //ret = backlight_init(&backlight_config);
-    //if (ret != ESP_OK) {
-    //    esp3d_log_e("Backlight initialization failed");
-    //    return ret;
-   // }
-    
-    // Turn on backlight with default level from config
-    //ret = backlight_set_level(backlight_config.default_level);
-    //if (ret != ESP_OK) {
-    //    esp3d_log_e("Setting backlight level failed");
-        // Non-fatal error, continue
-    //}
-    
-    // Initialize LVGL
-    ///ret = init_lvgl();
-    //if (ret != ESP_OK) {
-    //    esp3d_log_e("LVGL initialization failed");
-    //    return ret;
-    //}
     backlight_set(100);
 #endif  // ESP3D_DISPLAY_FEATURE
     

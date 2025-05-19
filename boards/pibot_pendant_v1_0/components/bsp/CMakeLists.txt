@@ -10,21 +10,16 @@ set(INCLUDE_DIRS
     "."
 )
 
-# Base requirements
 set(BSP_REQUIRES
     "esp_timer"
     "esp3d_log"
     "nvs_flash"
     "driver"
     "disp_backlight"
+    "disp_ili9341"
 )
 
-# Check if TFT UI service is enabled
-if(TFT_UI_SERVICE)
-    list(APPEND BSP_REQUIRES
-      "disp_backlight"    )
-    message(STATUS "${Cyan}Adds Required:${White} ${BSP_REQUIRES}${ColourReset}\n\n")
-endif()
+message(STATUS "${Cyan}Adds Required:${White} ${BSP_REQUIRES}${ColourReset}\n\n")
 
 # Register the component with hardware-specific requirements
 idf_component_register(

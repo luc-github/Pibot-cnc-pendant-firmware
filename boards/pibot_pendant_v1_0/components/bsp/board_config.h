@@ -34,14 +34,12 @@ extern "C" {
 #define DISPLAY_SWAP_COLOR_FLAG 1
 
 // Display SPI configuration
-#define DISPLAY_SPI_HOST_IDX    SPI2_HOST
+#define DISPLAY_SPI_HOST_IDX    VSPI_HOST
 #define DISPLAY_SPI_FREQ_HZ     (40 * 1000 * 1000)  // 40 MHz
 #define DISPLAY_SPI_MODE_IDX    0
 
 // Display orientation flags
-#define DISPLAY_SWAP_XY_FLAG     0
-#define DISPLAY_MIRROR_X_FLAG    1
-#define DISPLAY_MIRROR_Y_FLAG    1
+#define DISPLAY_ORIENTATION      0
 #define DISPLAY_INVERT_FLAG      1
 
 // Display buffer configuration
