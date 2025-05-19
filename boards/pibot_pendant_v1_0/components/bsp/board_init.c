@@ -23,23 +23,177 @@
 #include "esp3d_log.h"
 
 // Include drivers and libraries
-
-#if ESP3D_DISPLAY_FEATURE
 #include "driver/gpio.h"
 #include "driver/spi_common.h"
 #include "disp_backlight.h"
 #include "backlight_def.h"
 #include "disp_ili9341_spi.h"
 #include "ili9341_def.h"
-//#include "lvgl.h"
 
+// Required includes for LVGL
+#include "lvgl.h"
+#include "esp_timer.h"
+#include "esp_heap_caps.h"
+#include <sys/lock.h>
 
-// LVGL display handle
-///static lv_disp_t* disp = NULL;
+#if ESP3D_DISPLAY_FEATURE
 
-// Forward declarations for internal functions
-//static esp_err_t init_lvgl(void);
-#endif  // ESP3D_DISPLAY_FEATURE
+// Global variables for LVGL
+static _lock_t lvgl_api_lock;
+static lv_display_t *lvgl_display = NULL;
+static lv_color16_t *lvgl_buf1 = NULL;
+static lv_color16_t *lvgl_buf2 = NULL;
+static esp_timer_handle_t lvgl_tick_timer = NULL;
+
+// Callback function to notify LVGL when flush is complete
+static bool notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
+{
+    lv_display_t *disp = (lv_display_t *)user_ctx;
+    lv_display_flush_ready(disp);
+    return false;
+}
+
+// LVGL flush callback function
+static void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
+{
+    esp_lcd_panel_handle_t panel_handle = lv_display_get_user_data(disp);
+    int offsetx1 = area->x1;
+    int offsetx2 = area->x2;
+    int offsety1 = area->y1;
+    int offsety2 = area->y2;
+    
+    // Swap R and B bytes if needed
+    if (DISPLAY_SWAP_COLOR_FLAG) {
+        lv_draw_sw_rgb565_swap(px_map, (offsetx2 + 1 - offsetx1) * (offsety2 + 1 - offsety1));
+    }
+    
+    // Send data to the display
+    esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, px_map);
+}
+
+// LVGL tick timer callback function
+static void increase_lvgl_tick(void *arg)
+{
+    lv_tick_inc(LVGL_TICK_PERIOD_MS);
+}
+
+// Initialize LVGL
+static esp_err_t init_lvgl(void)
+{
+    esp_err_t ret = ESP_OK;
+    
+    esp3d_log("Initializing LVGL v%d.%d.%d", lv_version_major(), lv_version_minor(), lv_version_patch());
+    
+    // Initialize LVGL library
+    lv_init();
+    
+    // Get panel and IO handles
+    esp_lcd_panel_handle_t panel_handle = ili9341_spi_get_panel_handle();
+    if (!panel_handle) {
+        esp3d_log_e("ILI9341 panel not initialized");
+        return ESP_FAIL;
+    }
+    
+    esp_lcd_panel_io_handle_t io_handle = ili9341_spi_get_io_handle();
+    if (!io_handle) {
+        esp3d_log_e("ILI9341 IO not initialized");
+        return ESP_FAIL;
+    }
+    
+    // Create LVGL display
+    lvgl_display = lv_display_create(DISPLAY_WIDTH_PX, DISPLAY_HEIGHT_PX);
+    if (!lvgl_display) {
+        esp3d_log_e("LVGL display creation failed");
+        return ESP_FAIL;
+    }
+    
+    // Allocate drawing buffers
+    size_t draw_buf_size = DISPLAY_WIDTH_PX * DISPLAY_BUFFER_LINES_NB * sizeof(lv_color16_t);
+    
+    lvgl_buf1 = heap_caps_malloc(draw_buf_size, MALLOC_CAP_DMA);
+    if (!lvgl_buf1) {
+        esp3d_log_e("Failed to allocate draw buffer 1");
+        return ESP_ERR_NO_MEM;
+    }
+    
+#if DISPLAY_USE_DOUBLE_BUFFER_FLAG
+    lvgl_buf2 = heap_caps_malloc(draw_buf_size, MALLOC_CAP_DMA);
+    if (!lvgl_buf2) {
+        esp3d_log_e("Failed to allocate draw buffer 2");
+        free(lvgl_buf1);
+        return ESP_ERR_NO_MEM;
+    }
+    esp3d_log("LVGL configured with double buffer");
+#else
+    lvgl_buf2 = NULL;
+    esp3d_log("LVGL configured with single buffer");
+#endif
+    
+    // Configure LVGL drawing buffers
+    lv_display_set_buffers(lvgl_display, lvgl_buf1, lvgl_buf2, draw_buf_size, LV_DISPLAY_RENDER_MODE_PARTIAL);
+    
+    // Associate the panel with the display
+    lv_display_set_user_data(lvgl_display, panel_handle);
+    
+    // Set color format
+    lv_display_set_color_format(lvgl_display, LV_COLOR_FORMAT_RGB565);
+    
+    // Set flush callback
+    lv_display_set_flush_cb(lvgl_display, lvgl_flush_cb);
+    
+    // Configure LVGL tick timer
+    const esp_timer_create_args_t lvgl_tick_timer_args = {
+        .callback = &increase_lvgl_tick,
+        .name = "lvgl_tick"
+    };
+    
+    ret = esp_timer_create(&lvgl_tick_timer_args, &lvgl_tick_timer);
+    if (ret != ESP_OK) {
+        esp3d_log_e("LVGL tick timer creation failed");
+        return ret;
+    }
+    
+    ret = esp_timer_start_periodic(lvgl_tick_timer, LVGL_TICK_PERIOD_MS * 1000);
+    if (ret != ESP_OK) {
+        esp3d_log_e("LVGL tick timer start failed");
+        return ret;
+    }
+    
+    // Register callbacks for color transfer completion notification
+    const esp_lcd_panel_io_callbacks_t cbs = {
+        .on_color_trans_done = notify_lvgl_flush_ready,
+    };
+    
+    // Register the callbacks
+    ret = esp_lcd_panel_io_register_event_callbacks(io_handle, &cbs, lvgl_display);
+    if (ret != ESP_OK) {
+        esp3d_log_e("Register IO callbacks failed");
+        return ret;
+    }
+    
+    esp3d_log("LVGL initialized successfully");
+    return ESP_OK;
+}
+#endif // ESP3D_DISPLAY_FEATURE
+
+// Access functions for ESP3DTftUi
+lv_display_t* get_lvgl_display(void)
+{
+#if ESP3D_DISPLAY_FEATURE
+    return lvgl_display;
+#else
+    return NULL;
+#endif
+}
+
+_lock_t* get_lvgl_lock(void)
+{
+#if ESP3D_DISPLAY_FEATURE
+    return &lvgl_api_lock;
+#else
+    return NULL;
+#endif
+}
 
 // Initialize board hardware and subsystems
 esp_err_t board_init(void)
@@ -49,8 +203,6 @@ esp_err_t board_init(void)
     esp3d_log("Initializing %s %s", BOARD_NAME_STR, BOARD_VERSION_STR);
  
 #if ESP3D_DISPLAY_FEATURE   
-
-    // Initialize display
     // Initialize backlight
     ret = backlight_configure(&backlight_cfg);
     if (ret != ESP_OK) {
@@ -58,28 +210,27 @@ esp_err_t board_init(void)
         return ret;
     }
     backlight_set(0);
+    
     // Initialize display
     ret = ili9341_spi_configure(&ili9341_default_config);
+    if (ret != ESP_OK) {
+        esp3d_log_e("ILI9341 display initialization failed");
+        return ret;
+    }
     
-
+    // Initialize LVGL
+    ret = init_lvgl();
+    if (ret != ESP_OK) {
+        esp3d_log_e("LVGL initialization failed");
+        return ret;
+    }
+    
     backlight_set(100);
 #endif  // ESP3D_DISPLAY_FEATURE
     
     esp3d_log("Board initialization completed successfully");
     return ret;
 }
-
-#if ESP3D_DISPLAY_FEATURE
-
-// Initialize LVGL
-/*static esp_err_t init_lvgl(void)
-{
-    esp3d_log("Initializing LVGL");
- 
-    esp3d_log("LVGL initialized successfully");
-    return ESP_OK;
-}*/
-#endif // ESP3D_DISPLAY_FEATURE
 
 // Get board name
 const char* board_get_name(void)

@@ -21,113 +21,113 @@
 #include "esp3d_tft_ui.h"
 
 #include <string>
+#include <sys/lock.h>
+#include <algorithm> // Pour std::max
 
 #include "esp3d_hal.h"
 #include "esp3d_log.h"
 #include "esp3d_values.h"
 #include "esp3d_version.h"
-//#include "esp_freertos_hooks.h"
 #include "esp_timer.h"
-//#include "freertos/FreeRTOS.h"
-//#include "freertos/semphr.h"
-//#include "freertos/task.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "lvgl.h"
+#include "board_init.h"
 #include "rendering/esp3d_rendering_client.h"
-#include "tasks_def.h"
+#include "board_config.h"
 
-#define STACKDEPTH UI_STACK_DEPTH
-#define TASKPRIORITY UI_TASK_PRIORITY
-#define TASKCORE UI_TASK_CORE
-
-/**********************
- *  STATIC PROTOTYPES
- **********************/
+// Declaration of the external UI creation function
+extern void create_application(void);
 
 ESP3DTftUi esp3dTftui;
-/*
-#if !LV_TICK_CUSTOM
-static void lv_tick_task(void *arg);
-#endif
-static void guiTask(void *pvParameter);
-extern void create_application(void);
-#if !LV_TICK_CUSTOM
-static void lv_tick_task(void *arg) {
-  (void)arg;
 
-  lv_tick_inc(LV_TICK_PERIOD_MS);
-}
-#endif  // !LV_TICK_CUSTOM*/
-
-/* Creates a semaphore to handle concurrent call to lvgl stuff
- * If you wish to call *any* lvgl function from other threads/tasks
- * you should lock on the very same semaphore! */
-//SemaphoreHandle_t xGuiSemaphore;
-/*
-static void guiTask(void *pvParameter) {
-  (void)pvParameter;
-  xGuiSemaphore = xSemaphoreCreateMutex();
-#if !LV_TICK_CUSTOM
-
-  const esp_timer_create_args_t periodic_timer_args = {
-      .callback = &lv_tick_task,
-      .arg = nullptr,
-      .dispatch_method = ESP_TIMER_TASK,
-      .name = "periodic_gui",
-      .skip_unhandled_events = false};
-  esp_timer_handle_t periodic_timer;
-  ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
-  ESP_ERROR_CHECK(
-      esp_timer_start_periodic(periodic_timer, LV_TICK_PERIOD_MS * 1000));
-#endif  // !LV_TICK_CUSTOM
-  create_application();
-
-  while (1) {
-
-    esp3d_hal::wait(10);
-
-
-    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)) {
-      esp3dTftValues.handle();
-      lv_task_handler();
-      xSemaphoreGive(xGuiSemaphore);
+// UI task to handle LVGL
+static void tft_ui_task(void *arg)
+{
+    ESP3DTftUi *ui = (ESP3DTftUi *)arg;
+    (void)ui;  // Avoid unused variable warning
+    _lock_t *lvgl_lock = get_lvgl_lock();
+    
+    esp3d_log("Starting UI task");
+    
+    // Call the function that creates the UI
+    _lock_acquire(lvgl_lock);
+    create_application();
+    _lock_release(lvgl_lock);
+    
+    uint32_t time_till_next_ms = 0;
+    uint32_t min_delay_ms = LVGL_TICK_PERIOD_MS;  // Minimum delay to avoid CPU overload
+    
+    while (1) {
+        // Pause respecting LVGL delays - using std::max au lieu de MAX
+        vTaskDelay(pdMS_TO_TICKS(std::max(time_till_next_ms, min_delay_ms)));
+        
+        // Take the lock to access LVGL
+        _lock_acquire(lvgl_lock);
+        
+        // Handle values to update for UI
+        esp3dTftValues.handle();
+        
+        // Call LVGL task handler and get time until next action
+        time_till_next_ms = lv_timer_handler();
+        
+        // Release the lock
+        _lock_release(lvgl_lock);
     }
-  }
+    
+    // Should never reach here
+    vTaskDelete(NULL);
+}
 
+ESP3DTftUi::ESP3DTftUi() : _started(false), _ui_task_handle(NULL) {}
 
-  vTaskDelete(NULL);
-}*/
-
-ESP3DTftUi::ESP3DTftUi() {}
-
-ESP3DTftUi::~ESP3DTftUi() {}
+ESP3DTftUi::~ESP3DTftUi() {
+    end();
+}
 
 bool ESP3DTftUi::begin() {
-  if (!renderingClient.begin()) {
-    esp3d_log_e("Rendering client not started");
-    return false;
-  }
-  return true;
+    if (_started) {
+        return true;
+    }
+    
+    // Start the rendering client
+    if (!renderingClient.begin()) {
+        esp3d_log_e("Rendering client not started");
+        return false;
+    }
+    
+    // Create the UI task
+    BaseType_t res = xTaskCreatePinnedToCore(tft_ui_task, "tftUI", LVGL_TASK_STACK_SIZE, this,
+                                            LVGL_TASK_PRIORITY, &_ui_task_handle, LVGL_TASK_CORE);
+    if (res == pdPASS && _ui_task_handle) {
+        esp3d_log("Created UI Task");
+        _started = true;
+        return true;
+    } else {
+        esp3d_log_e("UI Task creation failed");
+        renderingClient.end();
+        return false;
+    }
 }
 
-/*
-  // Ui creation
-  TaskHandle_t xHandle = NULL;
-  BaseType_t res = xTaskCreatePinnedToCore(guiTask, "tftUI", STACKDEPTH, NULL,
-                                           TASKPRIORITY, &xHandle, TASKCORE);
-  if (res == pdPASS && xHandle) {
-    esp3d_log("Created UI Task");
-    return true;
-  } else {
-    esp3d_log_e("UI Task creation failed");
-    return false;
-  
-
-}  */
-
-void ESP3DTftUi::handle() {}
+void ESP3DTftUi::handle() {
+    // This function can remain empty as management is done in the UI task
+}
 
 bool ESP3DTftUi::end() {
-  // TODO : stop TFT task and delete it
-  renderingClient.end();
-  return true;
+    if (!_started) {
+        return true;
+    }
+    
+    // Stop the rendering client
+    renderingClient.end();
+    
+    // Stop and delete the UI task
+    if (_ui_task_handle != NULL) {
+        vTaskDelete(_ui_task_handle);
+        _ui_task_handle = NULL;
+    }
+    
+    _started = false;
+    return true;
 }

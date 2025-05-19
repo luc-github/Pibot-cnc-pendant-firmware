@@ -21,6 +21,8 @@
 #pragma once
 
 #include "esp_err.h"
+#include "lvgl.h"
+#include <sys/lock.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,6 +58,20 @@ const char* board_get_name(void);
  * @return const char* Board version string
  */
 const char* board_get_version(void);
+
+/**
+ * @brief Get the LVGL display handle
+ * 
+ * @return lv_display_t* Display handle or NULL if not initialized
+ */
+lv_display_t* get_lvgl_display(void);
+
+/**
+ * @brief Get LVGL API lock for thread-safe access
+ * 
+ * @return _lock_t* Lock handle
+ */
+_lock_t* get_lvgl_lock(void);
 
 #ifdef __cplusplus
 }

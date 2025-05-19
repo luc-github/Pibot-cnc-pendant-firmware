@@ -20,8 +20,10 @@
 
 #pragma once
 #include <stdio.h>
-
+#include <sys/lock.h>
 #include "screens/esp3d_screen_type.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 class ESP3DTftUi final {
  public:
@@ -36,6 +38,7 @@ class ESP3DTftUi final {
  private:
   ESP3DScreenType _current_screen = ESP3DScreenType::none;
   bool _started;
+  TaskHandle_t _ui_task_handle;
 };
 
 extern ESP3DTftUi esp3dTftui;

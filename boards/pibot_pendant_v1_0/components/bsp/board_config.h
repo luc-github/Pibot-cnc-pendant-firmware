@@ -40,7 +40,7 @@ extern "C" {
 
 // Display orientation flags
 #define DISPLAY_ORIENTATION      0
-#define DISPLAY_INVERT_FLAG      1
+#define DISPLAY_INVERT_FLAG      0
 
 // Display buffer configuration
 #define DISPLAY_USE_DOUBLE_BUFFER_FLAG   1
@@ -148,9 +148,9 @@ extern "C" {
 
 /* LVGL Configuration */
 #define LVGL_TICK_PERIOD_MS 10
-#define LVGL_TASK_PRIORITY 10
+#define LVGL_TASK_PRIORITY 3
 #define LVGL_TASK_CORE 1
-#define LVGL_TASK_STACK_SIZE 4096
+#define LVGL_TASK_STACK_SIZE 8192
 
 
 #ifdef __cplusplus

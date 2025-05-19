@@ -17,6 +17,7 @@ set(BSP_REQUIRES
     "driver"
     "disp_backlight"
     "disp_ili9341"
+    "lvgl"
 )
 
 message(STATUS "${Cyan}Adds Required:${White} ${BSP_REQUIRES}${ColourReset}\n\n")
