@@ -29,6 +29,8 @@
 #include "backlight_def.h"
 #include "disp_ili9341_spi.h"
 #include "ili9341_def.h"
+#include "touch_ft6336u.h"
+#include "touch_ft6336u_def.h"
 
 // Required includes for LVGL
 #include "lvgl.h"
@@ -44,6 +46,7 @@ static lv_display_t *lvgl_display = NULL;
 static lv_color16_t *lvgl_buf1 = NULL;
 static lv_color16_t *lvgl_buf2 = NULL;
 static esp_timer_handle_t lvgl_tick_timer = NULL;
+static lv_indev_t *touch_indev = NULL;
 
 // Callback function to notify LVGL when flush is complete
 static bool notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
@@ -71,10 +74,41 @@ static void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px
     esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, px_map);
 }
 
+// LVGL touch input read callback
+static void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
+{
+    touch_ft6336u_data_t touch_data = touch_ft6336u_read();
+    
+    if (touch_data.is_pressed) {
+        data->state = LV_INDEV_STATE_PRESSED;
+        data->point.x = touch_data.x;
+        data->point.y = touch_data.y;
+        esp3d_log("Touch detected at (%d, %d)", touch_data.x, touch_data.y);
+    } else {
+        data->state = LV_INDEV_STATE_RELEASED;
+    }
+}
+
 // LVGL tick timer callback function
 static void increase_lvgl_tick(void *arg)
 {
     lv_tick_inc(LVGL_TICK_PERIOD_MS);
+}
+
+// Initialize touch controller
+static esp_err_t init_touch_controller(void)
+{
+    esp3d_log("Initializing touch controller");
+    
+    // Initialize the touch controller
+    esp_err_t ret = touch_ft6336u_init(&touch_ft6336u_default_config);
+    if (ret != ESP_OK) {
+        esp3d_log_e("Touch controller initialization failed: %d", ret);
+        return ret;
+    }
+    
+    esp3d_log("Touch controller initialized successfully");
+    return ESP_OK;
 }
 
 // Initialize LVGL
@@ -171,6 +205,12 @@ static esp_err_t init_lvgl(void)
         return ret;
     }
     
+    // Initialize touch input device for LVGL
+    touch_indev = lv_indev_create();
+    lv_indev_set_type(touch_indev, LV_INDEV_TYPE_POINTER);
+    lv_indev_set_read_cb(touch_indev, touch_read_cb);
+    lv_indev_set_display(touch_indev, lvgl_display);
+    
     esp3d_log("LVGL initialized successfully");
     return ESP_OK;
 }
@@ -216,6 +256,13 @@ esp_err_t board_init(void)
     if (ret != ESP_OK) {
         esp3d_log_e("ILI9341 display initialization failed");
         return ret;
+    }
+    
+    // Initialize touch controller
+    ret = init_touch_controller();
+    if (ret != ESP_OK) {
+        esp3d_log_e("Touch controller initialization failed");
+        // Continue even if touch controller fails
     }
     
     // Initialize LVGL

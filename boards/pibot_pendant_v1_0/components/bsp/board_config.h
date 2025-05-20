@@ -54,7 +54,7 @@ extern "C" {
 #define TOUCH_RST_PIN        GPIO_NUM_NC  // No dedicated reset pin
 
 // Touch controller I2C configuration
-#define TOUCH_I2C_PORT_IDX   I2C_NUM_0
+#define TOUCH_I2C_PORT_IDX   I2C_NUM_1
 #define TOUCH_I2C_ADDR_HEX   0x38
 #define TOUCH_I2C_FREQ_HZ    400000  // 400 KHz
 

@@ -28,6 +28,9 @@
 // Rotation for the display
 static lv_display_rotation_t current_rotation = LV_DISPLAY_ROTATION_0;
 
+// Label to display touch coordinates
+static lv_obj_t *touch_coord_label = NULL;
+
 // Callback for the rotation button
 static void btn_rotate_event_cb(lv_event_t *e)
 {
@@ -41,6 +44,25 @@ static void set_arc_angle(void *obj, int32_t v)
 {
     // Cast void* to lv_obj_t* to fix the type error
     lv_arc_set_value((lv_obj_t *)obj, v);
+}
+
+// Touch event callback to update coordinates display
+static void screen_touch_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *label = (lv_obj_t *)lv_event_get_user_data(e);
+    
+    if (code == LV_EVENT_PRESSED || code == LV_EVENT_PRESSING) {
+        lv_point_t point;
+        lv_indev_t *indev = lv_indev_get_act();
+        if (indev != NULL) {
+            lv_indev_get_point(indev, &point);
+            // Correction: utilisez %ld au lieu de %d pour int32_t
+            lv_label_set_text_fmt(label, "Touch: %ld,%ld", (long)point.x, (long)point.y);
+        }
+    } else if (code == LV_EVENT_RELEASED) {
+        lv_label_set_text(label, "Touch: ---,---");
+    }
 }
 
 // Create the user interface
@@ -70,19 +92,16 @@ void create_application(void) {
                       ESP3D_TFT_VERSION);
     lv_obj_align(title_label, LV_ALIGN_TOP_MID, 0, 20);
     
-    // Create a label for LVGL info
-    lv_obj_t *lvgl_label = lv_label_create(screen);
-    lv_label_set_text_fmt(lvgl_label, "LVGL v%d.%d.%d", 
-                      lv_version_major(), lv_version_minor(), lv_version_patch());
-    lv_obj_align(lvgl_label, LV_ALIGN_TOP_MID, 0, 60);
+
     
-    // Create a button to test screen rotation
-    lv_obj_t *btn = lv_button_create(screen);
-    lv_obj_t *btn_label = lv_label_create(btn);
-    lv_label_set_text_static(btn_label, LV_SYMBOL_REFRESH " ROTATE");
-    lv_obj_center(btn_label);
-    lv_obj_align(btn, LV_ALIGN_BOTTOM_LEFT, 30, -30);
-    lv_obj_add_event_cb(btn, btn_rotate_event_cb, LV_EVENT_CLICKED, display);
+    // Create a label to display touch coordinates
+    touch_coord_label = lv_label_create(screen);
+    lv_label_set_text(touch_coord_label, "Touch: ---,---");
+    lv_obj_align(touch_coord_label, LV_ALIGN_TOP_MID, 0, 60);
+    
+    // Add touch event handler to the screen
+    lv_obj_add_event_cb(screen, screen_touch_event_cb, LV_EVENT_ALL, touch_coord_label);
+    
     
     // Create an animated arc
     lv_obj_t *arc = lv_arc_create(screen);
@@ -102,6 +121,26 @@ void create_application(void) {
     lv_anim_set_repeat_delay(&a, 500);
     lv_anim_set_values(&a, 0, 100);
     lv_anim_start(&a);
+    
+    // Create a calibration button
+    lv_obj_t *calib_btn = lv_button_create(screen);
+    lv_obj_t *calib_label = lv_label_create(calib_btn);
+    lv_label_set_text_static(calib_label, "Touch Test");
+    lv_obj_center(calib_label);
+    lv_obj_align(calib_btn, LV_ALIGN_BOTTOM_RIGHT, -30, -30);
+    
+    // Add a simple event demonstration for the calibration button
+    lv_obj_add_event_cb(calib_btn, [](lv_event_t *e) {
+        // Correction: Cast explicite de void* à lv_obj_t*
+        lv_obj_t *btn = (lv_obj_t *)lv_event_get_target(e);
+        static uint32_t counter = 0;
+        counter++;
+        
+        lv_obj_t *label = lv_obj_get_child(btn, 0);
+        lv_label_set_text_fmt(label, "Pressed %lu", counter);
+        
+        esp3d_log("Calibration button pressed %lu times", counter);
+    }, LV_EVENT_CLICKED, NULL);
     
     esp3d_log("LVGL application UI created");
 }
