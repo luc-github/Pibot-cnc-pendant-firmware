@@ -161,11 +161,20 @@ bool ESP3DSd::begin() {
       esp3dTftsettings.readByte(ESP3DSettingIndex::esp3d_spi_divider);
   
   ret = spi_bus_initialize((spi_host_device_t)host.slot, &bus_cfg,
-                           SDSPI_DEFAULT_DMA);
+                           SPI_DMA_CH_AUTO);
+   esp3d_log_d("DMA  Auto");
   if (ret != ESP_OK) {
-    esp3d_log_e("Failed to initialize bus. %s", esp_err_to_name(ret));
+    esp3d_log_e("Failed to initialize bus. Error: %s (0x%x)", 
+               esp_err_to_name(ret), ret);
+    if (ret == ESP_ERR_NO_MEM) {
+        esp3d_log_e("Not enough memory for SPI bus allocation");
+    } else if (ret == ESP_ERR_INVALID_ARG) {
+        esp3d_log_e("Invalid arguments for SPI bus initialization");
+    } else if (ret == ESP_ERR_INVALID_STATE) {
+        esp3d_log_e("SPI bus already in use");
+    }
     return false;
-  }
+  } 
   esp3d_log_d("SPI bus initialized");
   _started = true;
   return true;

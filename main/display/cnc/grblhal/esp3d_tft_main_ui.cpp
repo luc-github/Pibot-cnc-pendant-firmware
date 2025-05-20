@@ -25,19 +25,10 @@
 //#include "screens/splash_screen.h"
 #include "lvgl.h"
 
-// Rotation for the display
-static lv_display_rotation_t current_rotation = LV_DISPLAY_ROTATION_0;
 
 // Label to display touch coordinates
 static lv_obj_t *touch_coord_label = NULL;
 
-// Callback for the rotation button
-static void btn_rotate_event_cb(lv_event_t *e)
-{
-    lv_display_t *disp = (lv_display_t *)lv_event_get_user_data(e);
-    current_rotation = (lv_display_rotation_t)((current_rotation + 1) % 4);
-    lv_display_set_rotation(disp, current_rotation);
-}
 
 // Function to set the angle of an arc (for animation)
 static void set_arc_angle(void *obj, int32_t v)

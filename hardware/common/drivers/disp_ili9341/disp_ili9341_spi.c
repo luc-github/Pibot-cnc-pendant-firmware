@@ -537,7 +537,7 @@ esp_err_t ili9341_spi_configure(const spi_ili9341_config_t *config)
             esp3d_log_e("Failed to initialize SPI bus: %s", esp_err_to_name(ret));
             return ret;
         }
-        esp3d_log_d("SPI bus initialized successfully on host %d", spiIli9341Config.spi_bus.host);
+        esp3d_log_d("SPI bus initialized successfully on host %s", spi_names[spiIli9341Config.spi_bus.host]);
     } else {
         esp3d_log("Using pre-initialized SPI bus");
     }
