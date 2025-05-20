@@ -41,6 +41,13 @@
 #define FT6336U_INTERRUPT_MODE    0xA4
 #define FT6336U_FIRMWARE_VERSION  0xA6
 #define FT6336U_VENDOR_ID         0xA8
+#define FT6336U_TOUCHRATE_ACTIVE  0x88
+
+#define ACK_CHECK_EN              0x1
+#define ACK_CHECK_DIS             0x0
+
+#define FT6336U_VENDID            0x11
+#define FT6336U_CHIPID            0x36
 
 /* Static variables */
 static touch_ft6336u_config_t _config;
@@ -54,63 +61,94 @@ static void IRAM_ATTR touch_ft6336u_touch_isr_handler(void *arg) {
     _touch_interrupt = true;
 }
 
-/* I2C communication functions */
-static esp_err_t touch_ft6336u_i2c_read(uint8_t reg, uint8_t *data, size_t len) {
-    if (!_is_initialized) {
-        return ESP_ERR_INVALID_STATE;
-    }
-
+/* Communication fonctions I2C modifiées avec séquence STOP/START */
+static esp_err_t touch_ft6336u_read_byte(uint8_t reg, uint8_t *data) {
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    esp_err_t ret;
-
-    // Write register address
+    
+    // Envoi de l'adresse du registre
     i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (_config.i2c_addr << 1) | I2C_MASTER_WRITE, true);
-    i2c_master_write_byte(cmd, reg, true);
-
-    // Read data
+    i2c_master_write_byte(cmd, (_config.i2c_addr << 1) | I2C_MASTER_WRITE, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, reg, ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    
+    esp_err_t ret = i2c_master_cmd_begin(_config.i2c_port, cmd, 1000 / portTICK_PERIOD_MS);
+    i2c_cmd_link_delete(cmd);
+    
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    
+    // Lecture des données
+    cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (_config.i2c_addr << 1) | I2C_MASTER_READ, true);
+    i2c_master_write_byte(cmd, (_config.i2c_addr << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
+    i2c_master_read_byte(cmd, data, I2C_MASTER_NACK);
+    i2c_master_stop(cmd);
+    
+    ret = i2c_master_cmd_begin(_config.i2c_port, cmd, 1000 / portTICK_PERIOD_MS);
+    i2c_cmd_link_delete(cmd);
+    
+    return ret;
+}
+
+static esp_err_t touch_ft6336u_write_byte(uint8_t reg, uint8_t data) {
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (_config.i2c_addr << 1) | I2C_MASTER_WRITE, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, reg, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, data, ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    
+    esp_err_t ret = i2c_master_cmd_begin(_config.i2c_port, cmd, 1000 / portTICK_PERIOD_MS);
+    i2c_cmd_link_delete(cmd);
+    
+    return ret;
+}
+
+/* Fonction pour lire un bloc de données de registres consécutifs */
+static esp_err_t touch_ft6336u_read_data(uint8_t *data, size_t len) {
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    
+    // Positionnement sur le registre 0
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (_config.i2c_addr << 1) | I2C_MASTER_WRITE, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, 0, ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    
+    esp_err_t ret = i2c_master_cmd_begin(_config.i2c_port, cmd, 1000 / portTICK_PERIOD_MS);
+    i2c_cmd_link_delete(cmd);
+    
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    
+    // Lecture des données
+    cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (_config.i2c_addr << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
     if (len > 1) {
         i2c_master_read(cmd, data, len - 1, I2C_MASTER_ACK);
     }
     i2c_master_read_byte(cmd, data + len - 1, I2C_MASTER_NACK);
     i2c_master_stop(cmd);
-
+    
     ret = i2c_master_cmd_begin(_config.i2c_port, cmd, 1000 / portTICK_PERIOD_MS);
     i2c_cmd_link_delete(cmd);
-
+    
     return ret;
 }
 
-static esp_err_t touch_ft6336u_i2c_write(uint8_t reg, const uint8_t *data, size_t len) {
-    if (!_is_initialized) {
-        return ESP_ERR_INVALID_STATE;
-    }
-
+/* Test simple de ping du périphérique */
+static esp_err_t touch_ft6336u_ping(void) {
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    esp_err_t ret;
-
     i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (_config.i2c_addr << 1) | I2C_MASTER_WRITE, true);
-    i2c_master_write_byte(cmd, reg, true);
-    if (len > 0) {
-        i2c_master_write(cmd, (uint8_t *)data, len, true);
-    }
+    i2c_master_write_byte(cmd, (_config.i2c_addr << 1) | I2C_MASTER_WRITE, ACK_CHECK_EN);
     i2c_master_stop(cmd);
-
-    ret = i2c_master_cmd_begin(_config.i2c_port, cmd, 1000 / portTICK_PERIOD_MS);
+    
+    esp_err_t ret = i2c_master_cmd_begin(_config.i2c_port, cmd, 1000 / portTICK_PERIOD_MS);
     i2c_cmd_link_delete(cmd);
-
+    
     return ret;
-}
-
-static esp_err_t touch_ft6336u_read_byte(uint8_t reg, uint8_t *data) {
-    return touch_ft6336u_i2c_read(reg, data, 1);
-}
-
-static esp_err_t touch_ft6336u_write_byte(uint8_t reg, uint8_t data) {
-    return touch_ft6336u_i2c_write(reg, &data, 1);
 }
 
 static bool touch_ft6336u_detect_touch(void) {
@@ -150,12 +188,10 @@ esp_err_t touch_ft6336u_init(const touch_ft6336u_config_t *config) {
         .mode = I2C_MODE_MASTER,
         .sda_io_num = _config.sda_pin,
         .scl_io_num = _config.scl_pin,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE, 
         .scl_pullup_en = GPIO_PULLUP_ENABLE,
         .master.clk_speed = config->i2c_clk_speed,
     };
-
-
 
     // Initialize I2C
     esp_err_t ret = i2c_param_config(config->i2c_port, &i2c_conf);
@@ -168,6 +204,18 @@ esp_err_t touch_ft6336u_init(const touch_ft6336u_config_t *config) {
     if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
         esp3d_log_e("Failed to install I2C driver: %d", ret);
         return ret;
+    }
+
+    // Attendre que le bus I2C soit stable
+    vTaskDelay(pdMS_TO_TICKS(200));
+
+    // Test ping simple pour vérifier si le périphérique répond
+    ret = touch_ft6336u_ping();
+    if (ret != ESP_OK) {
+        esp3d_log_e("FT6336U ping failed: %d", ret);
+        // Continuer malgré l'échec
+    } else {
+        esp3d_log("FT6336U ping successful, device detected at 0x%02x", _config.i2c_addr);
     }
 
     // Configure INT pin if specified
@@ -215,71 +263,50 @@ esp_err_t touch_ft6336u_init(const touch_ft6336u_config_t *config) {
             return ret;
         }
 
-        // Perform hardware reset
+        // Perform hardware reset with longer delays
         gpio_set_level(config->rst_pin, 0);
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(20));  // Augmenter à 20ms
         gpio_set_level(config->rst_pin, 1);
-        vTaskDelay(pdMS_TO_TICKS(50));  // Wait for FT6336U to initialize
+        vTaskDelay(pdMS_TO_TICKS(300));  // Augmenter à 300ms pour être sûr
     }
 
-    // Read chip information
-    uint8_t vendor_id = 0;
-    uint8_t chip_id = 0;
-    uint8_t firmware_version = 0;
-    uint8_t lib_version_h = 0;
-    uint8_t lib_version_l = 0;
-
-    ret = touch_ft6336u_read_byte(FT6336U_VENDOR_ID, &vendor_id);
-     if (ret != ESP_OK) {
-        esp3d_log_e("Failed to vendor information: %d", ret);
-        vendor_id = 0x11;  // Valeur typique
-     }
-    ret |= touch_ft6336u_read_byte(FT6336U_CHIP_ID, &chip_id);
+    // Initialisation simplifiée comme dans le driver FT6X36.cpp
+    
+    // Set device mode (normal operation)
+    ret = touch_ft6336u_write_byte(FT6336U_DEVICE_MODE, 0x00);
     if (ret != ESP_OK) {
-        esp3d_log_e("Failed to read chip ID: %d", ret);
-        chip_id = 0x36;    // FT6336U
+        esp3d_log_e("Failed to set device mode: %d", ret);
     }
-    ret |= touch_ft6336u_read_byte(FT6336U_FIRMWARE_VERSION, &firmware_version);
-    if (ret != ESP_OK) {
-        esp3d_log_e("Failed to read firmware version: %d", ret);
-    }
-    ret |= touch_ft6336u_read_byte(FT6336U_LIB_VERSION_H, &lib_version_h);
-    if (ret != ESP_OK) {
-        esp3d_log_e("Failed to read library version high: %d", ret);
-    }
-    ret |= touch_ft6336u_read_byte(FT6336U_LIB_VERSION_L, &lib_version_l);
-    if (ret != ESP_OK) {
-        esp3d_log_e("Failed to read library version low: %d", ret);
-    }
-
-    if (ret != ESP_OK) {
-        esp3d_log_e("Failed to read chip information: %d", ret);
-     
-           
-       // return ret;
-    }
-
-    esp3d_log("FT6336U found with Vendor ID: 0x%02x, Chip ID: 0x%02x, Firmware: 0x%02x, Library: 0x%02x 0x%02x",
-              vendor_id, chip_id, firmware_version, lib_version_h, lib_version_l);
-
-    // Configure touch controller settings
+    
     // Set threshold
-    ret = touch_ft6336u_write_byte(FT6336U_THRESHHOLD, 40);  // Default threshold value
+    ret = touch_ft6336u_write_byte(FT6336U_THRESHHOLD, 40);
     if (ret != ESP_OK) {
         esp3d_log_e("Failed to set threshold: %d", ret);
     }
-
-    // Set to monitoring mode
-    ret = touch_ft6336u_write_byte(FT6336U_MONITOR_MODE, 0);  // 0 = Active mode
+    
+    // Set active touch rate
+    ret = touch_ft6336u_write_byte(FT6336U_TOUCHRATE_ACTIVE, 0x0E);
     if (ret != ESP_OK) {
-        esp3d_log_e("Failed to set monitor mode: %d", ret);
+        esp3d_log_e("Failed to set touch rate: %d", ret);
     }
 
-    // Set interrupt mode
-    ret = touch_ft6336u_write_byte(FT6336U_INTERRUPT_MODE, 0);  // 0 = Polling mode, 1 = Interrupt trigger mode
+    // Lire et afficher les informations de la puce une fois que tout est configuré
+    uint8_t vendor_id = 0;
+    uint8_t chip_id = 0;
+    
+    ret = touch_ft6336u_read_byte(FT6336U_VENDOR_ID, &vendor_id);
     if (ret != ESP_OK) {
-        esp3d_log_e("Failed to set interrupt mode: %d", ret);
+        esp3d_log_e("Failed to read vendor ID: %d", ret);
+        vendor_id = FT6336U_VENDID;  // Valeur par défaut
     }
+    
+    ret = touch_ft6336u_read_byte(FT6336U_CHIP_ID, &chip_id);
+    if (ret != ESP_OK) {
+        esp3d_log_e("Failed to read chip ID: %d", ret);
+        chip_id = FT6336U_CHIPID;  // Valeur par défaut
+    }
+    
+    esp3d_log("FT6336U detected with Vendor ID: 0x%02x, Chip ID: 0x%02x", vendor_id, chip_id);
 
     _is_initialized = true;
     esp3d_log("FT6336U initialized successfully");
@@ -297,37 +324,42 @@ touch_ft6336u_data_t touch_ft6336u_read(void) {
         return data;
     }
 
-    if (touch_ft6336u_detect_touch()) {
-        uint8_t touch_data[4];
-        esp_err_t ret = touch_ft6336u_i2c_read(FT6336U_TOUCH1_XH, touch_data, 4);
-        
-        if (ret != ESP_OK) {
-            esp3d_log_e("Failed to read touch data: %d", ret);
-            return data;
-        }
-
+    // Lecture de tous les registres en une seule transaction
+    uint8_t touch_registers[16];  // Lire les 16 premiers registres 
+    esp_err_t ret = touch_ft6336u_read_data(touch_registers, 16);
+    
+    if (ret != ESP_OK) {
+        esp3d_log_e("Failed to read touch data: %d", ret);
+        return data;
+    }
+    
+    uint8_t touch_points = touch_registers[FT6336U_TOUCH_POINTS];
+    
+    if (touch_points > 0 && touch_points < 6) {
         data.is_pressed = true;
-        data.x = ((touch_data[0] & 0x0F) << 8) | touch_data[1];
-        data.y = ((touch_data[2] & 0x0F) << 8) | touch_data[3];
-
-        // Apply transformations
+        
+        // Extraire les coordonnées X et Y
+        data.x = ((touch_registers[FT6336U_TOUCH1_XH] & 0x0F) << 8) | touch_registers[FT6336U_TOUCH1_XL];
+        data.y = ((touch_registers[FT6336U_TOUCH1_YH] & 0x0F) << 8) | touch_registers[FT6336U_TOUCH1_YL];
+        
+        // Appliquer les transformations
         if (_config.swap_xy) {
             int16_t temp = data.x;
             data.x = data.y;
             data.y = temp;
         }
-
+        
         if (_config.invert_x) {
             data.x = _x_max - data.x;
         }
-
+        
         if (_config.invert_y) {
             data.y = _y_max - data.y;
         }
-
+        
         esp3d_log("Touch detected at (%d, %d)", data.x, data.y);
     }
-
+    
     return data;
 }
 
