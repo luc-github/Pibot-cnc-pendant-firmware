@@ -137,7 +137,7 @@ bool ESP3DTft::begin() {
 #endif  // ESP3D_UPDATE_FEATURE
 
   if (success) {
-    //success = esp3dTftstream.begin();
+    success = esp3dTftstream.begin();
   }
 
 #if ESP3D_WIFI_FEATURE

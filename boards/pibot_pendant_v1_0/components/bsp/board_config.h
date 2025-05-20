@@ -20,12 +20,12 @@ extern "C" {
 
 /* Display Configuration */
 // TFT Screen pin definitions
-#define TFT_CS_PIN          GPIO_NUM_15
-#define TFT_DC_PIN          GPIO_NUM_2
-#define TFT_MOSI_PIN        GPIO_NUM_13
-#define TFT_CLK_PIN         GPIO_NUM_14
-#define TFT_MISO_PIN        GPIO_NUM_12
-#define TFT_RST_PIN         -1  // Connected to ESP32 EN pin
+#define DISPLAY_CS_PIN          GPIO_NUM_15
+#define DISPLAY_DC_PIN          GPIO_NUM_2
+#define DISPLAY_MOSI_PIN        GPIO_NUM_13
+#define DISPLAY_CLK_PIN         GPIO_NUM_14
+#define DISPLAY_MISO_PIN        GPIO_NUM_12
+#define DISPLAY_RST_PIN         -1  // Connected to ESP32 EN pin
 
 // Display specifications
 #define DISPLAY_WIDTH_PX    240
@@ -34,7 +34,7 @@ extern "C" {
 #define DISPLAY_SWAP_COLOR_FLAG 1
 
 // Display SPI configuration
-#define DISPLAY_SPI_HOST_IDX    VSPI_HOST
+#define DISPLAY_SPI_HOST_IDX    SPI3_HOST
 #define DISPLAY_SPI_FREQ_HZ     (40 * 1000 * 1000)  // 40 MHz
 #define DISPLAY_SPI_MODE_IDX    0
 
@@ -87,7 +87,7 @@ extern "C" {
 
 
 // SD Card SPI configuration
-#define SD_SPI_HOST_IDX     HSPI_HOST
+#define SD_SPI_HOST_IDX     SPI2_HOST
 #define SD_SPI_FREQ_HZ      (20 * 1000 * 1000)  // 20 MHz
 #define SD_SPI_MODE_IDX     0
 #define SD_SPI_SPEED_DIVIDER  1  // SPI speed divider (1 = 25 MHz, 2 = 12.5 MHz, etc.)

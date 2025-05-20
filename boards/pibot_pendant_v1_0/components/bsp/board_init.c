@@ -101,7 +101,7 @@ static esp_err_t init_touch_controller(void)
     esp3d_log("Initializing touch controller");
     
     // Initialize the touch controller
-    esp_err_t ret = touch_ft6336u_init(&touch_ft6336u_default_config);
+    esp_err_t ret = touch_ft6336u_configure(&touch_ft6336u_default_config);
     if (ret != ESP_OK) {
         esp3d_log_e("Touch controller initialization failed: %d", ret);
         return ret;

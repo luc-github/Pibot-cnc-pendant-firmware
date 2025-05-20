@@ -132,7 +132,8 @@ void ESP3DRenderingClient::handle() {
         xSemaphoreGive(_xGuiSemaphore);
       }
     }
-    if (_polling_on) {
+    // LUC: FIXME
+    if (_polling_on && 0) {
       if (esp3d_hal::millis() - now >
           ESP3D_POLLING_INTERVAL / ESP3D_POLLING_COMMANDS_COUNT) {
         esp3d_log("Polling interval reached, list size is %d",

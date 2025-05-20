@@ -22,6 +22,7 @@
 #include "esp3d_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 #include "driver/gpio.h"
 #include <string.h>
 
@@ -55,17 +56,31 @@ static bool _is_initialized = false;
 static uint16_t _x_max = 0;
 static uint16_t _y_max = 0;
 static volatile bool _touch_interrupt = false;
+static SemaphoreHandle_t touch_semaphore = NULL;
 
 /* ISR handler for touch interrupt */
 static void IRAM_ATTR touch_ft6336u_touch_isr_handler(void *arg) {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    
+    // Give semaphore from ISR
+    if (touch_semaphore != NULL) {
+        xSemaphoreGiveFromISR(touch_semaphore, &xHigherPriorityTaskWoken);
+    }
+    
+    // Set flag for compatibility with existing code
     _touch_interrupt = true;
+    
+    // Yield if a higher priority task is woken
+    if (xHigherPriorityTaskWoken) {
+        portYIELD_FROM_ISR();
+    }
 }
 
-/* Communication fonctions I2C modifiées avec séquence STOP/START */
+/* I2C communication functions with STOP/START sequence */
 static esp_err_t touch_ft6336u_read_byte(uint8_t reg, uint8_t *data) {
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     
-    // Envoi de l'adresse du registre
+    // Send register address
     i2c_master_start(cmd);
     i2c_master_write_byte(cmd, (_config.i2c_addr << 1) | I2C_MASTER_WRITE, ACK_CHECK_EN);
     i2c_master_write_byte(cmd, reg, ACK_CHECK_EN);
@@ -78,7 +93,7 @@ static esp_err_t touch_ft6336u_read_byte(uint8_t reg, uint8_t *data) {
         return ret;
     }
     
-    // Lecture des données
+    // Read data
     cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
     i2c_master_write_byte(cmd, (_config.i2c_addr << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
@@ -105,11 +120,11 @@ static esp_err_t touch_ft6336u_write_byte(uint8_t reg, uint8_t data) {
     return ret;
 }
 
-/* Fonction pour lire un bloc de données de registres consécutifs */
+/* Function to read a block of consecutive registers */
 static esp_err_t touch_ft6336u_read_data(uint8_t *data, size_t len) {
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     
-    // Positionnement sur le registre 0
+    // Position at register 0
     i2c_master_start(cmd);
     i2c_master_write_byte(cmd, (_config.i2c_addr << 1) | I2C_MASTER_WRITE, ACK_CHECK_EN);
     i2c_master_write_byte(cmd, 0, ACK_CHECK_EN);
@@ -122,7 +137,7 @@ static esp_err_t touch_ft6336u_read_data(uint8_t *data, size_t len) {
         return ret;
     }
     
-    // Lecture des données
+    // Read data
     cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
     i2c_master_write_byte(cmd, (_config.i2c_addr << 1) | I2C_MASTER_READ, ACK_CHECK_EN);
@@ -138,7 +153,7 @@ static esp_err_t touch_ft6336u_read_data(uint8_t *data, size_t len) {
     return ret;
 }
 
-/* Test simple de ping du périphérique */
+/* Simple ping test for the device */
 static esp_err_t touch_ft6336u_ping(void) {
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
@@ -163,7 +178,7 @@ static bool touch_ft6336u_detect_touch(void) {
 }
 
 /* Public functions */
-esp_err_t touch_ft6336u_init(const touch_ft6336u_config_t *config) {
+esp_err_t touch_ft6336u_configure(const touch_ft6336u_config_t *config) {
     if (_is_initialized) {
         esp3d_log("FT6336U already initialized");
         return ESP_OK;
@@ -183,6 +198,15 @@ esp_err_t touch_ft6336u_init(const touch_ft6336u_config_t *config) {
 
     esp3d_log("FT6336U init with x_max=%d, y_max=%d", _x_max, _y_max);
 
+    // Create interrupt semaphore
+    if (touch_semaphore == NULL) {
+        touch_semaphore = xSemaphoreCreateBinary();
+        if (touch_semaphore == NULL) {
+            esp3d_log_e("Failed to create touch semaphore");
+            return ESP_ERR_NO_MEM;
+        }
+    }
+    
     // Configure I2C
     i2c_config_t i2c_conf = {
         .mode = I2C_MODE_MASTER,
@@ -206,14 +230,14 @@ esp_err_t touch_ft6336u_init(const touch_ft6336u_config_t *config) {
         return ret;
     }
 
-    // Attendre que le bus I2C soit stable
+    // Wait for I2C bus to stabilize
     vTaskDelay(pdMS_TO_TICKS(200));
 
-    // Test ping simple pour vérifier si le périphérique répond
+    // Simple ping test to check if device responds
     ret = touch_ft6336u_ping();
     if (ret != ESP_OK) {
         esp3d_log_e("FT6336U ping failed: %d", ret);
-        // Continuer malgré l'échec
+        // Continue despite failure
     } else {
         esp3d_log("FT6336U ping successful, device detected at 0x%02x", _config.i2c_addr);
     }
@@ -265,12 +289,12 @@ esp_err_t touch_ft6336u_init(const touch_ft6336u_config_t *config) {
 
         // Perform hardware reset with longer delays
         gpio_set_level(config->rst_pin, 0);
-        vTaskDelay(pdMS_TO_TICKS(20));  // Augmenter à 20ms
+        vTaskDelay(pdMS_TO_TICKS(20));  // Increased to 20ms
         gpio_set_level(config->rst_pin, 1);
-        vTaskDelay(pdMS_TO_TICKS(300));  // Augmenter à 300ms pour être sûr
+        vTaskDelay(pdMS_TO_TICKS(300));  // Increased to 300ms to be safe
     }
 
-    // Initialisation simplifiée comme dans le driver FT6X36.cpp
+    // Simplified initialization as in the FT6X36.cpp driver
     
     // Set device mode (normal operation)
     ret = touch_ft6336u_write_byte(FT6336U_DEVICE_MODE, 0x00);
@@ -289,21 +313,38 @@ esp_err_t touch_ft6336u_init(const touch_ft6336u_config_t *config) {
     if (ret != ESP_OK) {
         esp3d_log_e("Failed to set touch rate: %d", ret);
     }
+    
+    // Configure interrupt mode if needed
+    if (GPIO_IS_VALID_GPIO(config->int_pin)) {
+        ret = touch_ft6336u_write_byte(FT6336U_INTERRUPT_MODE, 1);  // 1 = Interrupt mode
+        if (ret != ESP_OK) {
+            esp3d_log_e("Failed to set interrupt mode: %d", ret);
+        } else {
+            esp3d_log("Touch controller configured for interrupt mode");
+        }
+    } else {
+        ret = touch_ft6336u_write_byte(FT6336U_INTERRUPT_MODE, 0);  // 0 = Polling mode
+        if (ret != ESP_OK) {
+            esp3d_log_e("Failed to set polling mode: %d", ret);
+        } else {
+            esp3d_log("Touch controller configured for polling mode");
+        }
+    }
 
-    // Lire et afficher les informations de la puce une fois que tout est configuré
+    // Read and display chip information after everything is configured
     uint8_t vendor_id = 0;
     uint8_t chip_id = 0;
     
     ret = touch_ft6336u_read_byte(FT6336U_VENDOR_ID, &vendor_id);
     if (ret != ESP_OK) {
         esp3d_log_e("Failed to read vendor ID: %d", ret);
-        vendor_id = FT6336U_VENDID;  // Valeur par défaut
+        vendor_id = FT6336U_VENDID;  // Default value
     }
     
     ret = touch_ft6336u_read_byte(FT6336U_CHIP_ID, &chip_id);
     if (ret != ESP_OK) {
         esp3d_log_e("Failed to read chip ID: %d", ret);
-        chip_id = FT6336U_CHIPID;  // Valeur par défaut
+        chip_id = FT6336U_CHIPID;  // Default value
     }
     
     esp3d_log("FT6336U detected with Vendor ID: 0x%02x, Chip ID: 0x%02x", vendor_id, chip_id);
@@ -311,6 +352,28 @@ esp_err_t touch_ft6336u_init(const touch_ft6336u_config_t *config) {
     _is_initialized = true;
     esp3d_log("FT6336U initialized successfully");
     return ESP_OK;
+}
+
+void touch_ft6336u_deinit(void) {
+    if (!_is_initialized) {
+        return;
+    }
+    
+    // Disable interrupt if configured
+    if (GPIO_IS_VALID_GPIO(_config.int_pin)) {
+        gpio_isr_handler_remove(_config.int_pin);
+    }
+    
+    // Free the semaphore
+    if (touch_semaphore != NULL) {
+        vSemaphoreDelete(touch_semaphore);
+        touch_semaphore = NULL;
+    }
+    
+    // Uninstall I2C driver
+    i2c_driver_delete(_config.i2c_port);
+    
+    _is_initialized = false;
 }
 
 touch_ft6336u_data_t touch_ft6336u_read(void) {
@@ -324,8 +387,22 @@ touch_ft6336u_data_t touch_ft6336u_read(void) {
         return data;
     }
 
-    // Lecture de tous les registres en une seule transaction
-    uint8_t touch_registers[16];  // Lire les 16 premiers registres 
+    // If interrupt mode is enabled and INT pin is configured
+    if (touch_semaphore != NULL && GPIO_IS_VALID_GPIO(_config.int_pin)) {
+        // Wait for at most 10ms for an interrupt (non-blocking for LVGL)
+        if (xSemaphoreTake(touch_semaphore, pdMS_TO_TICKS(10)) != pdTRUE) {
+            // No interrupt in the timeout period, no touch
+            return data;
+        }
+    } else {
+        // In polling mode, directly check for touch
+        if (!touch_ft6336u_detect_touch()) {
+            return data;
+        }
+    }
+
+    // Read all registers in a single transaction
+    uint8_t touch_registers[16];  // Read first 16 registers
     esp_err_t ret = touch_ft6336u_read_data(touch_registers, 16);
     
     if (ret != ESP_OK) {
@@ -338,11 +415,11 @@ touch_ft6336u_data_t touch_ft6336u_read(void) {
     if (touch_points > 0 && touch_points < 6) {
         data.is_pressed = true;
         
-        // Extraire les coordonnées X et Y
+        // Extract X and Y coordinates
         data.x = ((touch_registers[FT6336U_TOUCH1_XH] & 0x0F) << 8) | touch_registers[FT6336U_TOUCH1_XL];
         data.y = ((touch_registers[FT6336U_TOUCH1_YH] & 0x0F) << 8) | touch_registers[FT6336U_TOUCH1_YL];
         
-        // Appliquer les transformations
+        // Apply transformations
         if (_config.swap_xy) {
             int16_t temp = data.x;
             data.x = data.y;

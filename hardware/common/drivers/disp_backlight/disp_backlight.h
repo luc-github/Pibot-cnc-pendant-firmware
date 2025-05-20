@@ -46,7 +46,7 @@ extern "C" { /* extern "C" */
  * @return `ESP_OK` if the backlight instance is created successfully, or an
  * error code if it fails.
  */
-esp_err_t backlight_configure(backlight_config_t *config);
+esp_err_t backlight_configure(const backlight_config_t *config);
 
 /**
  * @brief Sets the brightness of the display backlight.

@@ -53,9 +53,10 @@
 #define LCD_CMD_COLMOD     0x3A
 
 // Static variables to store configuration and handles
-static spi_ili9341_config_t *spiIli9341Config = NULL;
+static spi_ili9341_config_t spiIli9341Config;
 static esp_lcd_panel_io_handle_t io_handle = NULL;
 static esp_lcd_panel_handle_t panel_handle = NULL;
+static bool _is_initialized = false;
 
 // Vendor-specific initialization commands for ILI9341
 typedef struct {
@@ -64,6 +65,10 @@ typedef struct {
     uint8_t data_bytes;
     uint8_t delay_ms;
 } ili9341_init_cmd_t;
+
+#if ESP3D_TFT_LOG 
+  const char *spi_names[] = {"SPI1_HOST", "SPI2_HOST", "SPI3_HOST"};
+#endif  // ESP3D_TFT_LOG
 
 // Default ILI9341 initialization sequence
 static const ili9341_init_cmd_t ili9341_init_commands[] = {
@@ -260,37 +265,46 @@ static esp_err_t panel_ili9341_init(esp_lcd_panel_t *panel)
     esp_lcd_panel_io_handle_t io = ili9341->io;
     esp_err_t ret;
 
+    esp3d_log_d("Initializing ILI9341 panel");
+    
     // LCD goes into sleep mode and display will be turned off after power on reset, exit sleep mode first
+    esp3d_log_d("Sending SLPOUT command to exit sleep mode");
     ret = esp_lcd_panel_io_tx_param(io, LCD_CMD_SLPOUT, NULL, 0);
     if (ret != ESP_OK) {
-        esp3d_log_e("Send command failed");
+        esp3d_log_e("Send SLPOUT command failed: %s", esp_err_to_name(ret));
         return ret;
     }
     vTaskDelay(pdMS_TO_TICKS(100));
     
+    esp3d_log_d("Sending MADCTL command with value 0x%02x", ili9341->madctl_val);
     ret = esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, (uint8_t[]) {
         ili9341->madctl_val,
     }, 1);
     if (ret != ESP_OK) {
-        esp3d_log_e("Send MADCTL command failed");
+        esp3d_log_e("Send MADCTL command failed: %s", esp_err_to_name(ret));
         return ret;
     }
     
+    esp3d_log_d("Sending COLMOD command with value 0x%02x", ili9341->colmod_val);
     ret = esp_lcd_panel_io_tx_param(io, LCD_CMD_COLMOD, (uint8_t[]) {
         ili9341->colmod_val,
     }, 1);
     if (ret != ESP_OK) {
-        esp3d_log_e("Send COLMOD command failed");
+        esp3d_log_e("Send COLMOD command failed: %s", esp_err_to_name(ret));
         return ret;
     }
 
     // Send the initialization commands
+    esp3d_log_d("Sending initialization command sequence (%d commands)", 
+               sizeof(ili9341_init_commands) / sizeof(ili9341_init_cmd_t));
+    
     for (int i = 0; i < sizeof(ili9341_init_commands) / sizeof(ili9341_init_cmd_t); i++) {
+        //esp3d_log_d("Command %d: 0x%02X, %d bytes", i, ili9341_init_commands[i].cmd, ili9341_init_commands[i].data_bytes);
         ret = esp_lcd_panel_io_tx_param(io, ili9341_init_commands[i].cmd, 
                                         ili9341_init_commands[i].data, 
                                         ili9341_init_commands[i].data_bytes);
         if (ret != ESP_OK) {
-            esp3d_log_e("Send command failed");
+            esp3d_log_e("Send command 0x%02X failed: %s", ili9341_init_commands[i].cmd, esp_err_to_name(ret));
             return ret;
         }
         if (ili9341_init_commands[i].delay_ms > 0) {
@@ -298,7 +312,7 @@ static esp_err_t panel_ili9341_init(esp_lcd_panel_t *panel)
         }
     }
     
-    esp3d_log("Send init commands success");
+    esp3d_log("ILI9341 panel initialization completed successfully");
     return ESP_OK;
 }
 
@@ -445,55 +459,85 @@ esp_err_t ili9341_spi_configure(const spi_ili9341_config_t *config)
         return ESP_ERR_INVALID_ARG;
     }
 
-    // Store the configuration
-    if (spiIli9341Config == NULL) {
-        spiIli9341Config = malloc(sizeof(spi_ili9341_config_t));
-        if (spiIli9341Config == NULL) {
-            esp3d_log_e("Failed to allocate memory for configuration");
-            return ESP_ERR_NO_MEM;
-        }
-    }
+    memcpy(&spiIli9341Config, config, sizeof(spi_ili9341_config_t));
     
-    // Copy configuration
-    memcpy(spiIli9341Config, config, sizeof(spi_ili9341_config_t));
-    
+    // Enhanced logging
     esp3d_log("Configuring ILI9341 LCD Display over SPI");
+    esp3d_log_d("SPI Configuration:");
+    esp3d_log_d("    Host: %s", spi_names[spiIli9341Config.spi_bus.host]);
+    esp3d_log_d("    MISO pin: %d", spiIli9341Config.spi_bus.miso_pin);
+    esp3d_log_d("    MOSI pin: %d", spiIli9341Config.spi_bus.mosi_pin);
+    esp3d_log_d("    SCLK pin: %d", spiIli9341Config.spi_bus.sclk_pin);
+    esp3d_log_d("    CS pin: %d", spiIli9341Config.spi_bus.cs_pin);
+    esp3d_log_d("    DC pin: %d", spiIli9341Config.spi_bus.dc_pin);
+    esp3d_log_d("    RST pin: %d", spiIli9341Config.spi_bus.rst_pin);
+    esp3d_log_d("    Clock speed: %ld Hz", spiIli9341Config.spi_bus.clock_speed_hz);
+    esp3d_log_d("    Max transfer size: %d bytes", spiIli9341Config.spi_bus.max_transfer_sz);
+    
+    esp3d_log_d("Display Configuration:");
+    esp3d_log_d("    Orientation: %d", spiIli9341Config.display.orientation);
+    esp3d_log_d("    Invert colors: %s", spiIli9341Config.display.invert_colors ? "Yes" : "No");
+    
+    esp3d_log_d("Backlight Configuration:");
+    esp3d_log_d("    Pin: %d", spiIli9341Config.backlight.pin);
+    esp3d_log_d("    Active level: %s", spiIli9341Config.backlight.on_level ? "HIGH" : "LOW");
+    
+    esp3d_log_d("Interface Configuration:");
+    esp3d_log_d("    Command bits: %d", spiIli9341Config.interface.cmd_bits);
+    esp3d_log_d("    Parameter bits: %d", spiIli9341Config.interface.param_bits);
+    esp3d_log_d("    Swap color bytes: %s", spiIli9341Config.interface.swap_color_bytes ? "Yes" : "No");
+    
+    esp3d_log_d("DMA Configuration:");
+    esp3d_log_d("    Channel: %d", spiIli9341Config.dma.channel);
+    esp3d_log_d("    QuadWP pin: %d", spiIli9341Config.dma.quadwp_pin);
+    esp3d_log_d("    QuadHD pin: %d", spiIli9341Config.dma.quadhd_pin);
     
     // Configure backlight GPIO
     gpio_config_t bk_gpio_config = {
         .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << config->backlight.pin
+        .pin_bit_mask = 1ULL << spiIli9341Config.backlight.pin
     };
     
-    if (config->backlight.pin >= 0) {
+    if (spiIli9341Config.backlight.pin >= 0) {
+        esp3d_log_d("Configuring backlight pin %d", spiIli9341Config.backlight.pin);
         ret = gpio_config(&bk_gpio_config);
         if (ret != ESP_OK) {
-            esp3d_log_e("Failed to configure backlight GPIO");
+            esp3d_log_e("Failed to configure backlight GPIO: %s", esp_err_to_name(ret));
             return ret;
         }
         
         // Turn off backlight initially
-        gpio_set_level(config->backlight.pin, !config->backlight.on_level);
+        gpio_set_level(spiIli9341Config.backlight.pin, !spiIli9341Config.backlight.on_level);
+        esp3d_log_d("Backlight initially turned off");
     }
     
     // Initialize SPI bus if this is the master
-    if (config->spi_bus.is_master) {
+    if (spiIli9341Config.spi_bus.is_master) {
         esp3d_log("Initializing SPI bus as master");
         
         spi_bus_config_t buscfg = {
-            .sclk_io_num = config->spi_bus.sclk_pin,
-            .mosi_io_num = config->spi_bus.mosi_pin,
-            .miso_io_num = config->spi_bus.miso_pin,
-            .quadwp_io_num = config->dma.quadwp_pin,
-            .quadhd_io_num = config->dma.quadhd_pin,
-            .max_transfer_sz = config->spi_bus.max_transfer_sz,
+            .sclk_io_num = spiIli9341Config.spi_bus.sclk_pin,
+            .mosi_io_num = spiIli9341Config.spi_bus.mosi_pin,
+            .miso_io_num = spiIli9341Config.spi_bus.miso_pin,
+            .quadwp_io_num = spiIli9341Config.dma.quadwp_pin,
+            .quadhd_io_num = spiIli9341Config.dma.quadhd_pin,
+            .max_transfer_sz = spiIli9341Config.spi_bus.max_transfer_sz,
         };
         
-        ret = spi_bus_initialize(config->spi_bus.host, &buscfg, config->dma.channel);
+        esp3d_log_d("SPI bus configuration:");
+        esp3d_log_d("    SCLK: %d", buscfg.sclk_io_num);
+        esp3d_log_d("    MOSI: %d", buscfg.mosi_io_num);
+        esp3d_log_d("    MISO: %d", buscfg.miso_io_num);
+        esp3d_log_d("    QuadWP: %d", buscfg.quadwp_io_num);
+        esp3d_log_d("    QuadHD: %d", buscfg.quadhd_io_num);
+        esp3d_log_d("    Max transfer size: %d bytes", buscfg.max_transfer_sz);
+        
+        ret = spi_bus_initialize(spiIli9341Config.spi_bus.host, &buscfg, spiIli9341Config.dma.channel);
         if (ret != ESP_OK) {
-            esp3d_log_e("Failed to initialize SPI bus");
+            esp3d_log_e("Failed to initialize SPI bus: %s", esp_err_to_name(ret));
             return ret;
         }
+        esp3d_log_d("SPI bus initialized successfully on host %d", spiIli9341Config.spi_bus.host);
     } else {
         esp3d_log("Using pre-initialized SPI bus");
     }
@@ -501,101 +545,144 @@ esp_err_t ili9341_spi_configure(const spi_ili9341_config_t *config)
     // Configure LCD panel IO
     esp3d_log("Configuring LCD panel IO");
     esp_lcd_panel_io_spi_config_t io_config = {
-        .dc_gpio_num = config->spi_bus.dc_pin,
-        .cs_gpio_num = config->spi_bus.cs_pin,
-        .pclk_hz = config->spi_bus.clock_speed_hz,
-        .lcd_cmd_bits = config->interface.cmd_bits,
-        .lcd_param_bits = config->interface.param_bits,
+        .dc_gpio_num = spiIli9341Config.spi_bus.dc_pin,
+        .cs_gpio_num = spiIli9341Config.spi_bus.cs_pin,
+        .pclk_hz = spiIli9341Config.spi_bus.clock_speed_hz,
+        .lcd_cmd_bits = spiIli9341Config.interface.cmd_bits,
+        .lcd_param_bits = spiIli9341Config.interface.param_bits,
         .spi_mode = 0,
         .trans_queue_depth = 10,
-        .on_color_trans_done = config->lvgl.enable_callbacks ? config->lvgl.on_color_trans_done : NULL,
-        .user_ctx = config->lvgl.enable_callbacks ? config->lvgl.user_ctx : NULL
+        .on_color_trans_done = spiIli9341Config.lvgl.enable_callbacks ? spiIli9341Config.lvgl.on_color_trans_done : NULL,
+        .user_ctx = spiIli9341Config.lvgl.enable_callbacks ? spiIli9341Config.lvgl.user_ctx : NULL
     };
     
-    ret = esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)config->spi_bus.host, &io_config, &io_handle);
+    esp3d_log_d("LCD panel IO configuration:");
+    esp3d_log_d("    DC GPIO: %d", io_config.dc_gpio_num);
+    esp3d_log_d("    CS GPIO: %d", io_config.cs_gpio_num);
+    esp3d_log_d("    Clock speed: %d Hz", io_config.pclk_hz);
+    esp3d_log_d("    Command bits: %d", io_config.lcd_cmd_bits);
+    esp3d_log_d("    Parameter bits: %d", io_config.lcd_param_bits);
+    esp3d_log_d("    SPI mode: %d", io_config.spi_mode);
+    esp3d_log_d("    Transaction queue depth: %d", io_config.trans_queue_depth);
+    esp3d_log_d("    Color transfer callback: %s", spiIli9341Config.lvgl.enable_callbacks ? "Enabled" : "Disabled");
+    
+    ret = esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)spiIli9341Config.spi_bus.host, &io_config, &io_handle);
     if (ret != ESP_OK) {
-        esp3d_log_e("Failed to create LCD panel IO");
+        esp3d_log_e("Failed to create LCD panel IO: %s", esp_err_to_name(ret));
         return ret;
     }
+    esp3d_log_d("LCD panel IO created successfully");
     
     // Configure LCD panel
     esp3d_log("Creating ILI9341 panel driver");
     esp_lcd_panel_dev_config_t panel_config = {
-        .reset_gpio_num = config->spi_bus.rst_pin,
-        .rgb_ele_order = config->interface.swap_color_bytes ? LCD_RGB_ELEMENT_ORDER_BGR : LCD_RGB_ELEMENT_ORDER_RGB,
+        .reset_gpio_num = spiIli9341Config.spi_bus.rst_pin,
+        .rgb_ele_order = spiIli9341Config.interface.swap_color_bytes ? LCD_RGB_ELEMENT_ORDER_BGR : LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel = 16, // ILI9341 typically uses RGB565
     };
     
+    esp3d_log_d("LCD panel configuration:");
+    esp3d_log_d("    Reset GPIO: %d", panel_config.reset_gpio_num);
+    esp3d_log_d("    RGB element order: %s", spiIli9341Config.interface.swap_color_bytes ? "BGR" : "RGB");
+    esp3d_log_d("    Bits per pixel: %ld", panel_config.bits_per_pixel);
+    
     ret = esp_lcd_new_panel_ili9341(io_handle, &panel_config, &panel_handle);
     if (ret != ESP_OK) {
-        esp3d_log_e("Failed to create ILI9341 panel driver");
+        esp3d_log_e("Failed to create ILI9341 panel driver: %s", esp_err_to_name(ret));
         return ret;
     }
+    esp3d_log_d("ILI9341 panel driver created successfully");
     
     // Reset and initialize panel
     esp3d_log("Resetting and initializing panel");
     ret = esp_lcd_panel_reset(panel_handle);
     if (ret != ESP_OK) {
-        esp3d_log_e("Panel reset failed");
+        esp3d_log_e("Panel reset failed: %s", esp_err_to_name(ret));
         return ret;
     }
+    esp3d_log_d("Panel reset successful");
     
     ret = esp_lcd_panel_init(panel_handle);
     if (ret != ESP_OK) {
-        esp3d_log_e("Panel initialization failed");
+        esp3d_log_e("Panel initialization failed: %s", esp_err_to_name(ret));
         return ret;
     }
+    esp3d_log_d("Panel initialization successful");
     
     // Configure orientation based on the selected mode
     bool swap_xy = false;
     bool mirror_x = false;
     bool mirror_y = false;
     
-    switch (config->display.orientation) {
+    switch (spiIli9341Config.display.orientation) {
         case SPI_ILI9341_ORIENTATION_PORTRAIT:
             swap_xy = false;
             mirror_x = true;
             mirror_y = false;
+            esp3d_log_d("Setting orientation to Portrait");
             break;
         case SPI_ILI9341_ORIENTATION_LANDSCAPE:
             swap_xy = true;
             mirror_x = true;
             mirror_y = true;
+            esp3d_log_d("Setting orientation to Landscape");
             break;
         case SPI_ILI9341_ORIENTATION_PORTRAIT_INVERTED:
             swap_xy = false;
             mirror_x = false;
             mirror_y = true;
+            esp3d_log_d("Setting orientation to Portrait Inverted");
             break;
         case SPI_ILI9341_ORIENTATION_LANDSCAPE_INVERTED:
             swap_xy = true;
             mirror_x = false;
             mirror_y = false;
+            esp3d_log_d("Setting orientation to Landscape Inverted");
             break;
     }
     
-    esp_lcd_panel_swap_xy(panel_handle, swap_xy);
-    esp_lcd_panel_mirror(panel_handle, mirror_x, mirror_y);
+    esp3d_log_d("Panel orientation: swap_xy=%s, mirror_x=%s, mirror_y=%s",
+               swap_xy ? "true" : "false",
+               mirror_x ? "true" : "false",
+               mirror_y ? "true" : "false");
+    
+    ret = esp_lcd_panel_swap_xy(panel_handle, swap_xy);
+    if (ret != ESP_OK) {
+        esp3d_log_e("Failed to set panel swap_xy: %s", esp_err_to_name(ret));
+    }
+    
+    ret = esp_lcd_panel_mirror(panel_handle, mirror_x, mirror_y);
+    if (ret != ESP_OK) {
+        esp3d_log_e("Failed to set panel mirror: %s", esp_err_to_name(ret));
+    }
     
     // Apply color inversion if needed
-    if (config->display.invert_colors) {
-        esp_lcd_panel_invert_color(panel_handle, true);
+    if (spiIli9341Config.display.invert_colors) {
+        esp3d_log_d("Inverting panel colors");
+        ret = esp_lcd_panel_invert_color(panel_handle, true);
+        if (ret != ESP_OK) {
+            esp3d_log_e("Failed to invert panel colors: %s", esp_err_to_name(ret));
+        }
     }
     
     // Turn on display
+    esp3d_log_d("Turning on display");
     ret = esp_lcd_panel_disp_on_off(panel_handle, true);
     if (ret != ESP_OK) {
-        esp3d_log_e("Failed to turn on display");
+        esp3d_log_e("Failed to turn on display: %s", esp_err_to_name(ret));
         return ret;
     }
     
     // Turn on backlight
-    if (config->backlight.pin >= 0) {
-        esp3d_log("Turning on backlight");
-        gpio_set_level(config->backlight.pin, config->backlight.on_level);
+    if (spiIli9341Config.backlight.pin >= 0) {
+        esp3d_log("Turning on backlight on pin %d with level %d", 
+                 spiIli9341Config.backlight.pin, 
+                 spiIli9341Config.backlight.on_level);
+        gpio_set_level(spiIli9341Config.backlight.pin, spiIli9341Config.backlight.on_level);
     }
     
     esp3d_log("ILI9341 display configured successfully");
+    _is_initialized = true;
     return ESP_OK;
 }
 

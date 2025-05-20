@@ -33,7 +33,7 @@ extern "C" {
  * @param config Pointer to configuration structure
  * @return esp_err_t ESP_OK on success, error otherwise
  */
-esp_err_t touch_ft6336u_init(const touch_ft6336u_config_t *config);
+esp_err_t touch_ft6336u_configure(const touch_ft6336u_config_t *config);
 
 /**
  * @brief Read touch data from FT6336U
@@ -55,6 +55,11 @@ uint16_t touch_ft6336u_get_x_max(void);
  * @return uint16_t Maximum Y coordinate
  */
 uint16_t touch_ft6336u_get_y_max(void);
+
+/**
+ * @brief Deinitialize the FT6336U touch controller
+ */
+void touch_ft6336u_deinit(void);
 
 #ifdef __cplusplus
 }
