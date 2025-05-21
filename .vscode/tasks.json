@@ -1,0 +1,27 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Create LittleFS Image",
+            "type": "shell",
+            "command": "mklittlefs",
+            "args": [
+                "-c", "${workspaceFolder}\\littlefs_data",
+                "-s", "0x30000",
+                "${workspaceFolder}\\build\\littlefs.bin"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "List LittleFS Image",
+            "type": "shell",
+            "command": "mklittlefs",
+            "args": [
+                "-l","${workspaceFolder}\\build\\littlefs.bin"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}

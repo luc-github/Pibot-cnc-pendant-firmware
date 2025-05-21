@@ -40,7 +40,7 @@ extern "C" {
 
 // Display orientation flags
 #define DISPLAY_ORIENTATION      0
-#define DISPLAY_INVERT_FLAG      0
+#define DISPLAY_INVERT_FLAG      1
 
 // Display buffer configuration
 #define DISPLAY_USE_DOUBLE_BUFFER_FLAG   1

@@ -24,7 +24,61 @@
 #include "board_init.h"
 //#include "screens/splash_screen.h"
 #include "lvgl.h"
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
+static void *fs_open(lv_fs_drv_t *drv, const char *path, lv_fs_mode_t mode) {
+    char full_path[256];
+    snprintf(full_path, sizeof(full_path),"/fs/%s", path); // Chemin de base correspondant à mount_point()
+    const char *flags = (mode == LV_FS_MODE_WR) ? "wb" : (mode == LV_FS_MODE_RD) ? "rb" : "rb+";
+    FILE *file = fopen(full_path, flags);
+    if (!file) {
+        esp3d_log_e("Failed to open file: %s", full_path);
+    } else {
+        esp3d_log_d("Opened file succesfuly: %s", full_path);
+    }
+    return file ? file : NULL;
+}
+
+static lv_fs_res_t fs_close(lv_fs_drv_t *drv, void *file_p) {
+    fclose((FILE *)file_p);
+    esp3d_log_d("File closed");
+    return LV_FS_RES_OK;
+}
+
+static lv_fs_res_t fs_read(lv_fs_drv_t *drv, void *file_p, void *buf, uint32_t btr, uint32_t *br) {
+    *br = fread(buf, 1, btr, (FILE *)file_p);
+    esp3d_log_d("Read %ld bytes", *br);
+    return LV_FS_RES_OK;
+}
+
+static lv_fs_res_t fs_seek(lv_fs_drv_t *drv, void *file_p, uint32_t pos, lv_fs_whence_t whence) {
+    fseek((FILE *)file_p, pos, whence == LV_FS_SEEK_SET ? SEEK_SET : (whence == LV_FS_SEEK_CUR ? SEEK_CUR : SEEK_END));
+    esp3d_log_d("Seek to position %ld", pos);
+    return LV_FS_RES_OK;
+}
+
+static lv_fs_res_t fs_tell(lv_fs_drv_t *drv, void *file_p, uint32_t *pos_p) {
+    *pos_p = ftell((FILE *)file_p);
+    esp3d_log_d("Current position: %ld", *pos_p);
+    return LV_FS_RES_OK;
+}
+
+void lvgl_fs_init(void) {
+    static lv_fs_drv_t fs_drv;
+    lv_fs_drv_init(&fs_drv);
+    fs_drv.letter = 'L'; // Doit correspondre à LV_FS_POSIX_LETTER
+    fs_drv.open_cb = fs_open;
+    fs_drv.close_cb = fs_close;
+    fs_drv.read_cb = fs_read;
+    fs_drv.seek_cb = fs_seek;
+    fs_drv.tell_cb = fs_tell;
+    lv_fs_drv_register(&fs_drv);
+    esp3d_log_d("LVGL filesystem driver registered");
+}
 
 // Label to display touch coordinates
 static lv_obj_t *touch_coord_label = NULL;
@@ -59,10 +113,14 @@ static void screen_touch_event_cb(lv_event_t *e)
 // Create the user interface
 void create_application(void) {
     esp3d_log("Creating LVGL application UI");
+
+  
+
+    //lvgl_fs_init(); // Initialize the filesystem driver for LVGL
+    lv_fs_posix_init(); // Initialize the filesystem driver for LVGL
     
     // Initialize styles if you have them
     // ESP3DStyle::init();
-    
     // Get the LVGL display
     lv_display_t *display = get_lvgl_display();
     if (!display) {
@@ -71,11 +129,60 @@ void create_application(void) {
     }
     
     // Get the active screen
-    lv_obj_t *screen = lv_display_get_screen_active(display);
+lv_obj_t *screen = lv_display_get_screen_active(display);
+
+    // Test screen display
+    lv_obj_t *test_label = lv_label_create(screen);
+    lv_label_set_text(test_label, "Test Screen");
+    lv_obj_align(test_label, LV_ALIGN_TOP_LEFT, 10, 10);
+    lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
+
+     // Définir le texte blanc pour le label
+    lv_obj_set_style_text_color(test_label, lv_color_white(), LV_PART_MAIN);
+/*
+    // Create three 40x40 colored squares (Red, Green, Blue)
+    // Red square
+    lv_obj_t *red_square = lv_obj_create(screen);
+    lv_obj_set_size(red_square, 40, 40);
+    lv_obj_align(red_square, LV_ALIGN_CENTER, -50, 0); // Position to the left
+    lv_obj_set_style_bg_color(red_square, lv_color_make(255, 0, 0), LV_PART_MAIN); // Pure red
+    lv_obj_set_style_bg_opa(red_square, LV_OPA_COVER, LV_PART_MAIN);
+    esp3d_log("Red square created");
+
+    // Green square
+    lv_obj_t *green_square = lv_obj_create(screen);
+    lv_obj_set_size(green_square, 40, 40);
+    lv_obj_align(green_square, LV_ALIGN_CENTER, 0, 0); // Center
+    lv_obj_set_style_bg_color(green_square, lv_color_make(0, 255, 0), LV_PART_MAIN); // Pure green
+    lv_obj_set_style_bg_opa(green_square, LV_OPA_COVER, LV_PART_MAIN);
+    esp3d_log("Green square created");
+
+    // Blue square
+    lv_obj_t *blue_square = lv_obj_create(screen);
+    lv_obj_set_size(blue_square, 40, 40);
+    lv_obj_align(blue_square, LV_ALIGN_CENTER, 50, 0); // Position to the right
+    lv_obj_set_style_bg_color(blue_square, lv_color_make(0, 0, 255), LV_PART_MAIN); // Pure blue
+    lv_obj_set_style_bg_opa(blue_square, LV_OPA_COVER, LV_PART_MAIN);
+    esp3d_log("Blue square created");*/
     
     // Create splash screen
     // splashScreen::create();
+
     
+
+        
+    lv_fs_file_t file;
+     const char* img_path = "L:/hometp.png";
+    lv_fs_res_t res = lv_fs_open(&file, img_path, LV_FS_MODE_RD);
+
+    if(res != LV_FS_RES_OK) {
+        esp3d_log_e("Impossible d'ouvrir l'image: %d", res);
+    } else {
+        esp3d_log_d("Image trouvée");
+        lv_fs_close(&file);
+    }
+
     // Create a title label
     lv_obj_t *title_label = lv_label_create(screen);
     lv_label_set_text_fmt(title_label, "%s %s\nESP3D v%s", 
@@ -94,24 +201,20 @@ void create_application(void) {
     lv_obj_add_event_cb(screen, screen_touch_event_cb, LV_EVENT_ALL, touch_coord_label);
     
     
-    // Create an animated arc
-    lv_obj_t *arc = lv_arc_create(screen);
-    lv_arc_set_rotation(arc, 270);
-    lv_arc_set_bg_angles(arc, 0, 360);
-    lv_obj_remove_style(arc, NULL, LV_PART_KNOB);
-    lv_obj_remove_flag(arc, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_center(arc);
+  
     
-    // Create animation
-    lv_anim_t a;
-    lv_anim_init(&a);
-    lv_anim_set_var(&a, arc);
-    lv_anim_set_exec_cb(&a, set_arc_angle);
-    lv_anim_set_duration(&a, 1000);
-    lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
-    lv_anim_set_repeat_delay(&a, 500);
-    lv_anim_set_values(&a, 0, 100);
-    lv_anim_start(&a);
+    // Création de l'objet image
+    lv_obj_t* img = lv_img_create(screen);
+    
+    // Chargement de l'image depuis LittleFS
+    lv_img_set_src(img, img_path);
+if (lv_img_get_src(img) == NULL) {
+    esp3d_log_e("Failed to load image: %s", img_path);
+} else {
+    esp3d_log_d("Image loaded: %s", img_path);
+}
+    // Positionnement de l'image au centre de l'écran
+    lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
     
     // Create a calibration button
     lv_obj_t *calib_btn = lv_button_create(screen);
@@ -131,6 +234,7 @@ void create_application(void) {
         lv_label_set_text_fmt(label, "Pressed %lu", counter);
         
         esp3d_log("Calibration button pressed %lu times", counter);
+       
     }, LV_EVENT_CLICKED, NULL);
     
     esp3d_log("LVGL application UI created");

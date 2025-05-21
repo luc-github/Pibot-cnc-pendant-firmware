@@ -49,6 +49,8 @@ void lv_littlefs_set_handler(lfs_t * lfs)
  */
 void lv_fs_littlefs_init(void)
 {
+    
+#error "ici"
     lv_fs_drv_t * fs_drv = &(LV_GLOBAL_DEFAULT()->littlefs_fs_drv);
     lv_fs_drv_init(fs_drv);
 

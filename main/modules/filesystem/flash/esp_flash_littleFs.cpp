@@ -247,6 +247,7 @@ FILE *ESP3DFlash::open(const char *filename, const char *mode) {
     }
     file_path += filename;
   }
+  esp3d_log_d("open %s", file_path.c_str());
   return fopen(file_path.c_str(), mode);
 }
 
