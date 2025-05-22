@@ -24,61 +24,14 @@
 #include "board_init.h"
 //#include "screens/splash_screen.h"
 #include "lvgl.h"
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
+#include "disp_backlight.h"
+lv_timer_t *screen_on_delay_timer = nullptr;
 
-static void *fs_open(lv_fs_drv_t *drv, const char *path, lv_fs_mode_t mode) {
-    char full_path[256];
-    snprintf(full_path, sizeof(full_path),"/fs/%s", path); // Chemin de base correspondant à mount_point()
-    const char *flags = (mode == LV_FS_MODE_WR) ? "wb" : (mode == LV_FS_MODE_RD) ? "rb" : "rb+";
-    FILE *file = fopen(full_path, flags);
-    if (!file) {
-        esp3d_log_e("Failed to open file: %s", full_path);
-    } else {
-        esp3d_log_d("Opened file succesfuly: %s", full_path);
-    }
-    return file ? file : NULL;
-}
-
-static lv_fs_res_t fs_close(lv_fs_drv_t *drv, void *file_p) {
-    fclose((FILE *)file_p);
-    esp3d_log_d("File closed");
-    return LV_FS_RES_OK;
-}
-
-static lv_fs_res_t fs_read(lv_fs_drv_t *drv, void *file_p, void *buf, uint32_t btr, uint32_t *br) {
-    *br = fread(buf, 1, btr, (FILE *)file_p);
-    esp3d_log_d("Read %ld bytes", *br);
-    return LV_FS_RES_OK;
-}
-
-static lv_fs_res_t fs_seek(lv_fs_drv_t *drv, void *file_p, uint32_t pos, lv_fs_whence_t whence) {
-    fseek((FILE *)file_p, pos, whence == LV_FS_SEEK_SET ? SEEK_SET : (whence == LV_FS_SEEK_CUR ? SEEK_CUR : SEEK_END));
-    esp3d_log_d("Seek to position %ld", pos);
-    return LV_FS_RES_OK;
-}
-
-static lv_fs_res_t fs_tell(lv_fs_drv_t *drv, void *file_p, uint32_t *pos_p) {
-    *pos_p = ftell((FILE *)file_p);
-    esp3d_log_d("Current position: %ld", *pos_p);
-    return LV_FS_RES_OK;
-}
-
-void lvgl_fs_init(void) {
-    static lv_fs_drv_t fs_drv;
-    lv_fs_drv_init(&fs_drv);
-    fs_drv.letter = 'L'; // Doit correspondre à LV_FS_POSIX_LETTER
-    fs_drv.open_cb = fs_open;
-    fs_drv.close_cb = fs_close;
-    fs_drv.read_cb = fs_read;
-    fs_drv.seek_cb = fs_seek;
-    fs_drv.tell_cb = fs_tell;
-    lv_fs_drv_register(&fs_drv);
-    esp3d_log_d("LVGL filesystem driver registered");
-}
+void screen_on_delay_timer_cb(lv_timer_t *timer) {
+ 
+      lv_timer_del(screen_on_delay_timer);
+      backlight_set(100);
+  }
 
 // Label to display touch coordinates
 static lv_obj_t *touch_coord_label = NULL;
@@ -140,7 +93,7 @@ lv_obj_t *screen = lv_display_get_screen_active(display);
 
      // Définir le texte blanc pour le label
     lv_obj_set_style_text_color(test_label, lv_color_white(), LV_PART_MAIN);
-/*
+
     // Create three 40x40 colored squares (Red, Green, Blue)
     // Red square
     lv_obj_t *red_square = lv_obj_create(screen);
@@ -164,7 +117,7 @@ lv_obj_t *screen = lv_display_get_screen_active(display);
     lv_obj_align(blue_square, LV_ALIGN_CENTER, 50, 0); // Position to the right
     lv_obj_set_style_bg_color(blue_square, lv_color_make(0, 0, 255), LV_PART_MAIN); // Pure blue
     lv_obj_set_style_bg_opa(blue_square, LV_OPA_COVER, LV_PART_MAIN);
-    esp3d_log("Blue square created");*/
+    esp3d_log("Blue square created");
     
     // Create splash screen
     // splashScreen::create();
@@ -233,9 +186,12 @@ if (lv_img_get_src(img) == NULL) {
         lv_obj_t *label = lv_obj_get_child(btn, 0);
         lv_label_set_text_fmt(label, "Pressed %lu", counter);
         
+        
         esp3d_log("Calibration button pressed %lu times", counter);
-       
+        backlight_set(100); 
     }, LV_EVENT_CLICKED, NULL);
     
     esp3d_log("LVGL application UI created");
+    screen_on_delay_timer =
+        lv_timer_create(screen_on_delay_timer_cb, 50, NULL);
 }

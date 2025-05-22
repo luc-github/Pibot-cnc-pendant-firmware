@@ -72,38 +72,54 @@ typedef struct {
 
 // Default ILI9341 initialization sequence
 static const ili9341_init_cmd_t ili9341_init_commands[] = {
-    /* Power Control A */
+    // Software Reset
+    {0x01, {0}, 0, 50}, //  50 ms
+    // Power Control A
     {0xCB, {0x39, 0x2C, 0x00, 0x34, 0x02}, 5, 0},
-    /* Power Control B */
+    // Power Control B
     {0xCF, {0x00, 0xC1, 0x30}, 3, 0},
-    /* Driver timing control A */
+    // Driver Timing Control A
     {0xE8, {0x85, 0x00, 0x78}, 3, 0},
-    /* Driver timing control B */
+    // Driver Timing Control B
     {0xEA, {0x00, 0x00}, 2, 0},
-    /* Power on sequence control */
+    // Power On Sequence Control
     {0xED, {0x64, 0x03, 0x12, 0x81}, 4, 0},
-    /* Pump ratio control */
+    // Pump Ratio Control
     {0xF7, {0x20}, 1, 0},
-    /* Power Control 1 */
+    // Power Control 1
     {0xC0, {0x23}, 1, 0},
-    /* Power Control 2 */
+    // Power Control 2
     {0xC1, {0x10}, 1, 0},
-    /* VCOM Control 1 */
+    // VCOM Control 1
     {0xC5, {0x3E, 0x28}, 2, 0},
-    /* VCOM Control 2 */
+    // VCOM Control 2
     {0xC7, {0x86}, 1, 0},
-    /* Frame Rate Control (In Normal Mode/Full Colors) */
-    {0xB1, {0x00, 0x10}, 2, 0},
-    /* Display Function Control */
+    // Memory Access Control
+    {0x36, {0x48}, 1, 0}, // Orientation 
+    // Pixel Format Set (16 bits, RGB565)
+    {0x3A, {0x55}, 1, 0},
+    // Frame Rate Control (70 Hz)
+    {0xB1, {0x00, 0x18}, 2, 0},
+    // Display Function Control
     {0xB6, {0x08, 0x82, 0x27}, 3, 0},
-    /* 3Gamma Function Disable */
+    // 3Gamma Function Disable
     {0xF2, {0x00}, 1, 0},
-    /* Gamma curve selected */
+    // Gamma Set
     {0x26, {0x01}, 1, 0},
-    /* Gamma Positive Correction */
+    // Positive Gamma Correction
     {0xE0, {0x0F, 0x31, 0x2B, 0x0C, 0x0E, 0x08, 0x4E, 0xF1, 0x37, 0x07, 0x10, 0x03, 0x0E, 0x09, 0x00}, 15, 0},
-    /* Gamma Negative Correction */
+    // Negative Gamma Correction
     {0xE1, {0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31, 0xC1, 0x48, 0x08, 0x0F, 0x0C, 0x31, 0x36, 0x0F}, 15, 0},
+    // Sleep Out
+    {0x11, {0}, 0, 100},
+    // Init with black
+    {0x2A, {0x00, 0x00, 0x01, 0x3F}, 4, 0}, // resolution 320x240
+    {0x2B, {0x00, 0x00, 0x00, 0xEF}, 4, 0},
+    {0x2C, {0x00, 0x00}, 2, 20}, // Write black (RGB565: 0x0000)
+    // Display On
+    {0x29, {0}, 0, 100}, //100 ms
+    // Fin
+    {0, {0}, 0xFF, 0}
 };
 
 // Forward declarations for panel operations
@@ -678,7 +694,8 @@ esp_err_t ili9341_spi_configure(const spi_ili9341_config_t *config)
         esp3d_log("Turning on backlight on pin %d with level %d", 
                  spiIli9341Config.backlight.pin, 
                  spiIli9341Config.backlight.on_level);
-        gpio_set_level(spiIli9341Config.backlight.pin, spiIli9341Config.backlight.on_level);
+        //Backlight is contolled separately
+        //gpio_set_level(spiIli9341Config.backlight.pin, spiIli9341Config.backlight.on_level);
     }
     
     esp3d_log("ILI9341 display configured successfully");

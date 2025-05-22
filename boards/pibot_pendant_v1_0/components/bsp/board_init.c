@@ -272,7 +272,7 @@ esp_err_t board_init(void)
         return ret;
     }
     
-    backlight_set(100);
+    //backlight_set(100);
 #endif  // ESP3D_DISPLAY_FEATURE
     
     esp3d_log("Board initialization completed successfully");
