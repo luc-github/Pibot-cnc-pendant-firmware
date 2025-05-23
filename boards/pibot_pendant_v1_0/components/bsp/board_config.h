@@ -104,8 +104,10 @@ extern "C" {
 /* Rotary Encoder Configuration */
 #define ENCODER_A_PIN       GPIO_NUM_22
 #define ENCODER_B_PIN       GPIO_NUM_27
-#define ENCODER_STEPS_PER_REV_NB  20  // Example value, adjust based on actual encoder
+#define ENCODER_STEPS_PER_REV_NB  100  // Reference value
 #define ENCODER_PULLUPS_ENABLED_FLAG 0  // No pull-up resistors installed
+#define ENCODER_DEBOUNCE_US 1000           // 5ms debounce hardware
+#define ENCODER_MIN_STEP_INTERVAL_US 10000 // 50ms anti-double-click
 
 /* 4-Position Switch Configuration */
 #define SWITCH_POS_1_PIN    GPIO_NUM_34

@@ -80,7 +80,7 @@ bool ESP3DSd::mount() {
       slot_config.gpio_cd = _config->detect_pin;
   } 
   host.max_freq_khz = ((_config->freq)/1000) / _config->spi.speed_divider;
-  esp3d_log_d("CS pin %d, host_id %d , Max Freq %d", slot_config.gpio_cs,
+  esp3d_log("CS pin %d, host_id %d , Max Freq %d", slot_config.gpio_cs,
             slot_config.host_id, host.max_freq_khz);
   esp_vfs_fat_sdmmc_mount_config_t mount_config = {
       .format_if_mount_failed = false,
@@ -94,7 +94,7 @@ bool ESP3DSd::mount() {
 
 
 
-  esp3d_log_d("Mounting filesystem cd:%d, wp:%d", slot_config.gpio_cd,
+  esp3d_log("Mounting filesystem cd:%d, wp:%d", slot_config.gpio_cd,
             slot_config.gpio_wp);
   esp_err_t ret = esp_vfs_fat_sdspi_mount(mount_point(), &host, &slot_config,
                                           &mount_config, &card);
@@ -108,7 +108,7 @@ bool ESP3DSd::mount() {
     }
     return false;
   }
-  esp3d_log_d("Filesystem mounted");
+  esp3d_log("Filesystem mounted");
   _mounted = true;
   _state = ESP3DSdState::idle;
   return _mounted;
@@ -117,7 +117,7 @@ bool ESP3DSd::mount() {
 const char *ESP3DSd::getFileSystemName() { return "SDFat native"; }
 
 bool ESP3DSd::begin() {
-  esp3d_log_d("Starting SD Card");
+  esp3d_log("Starting SD Card");
   _started = false;
   if (!_config) {
     esp3d_log_e("SD Card not configured.");
@@ -125,20 +125,21 @@ bool ESP3DSd::begin() {
   }
   
   esp_err_t ret;
-  esp3d_log_d("Initializing SD card");
+  esp3d_log("Initializing SD card");
 #if ESP3D_TFT_LOG 
   const char *spi_names[] = {"SPI1_HOST", "SPI2_HOST", "SPI3_HOST"};
+  (void)spi_names;
 #endif  // ESP3D_TFT_LOG
 
   host.slot = (spi_host_device_t)_config->spi.host;
   
-  esp3d_log_d("Configuring SPI host %s", spi_names[host.slot]);
-  esp3d_log_d(
+  esp3d_log("Configuring SPI host %s", spi_names[host.slot]);
+  esp3d_log(
       "MISO pin: %d, MOSI pin: %d, SCLK pin: %d, IO2/WP pin: %d, IO3/HD pin: "
       "%d",
       _config->spi.miso_pin, _config->spi.mosi_pin, _config->spi.clk_pin, -1, -1);
 
-  esp3d_log_d("Max transfer size: %d (bytes)", _config->spi.max_transfer_sz);
+  esp3d_log("Max transfer size: %d (bytes)", _config->spi.max_transfer_sz);
   spi_bus_config_t bus_cfg = {
       .mosi_io_num = _config->spi.mosi_pin,
       .miso_io_num = _config->spi.miso_pin,
@@ -162,7 +163,7 @@ bool ESP3DSd::begin() {
   
   ret = spi_bus_initialize((spi_host_device_t)host.slot, &bus_cfg,
                            SPI_DMA_CH_AUTO);
-   esp3d_log_d("DMA  Auto");
+   esp3d_log("DMA  Auto");
   if (ret != ESP_OK) {
     esp3d_log_e("Failed to initialize bus. Error: %s (0x%x)", 
                esp_err_to_name(ret), ret);
@@ -175,7 +176,7 @@ bool ESP3DSd::begin() {
     }
     return false;
   } 
-  esp3d_log_d("SPI bus initialized");
+  esp3d_log("SPI bus initialized");
   _started = true;
   return true;
 }
@@ -187,7 +188,7 @@ bool ESP3DSd::getSpaceInfo(uint64_t *totalBytes, uint64_t *usedBytes,
   static uint64_t _totalBytes = 0;
   static uint64_t _usedBytes = 0;
   static uint64_t _freeBytes = 0;
-  esp3d_log_d("Try to get total and free space");
+  esp3d_log("Try to get total and free space");
   // if not mounted reset values
   if (!_mounted) {
     esp3d_log_e("Failed to get total and free space because not mounted");
@@ -235,7 +236,7 @@ DIR *ESP3DSd::opendir(const char *dirpath) {
     }
     dir_path += dirpath;
   }
-  esp3d_log_d("openDir %s", dir_path.c_str());
+  esp3d_log("openDir %s", dir_path.c_str());
   return ::opendir(dir_path.c_str());
 }
 
@@ -249,7 +250,7 @@ int ESP3DSd::stat(const char *filepath, struct stat *entry_stat) {
     }
     dir_path += filepath;
   }
-  // esp3d_log_d("Stat %s, %d", dir_path.c_str(), ::stat(dir_path.c_str(),
+  // esp3d_log("Stat %s, %d", dir_path.c_str(), ::stat(dir_path.c_str(),
   // entry_stat));
   return ::stat(dir_path.c_str(), entry_stat);
 }

@@ -63,7 +63,7 @@ bool ESP3DSd::mount() {
     return false;
   }
 
-  esp3d_log_d("Initializing SD card");
+  esp3d_log("Initializing SD card");
   sdmmc_host_t host = SDMMC_HOST_DEFAULT();
   host.max_freq_khz = _config->freq / 1000; // freq is in Hz, max_freq_khz expects kHz
   
@@ -99,7 +99,7 @@ bool ESP3DSd::mount() {
       .use_one_fat = false
   };
   
-  esp3d_log_d("Mounting filesystem");
+  esp3d_log("Mounting filesystem");
   esp_err_t ret = esp_vfs_fat_sdmmc_mount(mount_point(), &host, &slot_config,
                                           &mount_config, &card);
 
@@ -112,7 +112,7 @@ bool ESP3DSd::mount() {
     }
     return false;
   }
-  esp3d_log_d("Filesystem mounted");
+  esp3d_log("Filesystem mounted");
   _mounted = true;
   _state = ESP3DSdState::idle;
   return _mounted;
@@ -126,7 +126,7 @@ bool ESP3DSd::begin() {
     return false;
   }
   
-  esp3d_log_d("Starting SD Card in SDIO mode");
+  esp3d_log("Starting SD Card in SDIO mode");
   // In SDIO mode, we don't need to initialize any bus as it's handled by the hardware
   _started = true;
   return true;
@@ -139,7 +139,7 @@ bool ESP3DSd::getSpaceInfo(uint64_t *totalBytes, uint64_t *usedBytes,
   static uint64_t _totalBytes = 0;
   static uint64_t _usedBytes = 0;
   static uint64_t _freeBytes = 0;
-  esp3d_log_d("Try to get total and free space");
+  esp3d_log("Try to get total and free space");
   // if not mounted reset values
   if (!_mounted) {
     esp3d_log_e("Failed to get total and free space because not mounted");
@@ -187,7 +187,7 @@ DIR *ESP3DSd::opendir(const char *dirpath) {
     }
     dir_path += dirpath;
   }
-  esp3d_log_d("openDir %s", dir_path.c_str());
+  esp3d_log("openDir %s", dir_path.c_str());
   return ::opendir(dir_path.c_str());
 }
 
@@ -201,7 +201,7 @@ int ESP3DSd::stat(const char *filepath, struct stat *entry_stat) {
     }
     dir_path += filepath;
   }
-  // esp3d_log_d("Stat %s, %d", dir_path.c_str(), ::stat(dir_path.c_str(),
+  // esp3d_log("Stat %s, %d", dir_path.c_str(), ::stat(dir_path.c_str(),
   // entry_stat));
   return ::stat(dir_path.c_str(), entry_stat);
 }

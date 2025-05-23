@@ -37,13 +37,6 @@ void screen_on_delay_timer_cb(lv_timer_t *timer) {
 static lv_obj_t *touch_coord_label = NULL;
 
 
-// Function to set the angle of an arc (for animation)
-static void set_arc_angle(void *obj, int32_t v)
-{
-    // Cast void* to lv_obj_t* to fix the type error
-    lv_arc_set_value((lv_obj_t *)obj, v);
-}
-
 // Touch event callback to update coordinates display
 static void screen_touch_event_cb(lv_event_t *e)
 {
@@ -60,6 +53,46 @@ static void screen_touch_event_cb(lv_event_t *e)
         }
     } else if (code == LV_EVENT_RELEASED) {
         lv_label_set_text(label, "Touch: ---,---");
+    }
+}
+
+static void button_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_indev_t *indev = lv_event_get_indev(e);
+    lv_indev_type_t type = lv_indev_get_type( indev);
+
+    if (code == LV_EVENT_PRESSED && type == LV_INDEV_TYPE_BUTTON) {
+        uint32_t lkey = lv_indev_get_key(indev);
+       esp3d_log_d("button key: %ld", lkey);
+         lv_point_t point;
+        lv_indev_get_point(indev, &point);
+        uint32_t btn_id =point.x;
+            switch (btn_id) {
+                case 0: esp3d_log_d("Button 1"); break;
+                case 1: esp3d_log_d("Button 2"); break;
+                case 2: esp3d_log_d("Button 3"); break;
+            }
+        
+    }
+}
+
+
+static void encoder_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_indev_t *indev = lv_event_get_indev(e);
+    if (code == LV_EVENT_KEY && lv_indev_get_type(indev) == LV_INDEV_TYPE_ENCODER) {
+      /*  int32_t steps;
+        if (phy_encoder_read(&steps) == ESP_OK && steps != 0) {
+            esp3d_log_d("Encoder event: %ld steps", steps);
+            lv_obj_t *label = lv_event_get_user_data(e);
+            static int value = 0;
+            value += steps;
+            lv_label_set_text_fmt(label, "Value: %d", value);
+        }*/
+       esp3d_log_d("Encoder event");
+        
     }
 }
 
@@ -132,7 +165,7 @@ lv_obj_t *screen = lv_display_get_screen_active(display);
     if(res != LV_FS_RES_OK) {
         esp3d_log_e("Impossible d'ouvrir l'image: %d", res);
     } else {
-        esp3d_log_d("Image trouvée");
+        esp3d_log("Image trouvée");
         lv_fs_close(&file);
     }
 
@@ -142,17 +175,26 @@ lv_obj_t *screen = lv_display_get_screen_active(display);
                       BOARD_NAME_STR, BOARD_VERSION_STR, 
                       ESP3D_TFT_VERSION);
     lv_obj_align(title_label, LV_ALIGN_TOP_MID, 0, 20);
-    
+    lv_obj_set_style_text_color(title_label, lv_color_white(), LV_PART_MAIN);
 
     
     // Create a label to display touch coordinates
     touch_coord_label = lv_label_create(screen);
     lv_label_set_text(touch_coord_label, "Touch: ---,---");
     lv_obj_align(touch_coord_label, LV_ALIGN_TOP_MID, 0, 60);
+    lv_obj_set_style_text_color(touch_coord_label, lv_color_white(), LV_PART_MAIN);
+
+    lv_group_t *group = lv_group_get_default();
+    if (!group) {
+        group = lv_group_create();
+        lv_group_set_default(group);
+    }
+    lv_group_add_obj(group, touch_coord_label);
     
     // Add touch event handler to the screen
     lv_obj_add_event_cb(screen, screen_touch_event_cb, LV_EVENT_ALL, touch_coord_label);
-    
+    lv_obj_add_event_cb(screen, button_event_cb, LV_EVENT_PRESSED, NULL);
+    lv_obj_add_event_cb(screen, encoder_event_cb, LV_EVENT_KEY, touch_coord_label);
     
   
     
@@ -164,7 +206,7 @@ lv_obj_t *screen = lv_display_get_screen_active(display);
 if (lv_img_get_src(img) == NULL) {
     esp3d_log_e("Failed to load image: %s", img_path);
 } else {
-    esp3d_log_d("Image loaded: %s", img_path);
+    esp3d_log("Image loaded: %s", img_path);
 }
     // Positionnement de l'image au centre de l'écran
     lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);

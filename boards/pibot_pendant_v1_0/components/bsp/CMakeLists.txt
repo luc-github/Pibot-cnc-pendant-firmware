@@ -18,6 +18,8 @@ set(BSP_REQUIRES
     "disp_backlight"
     "disp_ili9341"
     "touch_ft6336u"
+    "phy_buttons"
+    "phy_encoder"
     "lvgl"
 )
 

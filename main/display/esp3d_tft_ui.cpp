@@ -35,6 +35,7 @@
 #include "board_init.h"
 #include "rendering/esp3d_rendering_client.h"
 #include "board_config.h"
+#include "phy_buttons.h"
 
 // Declaration of the external UI creation function
 extern void create_application(void);
@@ -64,7 +65,6 @@ static void tft_ui_task(void *arg)
         
         // Take the lock to access LVGL
         _lock_acquire(lvgl_lock);
-        
         // Handle values to update for UI
         esp3dTftValues.handle();
         

@@ -19,37 +19,50 @@
 */
 
 #include "board_init.h"
+
 #include "board_config.h"
 #include "esp3d_log.h"
 
 // Include drivers and libraries
+
+#include "disp_backlight.h"
+#include "disp_backlight_def.h"
+#include "disp_ili9341_spi.h"
+#include "disp_ili9341_spi_def.h"
 #include "driver/gpio.h"
 #include "driver/spi_common.h"
-#include "disp_backlight.h"
-#include "backlight_def.h"
-#include "disp_ili9341_spi.h"
-#include "ili9341_def.h"
+#include "phy_buttons.h"
+#include "phy_buttons_def.h"
 #include "touch_ft6336u.h"
 #include "touch_ft6336u_def.h"
+#include "phy_encoder.h"
+#include "phy_encoder_def.h"
+
 
 // Required includes for LVGL
-#include "lvgl.h"
-#include "esp_timer.h"
-#include "esp_heap_caps.h"
 #include <sys/lock.h>
+
+#include "esp_heap_caps.h"
+#include "esp_timer.h"
+#include "lvgl.h"
 
 #if ESP3D_DISPLAY_FEATURE
 
 // Global variables for LVGL
 static _lock_t lvgl_api_lock;
-static lv_display_t *lvgl_display = NULL;
-static lv_color16_t *lvgl_buf1 = NULL;
-static lv_color16_t *lvgl_buf2 = NULL;
+static lv_display_t *lvgl_display         = NULL;
+static lv_color16_t *lvgl_buf1            = NULL;
+static lv_color16_t *lvgl_buf2            = NULL;
 static esp_timer_handle_t lvgl_tick_timer = NULL;
-static lv_indev_t *touch_indev = NULL;
+static lv_indev_t *touch_indev            = NULL;
+static lv_indev_t *button_indev           = NULL;
+static lv_indev_t *encoder_indev          = NULL;
+static lv_group_t *encoder_group = NULL;
 
 // Callback function to notify LVGL when flush is complete
-static bool notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
+static bool notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io,
+                                    esp_lcd_panel_io_event_data_t *edata,
+                                    void *user_ctx)
 {
     lv_display_t *disp = (lv_display_t *)user_ctx;
     lv_display_flush_ready(disp);
@@ -60,16 +73,17 @@ static bool notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_
 static void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
 {
     esp_lcd_panel_handle_t panel_handle = lv_display_get_user_data(disp);
-    int offsetx1 = area->x1;
-    int offsetx2 = area->x2;
-    int offsety1 = area->y1;
-    int offsety2 = area->y2;
-    
+    int offsetx1                        = area->x1;
+    int offsetx2                        = area->x2;
+    int offsety1                        = area->y1;
+    int offsety2                        = area->y2;
+
     // Swap R and B bytes if needed
-    if (DISPLAY_SWAP_COLOR_FLAG) {
+    if (DISPLAY_SWAP_COLOR_FLAG)
+    {
         lv_draw_sw_rgb565_swap(px_map, (offsetx2 + 1 - offsetx1) * (offsety2 + 1 - offsety1));
     }
-    
+
     // Send data to the display
     esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, px_map);
 }
@@ -78,13 +92,90 @@ static void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px
 static void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
     touch_ft6336u_data_t touch_data = touch_ft6336u_read();
-    
-    if (touch_data.is_pressed) {
-        data->state = LV_INDEV_STATE_PRESSED;
+
+    if (touch_data.is_pressed)
+    {
+        data->state   = LV_INDEV_STATE_PRESSED;
         data->point.x = touch_data.x;
         data->point.y = touch_data.y;
         esp3d_log("Touch detected at (%d, %d)", touch_data.x, touch_data.y);
+    }
+    else
+    {
+        data->state = LV_INDEV_STATE_RELEASED;
+    }
+}
+
+// LVGL button input read callback
+static void button_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
+{
+    static bool last_states[3] = {0, 0, 0};
+    bool states[3];
+    phy_buttons_read(states);
+    for (int i = 0; i < 3; i++)
+    {
+        if (states[i] && !last_states[i])
+        {
+            // Pressed
+            data->btn_id   = i;
+            data->point.x = i;
+            data->state    = LV_INDEV_STATE_PRESSED;
+            last_states[i] = states[i];
+            esp3d_log("Button %d pressed (btn_id: %ld)", i + 1, data->btn_id);
+            return;
+        }
+        else if (!states[i] && last_states[i])
+        {
+            // Released
+            data->btn_id   = i;
+            data->state    = LV_INDEV_STATE_RELEASED;
+            last_states[i] = states[i];
+            esp3d_log("Button %d released (btn_id: %ld)", i + 1, data->btn_id);
+            return;
+        }
+    }
+    // no change
+    data->state = LV_INDEV_STATE_RELEASED;
+}
+
+static void encoder_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
+{
+    static uint32_t last_output_time = 0;
+    uint32_t current_time = esp_timer_get_time() / 1000;
+    
+    int32_t steps;
+    if (phy_encoder_read(&steps) == ESP_OK && steps != 0) {
+        uint32_t time_since_last = current_time - last_output_time;
+        
+        // Filtrer spécifiquement les événements de 40ms (artifacts de quadrature)
+        if (time_since_last == 40) {
+            data->enc_diff = 0;
+            data->state = LV_INDEV_STATE_RELEASED;
+            return;
+        }
+        
+        // Intervalle adaptatif selon la vitesse
+        uint32_t min_interval;
+        if (time_since_last < 200) {
+            min_interval = 60;  // Rotation rapide : 60ms (au lieu de 30ms)
+        } else {
+            min_interval = 120; // Rotation lente : 120ms (au lieu de 100ms)
+        }
+        
+        if (time_since_last >= min_interval) {
+            data->enc_diff = (steps > 0) ? 1 : -1;
+            data->state = LV_INDEV_STATE_PRESSED;
+            
+            esp3d_log_d("LVGL encoder: %d (raw: %ld, interval: %lu)", 
+                       data->enc_diff, steps, time_since_last);
+            
+            last_output_time = current_time;
+        } else {
+            data->enc_diff = 0;
+            data->state = LV_INDEV_STATE_RELEASED;
+        }
     } else {
+        data->enc_diff = 0;
         data->state = LV_INDEV_STATE_RELEASED;
     }
 }
@@ -99,14 +190,15 @@ static void increase_lvgl_tick(void *arg)
 static esp_err_t init_touch_controller(void)
 {
     esp3d_log("Initializing touch controller");
-    
+
     // Initialize the touch controller
     esp_err_t ret = touch_ft6336u_configure(&touch_ft6336u_default_config);
-    if (ret != ESP_OK) {
+    if (ret != ESP_OK)
+    {
         esp3d_log_e("Touch controller initialization failed: %d", ret);
         return ret;
     }
-    
+
     esp3d_log("Touch controller initialized successfully");
     return ESP_OK;
 }
@@ -115,109 +207,144 @@ static esp_err_t init_touch_controller(void)
 static esp_err_t init_lvgl(void)
 {
     esp_err_t ret = ESP_OK;
-    
-    esp3d_log("Initializing LVGL v%d.%d.%d", lv_version_major(), lv_version_minor(), lv_version_patch());
-    
+
+    esp3d_log("Initializing LVGL v%d.%d.%d",
+              lv_version_major(),
+              lv_version_minor(),
+              lv_version_patch());
+
     // Initialize LVGL library
     lv_init();
-    
+
     // Get panel and IO handles
     esp_lcd_panel_handle_t panel_handle = ili9341_spi_get_panel_handle();
-    if (!panel_handle) {
+    if (!panel_handle)
+    {
         esp3d_log_e("ILI9341 panel not initialized");
         return ESP_FAIL;
     }
-    
+
     esp_lcd_panel_io_handle_t io_handle = ili9341_spi_get_io_handle();
-    if (!io_handle) {
+    if (!io_handle)
+    {
         esp3d_log_e("ILI9341 IO not initialized");
         return ESP_FAIL;
     }
-    
+
     // Create LVGL display
     lvgl_display = lv_display_create(DISPLAY_WIDTH_PX, DISPLAY_HEIGHT_PX);
-    if (!lvgl_display) {
+    if (!lvgl_display)
+    {
         esp3d_log_e("LVGL display creation failed");
         return ESP_FAIL;
     }
-    
+
     // Allocate drawing buffers
     size_t draw_buf_size = DISPLAY_WIDTH_PX * DISPLAY_BUFFER_LINES_NB * sizeof(lv_color16_t);
-    
+
     lvgl_buf1 = heap_caps_malloc(draw_buf_size, MALLOC_CAP_DMA);
-    if (!lvgl_buf1) {
+    if (!lvgl_buf1)
+    {
         esp3d_log_e("Failed to allocate draw buffer 1");
         return ESP_ERR_NO_MEM;
     }
-    
-#if DISPLAY_USE_DOUBLE_BUFFER_FLAG
+
+#    if DISPLAY_USE_DOUBLE_BUFFER_FLAG
     lvgl_buf2 = heap_caps_malloc(draw_buf_size, MALLOC_CAP_DMA);
-    if (!lvgl_buf2) {
+    if (!lvgl_buf2)
+    {
         esp3d_log_e("Failed to allocate draw buffer 2");
         free(lvgl_buf1);
         return ESP_ERR_NO_MEM;
     }
     esp3d_log("LVGL configured with double buffer");
-#else
+#    else
     lvgl_buf2 = NULL;
     esp3d_log("LVGL configured with single buffer");
-#endif
-    
+#    endif
+
     // Configure LVGL drawing buffers
-    lv_display_set_buffers(lvgl_display, lvgl_buf1, lvgl_buf2, draw_buf_size, LV_DISPLAY_RENDER_MODE_PARTIAL);
-    
+    lv_display_set_buffers(lvgl_display,
+                           lvgl_buf1,
+                           lvgl_buf2,
+                           draw_buf_size,
+                           LV_DISPLAY_RENDER_MODE_PARTIAL);
+
     // Associate the panel with the display
     lv_display_set_user_data(lvgl_display, panel_handle);
-    
+
     // Set color format
     lv_display_set_color_format(lvgl_display, LV_COLOR_FORMAT_RGB565);
-    
+
     // Set flush callback
     lv_display_set_flush_cb(lvgl_display, lvgl_flush_cb);
-    
+
     // Configure LVGL tick timer
-    const esp_timer_create_args_t lvgl_tick_timer_args = {
-        .callback = &increase_lvgl_tick,
-        .name = "lvgl_tick"
-    };
-    
+    const esp_timer_create_args_t lvgl_tick_timer_args = {.callback = &increase_lvgl_tick,
+                                                          .name     = "lvgl_tick"};
+
     ret = esp_timer_create(&lvgl_tick_timer_args, &lvgl_tick_timer);
-    if (ret != ESP_OK) {
+    if (ret != ESP_OK)
+    {
         esp3d_log_e("LVGL tick timer creation failed");
         return ret;
     }
-    
+
     ret = esp_timer_start_periodic(lvgl_tick_timer, LVGL_TICK_PERIOD_MS * 1000);
-    if (ret != ESP_OK) {
+    if (ret != ESP_OK)
+    {
         esp3d_log_e("LVGL tick timer start failed");
         return ret;
     }
-    
+
     // Register callbacks for color transfer completion notification
     const esp_lcd_panel_io_callbacks_t cbs = {
         .on_color_trans_done = notify_lvgl_flush_ready,
     };
-    
+
     // Register the callbacks
     ret = esp_lcd_panel_io_register_event_callbacks(io_handle, &cbs, lvgl_display);
-    if (ret != ESP_OK) {
+    if (ret != ESP_OK)
+    {
         esp3d_log_e("Register IO callbacks failed");
         return ret;
     }
-    
+
     // Initialize touch input device for LVGL
     touch_indev = lv_indev_create();
     lv_indev_set_type(touch_indev, LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(touch_indev, touch_read_cb);
     lv_indev_set_display(touch_indev, lvgl_display);
+
     
+    // Initialize button input device for LVGL
+    button_indev = lv_indev_create();
+    lv_indev_set_type(button_indev, LV_INDEV_TYPE_BUTTON);
+    lv_indev_set_read_cb(button_indev, button_read_cb);
+    lv_indev_set_display(button_indev, lvgl_display);
+    static lv_point_t button_points[3] = {
+        {0, 0}, // btn 1 fake positions but replace button id
+        {1, 1}, // btn 2 fake positions but replace button id
+        {2, 2}  // btn 3 fake positions but replace button id
+    };
+    lv_indev_set_button_points(button_indev, button_points);
+
+    // Initialize encoder input device for LVGL
+    encoder_indev = lv_indev_create();
+    lv_indev_set_type(encoder_indev, LV_INDEV_TYPE_ENCODER);
+    lv_indev_set_read_cb(encoder_indev, encoder_read_cb);
+    lv_indev_set_display(encoder_indev, lvgl_display);
+
+    encoder_group = lv_group_create();
+    lv_indev_set_group(encoder_indev, encoder_group);
+
     esp3d_log("LVGL initialized successfully");
     return ESP_OK;
 }
-#endif // ESP3D_DISPLAY_FEATURE
+#endif  // ESP3D_DISPLAY_FEATURE
 
 // Access functions for ESP3DTftUi
-lv_display_t* get_lvgl_display(void)
+lv_display_t *get_lvgl_display(void)
 {
 #if ESP3D_DISPLAY_FEATURE
     return lvgl_display;
@@ -226,7 +353,7 @@ lv_display_t* get_lvgl_display(void)
 #endif
 }
 
-_lock_t* get_lvgl_lock(void)
+_lock_t *get_lvgl_lock(void)
 {
 #if ESP3D_DISPLAY_FEATURE
     return &lvgl_api_lock;
@@ -239,54 +366,74 @@ _lock_t* get_lvgl_lock(void)
 esp_err_t board_init(void)
 {
     esp_err_t ret = ESP_OK;
-    
+
     esp3d_log("Initializing %s %s", BOARD_NAME_STR, BOARD_VERSION_STR);
- 
-#if ESP3D_DISPLAY_FEATURE   
+
+#if ESP3D_DISPLAY_FEATURE
     // Initialize backlight
     ret = backlight_configure(&backlight_cfg);
-    if (ret != ESP_OK) {
+    if (ret != ESP_OK)
+    {
         esp3d_log_e("Backlight initialization failed");
         return ret;
     }
     backlight_set(0);
-    
+
     // Initialize display
     ret = ili9341_spi_configure(&ili9341_default_config);
-    if (ret != ESP_OK) {
+    if (ret != ESP_OK)
+    {
         esp3d_log_e("ILI9341 display initialization failed");
         return ret;
     }
-    
+
     // Initialize touch controller
     ret = init_touch_controller();
-    if (ret != ESP_OK) {
+    if (ret != ESP_OK)
+    {
         esp3d_log_e("Touch controller initialization failed");
         // Continue even if touch controller fails
     }
-    
+
+     // Initialize physical buttons
+    ret = phy_buttons_configure(&phy_buttons_cfg);
+    if (ret != ESP_OK)
+    {
+        esp3d_log_e("Physical buttons initialization failed");
+        return ret;
+    }
+
+    // Initialize rotary encoder
+    ret = phy_encoder_configure(&phy_encoder_cfg);
+    if (ret != ESP_OK) {
+        esp3d_log_e("Rotary encoder initialization failed");
+        return ret;
+    }
+
     // Initialize LVGL
     ret = init_lvgl();
-    if (ret != ESP_OK) {
+    if (ret != ESP_OK)
+    {
         esp3d_log_e("LVGL initialization failed");
         return ret;
     }
-    
-    //backlight_set(100);
+
+    // backlight_set(100);
 #endif  // ESP3D_DISPLAY_FEATURE
-    
+
+   
     esp3d_log("Board initialization completed successfully");
     return ret;
 }
 
 // Get board name
-const char* board_get_name(void)
+const char *board_get_name(void)
 {
     return BOARD_NAME_STR;
 }
 
 // Get board version
-const char* board_get_version(void)
+const char *board_get_version(void)
 {
     return BOARD_VERSION_STR;
 }

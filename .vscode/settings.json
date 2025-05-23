@@ -15,6 +15,7 @@
         "spi_common.h": "c",
         "backlight_def.h": "c",
         "esp_lcd_panel_vendor.h": "c",
-        "lv_global.h": "c"
+        "lv_global.h": "c",
+        "list": "cpp"
     }
 }
