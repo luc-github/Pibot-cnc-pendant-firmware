@@ -73,6 +73,10 @@ lv_display_t* get_lvgl_display(void);
  */
 _lock_t* get_lvgl_lock(void);
 
+
+lv_group_t *get_encoder_group(void);
+lv_group_t *get_switch_group(void);
+
 #ifdef __cplusplus
 }
 #endif
