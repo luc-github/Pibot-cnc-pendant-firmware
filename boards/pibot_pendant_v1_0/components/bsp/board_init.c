@@ -37,6 +37,8 @@
 #include "touch_ft6336u_def.h"
 #include "phy_encoder.h"
 #include "phy_encoder_def.h"
+#include "phy_switch.h"
+#include "phy_switch_def.h"
 
 
 // Required includes for LVGL
@@ -57,6 +59,7 @@ static esp_timer_handle_t lvgl_tick_timer = NULL;
 static lv_indev_t *touch_indev            = NULL;
 static lv_indev_t *button_indev           = NULL;
 static lv_indev_t *encoder_indev          = NULL;
+static lv_indev_t *switch_indev = NULL;
 static lv_group_t *encoder_group = NULL;
 
 // Callback function to notify LVGL when flush is complete
@@ -177,6 +180,29 @@ static void encoder_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
     } else {
         data->enc_diff = 0;
         data->state = LV_INDEV_STATE_RELEASED;
+    }
+}
+
+// LVGL switch input read callback
+static void switch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
+{
+    uint32_t key_code;
+    static uint32_t last_key_code = UINT32_MAX;
+
+    if (phy_switch_read(&key_code) == ESP_OK) {
+        if (key_code != last_key_code) {
+            // Nouvelle position détectée
+            data->key = 0x31 + key_code; // Mapper à '1' (0x31), '2' (0x32), '3' (0x33), '4' (0x34)
+            data->state = LV_INDEV_STATE_PRESSED;
+            last_key_code = key_code;
+            esp3d_log_d("Switch position: %ld (key: %ld)", key_code, data->key);
+        } else {
+            // Même position, pas de nouvel événement
+            data->state = LV_INDEV_STATE_RELEASED;
+        }
+    } else {
+        data->state = LV_INDEV_STATE_RELEASED;
+        last_key_code = UINT32_MAX;
     }
 }
 
@@ -338,6 +364,12 @@ static esp_err_t init_lvgl(void)
     encoder_group = lv_group_create();
     lv_indev_set_group(encoder_indev, encoder_group);
 
+    // Initialize switch input device for LVGL
+    switch_indev = lv_indev_create();
+    lv_indev_set_type(switch_indev, LV_INDEV_TYPE_KEYPAD);
+    lv_indev_set_read_cb(switch_indev, switch_read_cb);
+    lv_indev_set_display(switch_indev, lvgl_display);
+
     esp3d_log("LVGL initialized successfully");
     return ESP_OK;
 }
@@ -407,6 +439,13 @@ esp_err_t board_init(void)
     ret = phy_encoder_configure(&phy_encoder_cfg);
     if (ret != ESP_OK) {
         esp3d_log_e("Rotary encoder initialization failed");
+        return ret;
+    }
+    
+    // Initialize 4-position switch
+    ret = phy_switch_configure(&phy_switch_cfg);
+    if (ret != ESP_OK) {
+        esp3d_log_e("4-position switch initialization failed");
         return ret;
     }
 

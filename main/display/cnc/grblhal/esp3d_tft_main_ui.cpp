@@ -96,6 +96,24 @@ static void encoder_event_cb(lv_event_t *e)
     }
 }
 
+static void switch_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_indev_t *indev = lv_event_get_indev(e);
+    if (code == LV_EVENT_PRESSED && lv_indev_get_type(indev) == LV_INDEV_TYPE_KEYPAD) {
+        uint32_t key = lv_indev_get_key(indev);
+        esp3d_log_d("Switch key: %ld", key);
+         lv_obj_t *label = (lv_obj_t *)lv_event_get_user_data(e);
+        switch (key) {
+            case 0x31: lv_label_set_text(label, "Switch: Position 1"); break;
+            case 0x32: lv_label_set_text(label, "Switch: Position 2"); break;
+            case 0x33: lv_label_set_text(label, "Switch: Position 3"); break;
+            case 0x34: lv_label_set_text(label, "Switch: Position 4"); break;
+            default: lv_label_set_text(label, "Switch: Unknown"); break;
+        }
+    }
+}
+
 // Create the user interface
 void create_application(void) {
     esp3d_log("Creating LVGL application UI");
@@ -195,6 +213,7 @@ lv_obj_t *screen = lv_display_get_screen_active(display);
     lv_obj_add_event_cb(screen, screen_touch_event_cb, LV_EVENT_ALL, touch_coord_label);
     lv_obj_add_event_cb(screen, button_event_cb, LV_EVENT_PRESSED, NULL);
     lv_obj_add_event_cb(screen, encoder_event_cb, LV_EVENT_KEY, touch_coord_label);
+    lv_obj_add_event_cb(screen, switch_event_cb, LV_EVENT_PRESSED, touch_coord_label);
     
   
     

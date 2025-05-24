@@ -114,6 +114,7 @@ extern "C" {
 #define SWITCH_POS_2_PIN    GPIO_NUM_35
 #define SWITCH_POS_3_PIN    GPIO_NUM_39
 #define SWITCH_PULLUPS_ENABLED_FLAG 1  // 10K pull-up resistors installed
+#define SWITCH_DEBOUNCE_MS_TIME  600  // Debounce time in milliseconds
 
 /* Analog Input Configuration */
 #define ANALOG_INPUT_PIN    GPIO_NUM_33

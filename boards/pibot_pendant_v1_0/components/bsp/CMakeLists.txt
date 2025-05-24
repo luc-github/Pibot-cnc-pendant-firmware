@@ -20,6 +20,7 @@ set(BSP_REQUIRES
     "touch_ft6336u"
     "phy_buttons"
     "phy_encoder"
+    "phy_switch"
     "lvgl"
 )
 
