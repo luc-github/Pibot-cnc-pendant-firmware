@@ -108,7 +108,7 @@ extern "C" {
 #define ENCODER_PULLUPS_ENABLED_FLAG 0  // No pull-up resistors installed
 #define ENCODER_DEBOUNCE_US 1000           // 5ms debounce hardware
 #define ENCODER_MIN_STEP_INTERVAL_US 10000 // 50ms anti-double-click
-#define ENCODER_ROTATION_CW 1 // rotation positive is clockwise
+#define ENCODER_INVERT_ROTATION 0 // rotation positive 
 
 /* 4-Position Switch Configuration */
 #define SWITCH_POS_1_PIN    GPIO_NUM_34

@@ -74,11 +74,23 @@ static void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px
 }
 
 // LVGL touch input read callback
-void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
+static void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
-    // Disabled for button, switch, encoder, and potentiometer focus
-    data->state = LV_INDEV_STATE_RELEASED;
+    touch_ft6336u_data_t touch_data = touch_ft6336u_read();
+
+    if (touch_data.is_pressed)
+    {
+        data->state   = LV_INDEV_STATE_PRESSED;
+        data->point.x = touch_data.x;
+        data->point.y = touch_data.y;
+        esp3d_log("Touch detected at (%d, %d)", touch_data.x, touch_data.y);
+    }
+    else
+    {
+        data->state = LV_INDEV_STATE_RELEASED;
+    }
 }
+
 
 // LVGL button input read callback
 void button_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
@@ -151,8 +163,8 @@ void encoder_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
             min_interval = 120;
         }
         if (time_since_last >= min_interval) {
-            // Adjust steps based on ENCODER_ROTATION_CW
-            int32_t adjusted_steps = ENCODER_ROTATION_CW ? steps : -steps;
+            // Adjust steps based on ENCODER_INVERT_ROTATION
+            int32_t adjusted_steps = ENCODER_INVERT_ROTATION ? -steps : steps;
             data->key = (adjusted_steps > 0) ? LV_KEY_RIGHT : LV_KEY_LEFT;
             data->state = LV_INDEV_STATE_PRESSED;
             encoder_event.steps = adjusted_steps;
@@ -239,7 +251,7 @@ void potentiometer_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
         int32_t delta = mapped_value - last_value;
         // Only send event if change is significant (e.g., ±5)
         if (abs(delta) >= 5) {
-            potentiometer_event.steps = mapped_value; // Absolute value
+            potentiometer_event.steps = mapped_value;
             data->state = LV_INDEV_STATE_PRESSED;
             lv_obj_send_event(active_screen, LV_EVENT_VALUE_CHANGED, &potentiometer_event);
             esp3d_log_d("Potentiometer: adc_value=%ld, mapped_value=%ld, delta=%ld", 
