@@ -16,7 +16,7 @@ extern "C" {
 /**
  * @brief Configure the 4-position switch
  *
- * This function initializes the GPIO pins for the switch based on the provided configuration.
+ * This function initializes the switch based on the provided configuration.
  *
  * @param config Pointer to the switch configuration
  * @return ESP_OK on success, or an error code on failure
@@ -24,14 +24,24 @@ extern "C" {
 esp_err_t phy_switch_configure(const phy_switch_config_t *config);
 
 /**
- * @brief Read the state of the switch
+ * @brief Read the state of the switch as buttons
  *
- * This function reads the current state of the switch and returns a key code.
+ * This function reads the current state of the switch and returns it as a set of button states.
  *
- * @param key_code Pointer to store the key code (0-3 for the 4 states)
+ * @param states Array to store the state of each virtual button (true = pressed, false = released)
  * @return ESP_OK on success, or an error code on failure
  */
-esp_err_t phy_switch_read(uint32_t *key_code);
+esp_err_t phy_switch_read(bool *states);
+
+/**
+ * @brief Get the current state of the switch
+ *
+ * This function returns the current key code of the switch (0 to 3).
+ *
+ * @param key_code Pointer to store the current key code
+ * @return ESP_OK on success, or an error code on failure
+ */
+esp_err_t phy_switch_get_state(uint32_t *key_code);
 
 #ifdef __cplusplus
 } /* extern "C" */

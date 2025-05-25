@@ -65,23 +65,23 @@ esp_err_t phy_switch_configure(const phy_switch_config_t *config)
 }
 
 /**
- * @brief Read the state of the switch
+ * @brief Read the state of the switch as buttons
  */
-esp_err_t phy_switch_read(uint32_t *key_code)
+esp_err_t phy_switch_read(bool *states)
 {
     if (!is_initialized) {
         esp3d_log_e("Switch not configured");
         return ESP_ERR_INVALID_STATE;
     }
 
-    if (key_code == NULL) {
-        esp3d_log_e("Invalid key code pointer");
+    if (states == NULL) {
+        esp3d_log_e("Invalid states pointer");
         return ESP_ERR_INVALID_ARG;
     }
 
-    static uint32_t last_key_code = 0;
+    static uint32_t last_key_code = UINT32_MAX;
     static uint64_t last_change_time = 0;
-    static uint32_t last_state = 0;
+    static uint32_t last_state = UINT32_MAX;
     static uint32_t stable_count = 0;
     uint64_t current_time = esp_timer_get_time() / 1000; // Temps en ms
     const uint64_t transient_key0_duration = 1000; // 1000 ms pour key_code 0
@@ -89,15 +89,31 @@ esp_err_t phy_switch_read(uint32_t *key_code)
 
     // Lire les niveaux des 3 pins (inversés pour correspondre à Arduino)
     uint32_t state = 0;
+    bool changed = false;
+    static uint8_t prevstate[] = {0, 0, 0};
     for (int i = 0; i < 3; i++) {
-        state |= (!gpio_get_level(switch_config.pins[i]) << i);
+        uint8_t current_level = !gpio_get_level(switch_config.pins[i]); // Inversé pour correspondre à Arduino
+        if (current_level != prevstate[i]) {
+            changed = true; // Un changement a été détecté
+            prevstate[i] = current_level; // Mettre à jour l'état précédent
+        }
+        state |= (current_level << i);
     }
 
     // Loguer les niveaux bruts des pins
-    /*esp3d_log_d("Switch pins (39,35,34): %d%d%d", 
-                !gpio_get_level(switch_config.pins[2]), 
-                !gpio_get_level(switch_config.pins[1]), 
-                !gpio_get_level(switch_config.pins[0]));*/
+   // esp3d_log_d("Switch pins (39,35,34): %d%d%d", 
+   //             !gpio_get_level(switch_config.pins[2]), 
+   //             !gpio_get_level(switch_config.pins[1]), 
+   //             !gpio_get_level(switch_config.pins[0]));
+   #if TFT_LOG_LEVEL >= ESP_LOG_DEBUG
+   if (changed){
+    esp3d_log_d("Switch pins (39,35,34): %d%d%d", 
+                prevstate[2], 
+                prevstate[1], 
+                prevstate[0]);
+   }
+
+   #endif // TFT_LOG_LEVEL >= ESP_LOG_DEBUG
 
     // Mapper l'état à un code de touche
     uint32_t new_key_code = state_to_key_code[state];
@@ -112,15 +128,44 @@ esp_err_t phy_switch_read(uint32_t *key_code)
 
     // Vérification du débounce et de la stabilité
     if (new_key_code != last_key_code && stable_count >= stable_threshold) {
-        // Appliquer un débounce plus strict pour key_code 0
         uint64_t required_duration = (new_key_code == 0) ? transient_key0_duration : switch_config.debounce_ms;
         if ((current_time - last_change_time) >= required_duration) {
             last_key_code = new_key_code;
             last_change_time = current_time;
-            //esp3d_log_d("Switch state changed to key code %ld", new_key_code);
+            esp3d_log_d("Switch state changed to key code %ld", new_key_code);
         }
     }
 
-    *key_code = last_key_code;
+    // Mettre à jour les états des boutons virtuels
+    for (int i = 0; i < 4; i++) {
+        states[i] = (i == last_key_code);
+    }
+
+    return ESP_OK;
+}
+
+/**
+ * @brief Get the current state of the switch
+ */
+esp_err_t phy_switch_get_state(uint32_t *key_code)
+{
+    if (!is_initialized) {
+        esp3d_log_e("Switch not configured");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (key_code == NULL) {
+        esp3d_log_e("Invalid key code pointer");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    // Lire les niveaux des 3 pins
+    uint32_t state = 0;
+    for (int i = 0; i < 3; i++) {
+        state |= (!gpio_get_level(switch_config.pins[i]) << i);
+    }
+
+    // Mapper l'état à un code de touche
+    *key_code = state_to_key_code[state];
     return ESP_OK;
 }

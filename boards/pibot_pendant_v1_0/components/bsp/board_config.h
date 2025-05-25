@@ -118,9 +118,9 @@ extern "C" {
 
 /* Analog Input Configuration */
 #define ANALOG_INPUT_PIN    GPIO_NUM_33
-#define ANALOG_ADC_CHANNEL_IDX   ADC1_CHANNEL_5  // Corresponding ADC channel for GPIO33
-#define ANALOG_ADC_WIDTH_BITS    ADC_WIDTH_BIT_12
-#define ANALOG_ADC_ATTEN_DB      ADC_ATTEN_DB_11
+#define ANALOG_ADC_CHANNEL_IDX   ADC_CHANNEL_5  // Corresponding ADC channel for GPIO33
+#define ANALOG_ADC_WIDTH_BITS    ADC_BITWIDTH_12
+#define ANALOG_ADC_ATTEN_DB      ADC_ATTEN_DB_12
 #define ANALOG_FILTER_ENABLED_FLAG 1
 #define ANALOG_FILTER_SAMPLES_NB 5  // Number of samples for filtering
 

@@ -21,6 +21,7 @@ set(BSP_REQUIRES
     "phy_buttons"
     "phy_encoder"
     "phy_switch"
+    "phy_potentiometer"
     "lvgl"
 )
 
