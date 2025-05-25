@@ -74,8 +74,14 @@ lv_display_t* get_lvgl_display(void);
 _lock_t* get_lvgl_lock(void);
 
 
-lv_group_t *get_encoder_group(void);
-lv_group_t *get_switch_group(void);
+// Access functions for indev
+lv_indev_t *get_touch_indev(void);
+
+lv_indev_t *get_button_indev(void);
+
+lv_indev_t *get_encoder_indev(void);
+
+lv_indev_t *get_switch_indev(void);
 
 #ifdef __cplusplus
 }

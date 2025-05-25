@@ -7,6 +7,7 @@
 #include "board_init.h"
 #include "board_config.h"
 #include "esp3d_log.h"
+#include "control_event.h"
 
 // Include drivers and libraries
 #include "disp_backlight.h"
@@ -72,42 +73,45 @@ static void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px
 }
 
 // LVGL touch input read callback
-static void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
+void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
-    touch_ft6336u_data_t touch_data = touch_ft6336u_read();
-
-    if (touch_data.is_pressed) {
-        data->state = LV_INDEV_STATE_PRESSED;
-        data->point.x = touch_data.x;
-        data->point.y = touch_data.y;
-        esp3d_log("Touch detected at (%d, %d)", touch_data.x, touch_data.y);
-    } else {
-        data->state = LV_INDEV_STATE_RELEASED;
-    }
+    // Disabled for button and switch focus
+    data->state = LV_INDEV_STATE_RELEASED;
 }
 
 // LVGL button input read callback
-static void button_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
+void button_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
     static bool last_states[3] = {0, 0, 0};
+    static control_event_t button_events[3] = {
+        {NULL, 0, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_BUTTONS},
+        {NULL, 1, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_BUTTONS},
+        {NULL, 2, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_BUTTONS}
+    };
     bool states[3];
     phy_buttons_read(states);
+    lv_obj_t *active_screen = lv_screen_active();
+    if (!active_screen) {
+        esp3d_log_e("Active screen is NULL in button_read_cb");
+        data->state = LV_INDEV_STATE_RELEASED;
+        return;
+    }
+    // Initialize indev handles
+    for (int i = 0; i < 3; i++) {
+        button_events[i].indev = indev;
+    }
     for (int i = 0; i < 3; i++) {
         if (states[i] && !last_states[i]) {
-            data->btn_id = i;
-            data->point.x = 0; // Coordonnées : {0,0}, {0,1}, {0,2}
-            data->point.y = i;
             data->state = LV_INDEV_STATE_PRESSED;
+            lv_obj_send_event(active_screen, LV_EVENT_PRESSED, &button_events[i]);
+            esp3d_log_d("Button %d pressed (btn_id: %d)", i + 1, i);
             last_states[i] = states[i];
-            esp3d_log_d("Button %d pressed (btn_id: %ld)", i + 1, data->btn_id);
             return;
         } else if (!states[i] && last_states[i]) {
-            data->btn_id = i;
-            data->point.x = 0;
-            data->point.y = i;
             data->state = LV_INDEV_STATE_RELEASED;
+            lv_obj_send_event(active_screen, LV_EVENT_RELEASED, &button_events[i]);
+            esp3d_log_d("Button %d released (btn_id: %d)", i + 1, i);
             last_states[i] = states[i];
-            esp3d_log_d("Button %d released (btn_id: %ld)", i + 1, data->btn_id);
             return;
         }
     }
@@ -115,66 +119,47 @@ static void button_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 }
 
 // LVGL encoder input read callback
-static void encoder_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
+void encoder_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
-    static uint32_t last_output_time = 0;
-    uint32_t current_time = esp_timer_get_time() / 1000;
-
-    int32_t steps;
-    if (phy_encoder_read(&steps) == ESP_OK && steps != 0) {
-        uint32_t time_since_last = current_time - last_output_time;
-
-        if (time_since_last == 40) {
-            data->key = 0;
-            data->state = LV_INDEV_STATE_RELEASED;
-            return;
-        }
-
-        uint32_t min_interval;
-        if (time_since_last < 200) {
-            min_interval = 60;
-        } else {
-            min_interval = 120;
-        }
-
-        if (time_since_last >= min_interval) {
-            data->key = (steps > 0) ? LV_KEY_RIGHT : LV_KEY_LEFT;
-            data->state = LV_INDEV_STATE_PRESSED;
-            esp3d_log_d("LVGL encoder: key=%ld (steps: %ld, interval: %lu)",
-                       data->key, steps, time_since_last);
-            last_output_time = current_time;
-        } else {
-            data->key = 0;
-            data->state = LV_INDEV_STATE_RELEASED;
-        }
-    } else {
-        data->key = 0;
-        data->state = LV_INDEV_STATE_RELEASED;
-    }
+    // Disabled for button and switch focus
+    data->key = 0;
+    data->state = LV_INDEV_STATE_RELEASED;
 }
 
-// LVGL switch input read callback (traité comme boutons)
-static void switch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
+// LVGL switch input read callback
+void switch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
     static bool last_states[4] = {0, 0, 0, 0};
+    static control_event_t switch_events[4] = {
+        {NULL, 0, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH},
+        {NULL, 1, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH},
+        {NULL, 2, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH},
+        {NULL, 3, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH}
+    };
     bool states[4];
+    lv_obj_t *active_screen = lv_screen_active();
+    if (!active_screen) {
+        esp3d_log_e("Active screen is NULL in switch_read_cb");
+        data->state = LV_INDEV_STATE_RELEASED;
+        return;
+    }
+    // Initialize indev handles
+    for (int i = 0; i < 4; i++) {
+        switch_events[i].indev = indev;
+    }
     if (phy_switch_read(states) == ESP_OK) {
         for (int i = 0; i < 4; i++) {
             if (states[i] && !last_states[i]) {
-                data->btn_id = i;
-                data->point.x = 1; // Coordonnées : {1,0}, {1,1}, {1,2}, {1,3}
-                data->point.y = i;
                 data->state = LV_INDEV_STATE_PRESSED;
+                lv_obj_send_event(active_screen, LV_EVENT_PRESSED, &switch_events[i]);
+                esp3d_log_d("Switch button %d pressed (btn_id: %d)", i, i);
                 last_states[i] = states[i];
-                esp3d_log_d("Switch button %d pressed (btn_id: %ld, point: %ld,%ld)", i, data->btn_id, data->point.x, data->point.y);
                 return;
             } else if (!states[i] && last_states[i]) {
-                data->btn_id = i;
-                data->point.x = 1;
-                data->point.y = i;
                 data->state = LV_INDEV_STATE_RELEASED;
+                lv_obj_send_event(active_screen, LV_EVENT_RELEASED, &switch_events[i]);
+                esp3d_log_d("Switch button %d released (btn_id: %d)", i, i);
                 last_states[i] = states[i];
-                esp3d_log_d("Switch button %d released (btn_id: %ld, point: %ld,%ld)", i, data->btn_id, data->point.x, data->point.y);
                 return;
             }
         }
@@ -305,7 +290,7 @@ static esp_err_t init_lvgl(void)
     lv_indev_set_type(button_indev, LV_INDEV_TYPE_BUTTON);
     lv_indev_set_read_cb(button_indev, button_read_cb);
     lv_indev_set_display(button_indev, lvgl_display);
-    static lv_point_t button_points[3] = {{0, 0}, {0, 1}, {0, 2}};
+    static lv_point_t button_points[3] = {{0, 0}, {0, 0}, {0, 0}}; // Identical coordinates
     lv_indev_set_button_points(button_indev, button_points);
 
     encoder_indev = lv_indev_create();
@@ -317,7 +302,7 @@ static esp_err_t init_lvgl(void)
     lv_indev_set_type(switch_indev, LV_INDEV_TYPE_BUTTON);
     lv_indev_set_read_cb(switch_indev, switch_read_cb);
     lv_indev_set_display(switch_indev, lvgl_display);
-    static lv_point_t switch_points[4] = {{1, 0}, {1, 1}, {1, 2}, {1, 3}};
+    static lv_point_t switch_points[4] = {{0, 0}, {0, 0}, {0, 0}, {0, 0}}; // Identical coordinates
     lv_indev_set_button_points(switch_indev, switch_points);
 
     esp3d_log("LVGL initialized successfully");
@@ -339,6 +324,43 @@ _lock_t *get_lvgl_lock(void)
 {
 #if ESP3D_DISPLAY_FEATURE
     return &lvgl_api_lock;
+#else
+    return NULL;
+#endif
+}
+
+// Access functions for indev
+lv_indev_t *get_touch_indev(void)
+{
+#if ESP3D_DISPLAY_FEATURE
+    return touch_indev;
+#else
+    return NULL;
+#endif
+}
+
+lv_indev_t *get_button_indev(void)
+{
+#if ESP3D_DISPLAY_FEATURE
+    return button_indev;
+#else
+    return NULL;
+#endif
+}
+
+lv_indev_t *get_encoder_indev(void)
+{
+#if ESP3D_DISPLAY_FEATURE
+    return encoder_indev;
+#else
+    return NULL;
+#endif
+}
+
+lv_indev_t *get_switch_indev(void)
+{
+#if ESP3D_DISPLAY_FEATURE
+    return switch_indev;
 #else
     return NULL;
 #endif
@@ -404,7 +426,7 @@ esp_err_t board_init(void)
 #endif  // ESP3D_DISPLAY_FEATURE
 
     esp3d_log("Board initialization completed successfully");
-    return ret;
+    return ESP_OK;
 }
 
 // Get board name

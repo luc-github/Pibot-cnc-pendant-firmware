@@ -1,6 +1,6 @@
 /*
   phy_switch.c - 4-position switch driver for PiBot CNC Pendant
-  Copyright (c) 2025 Luc Lebosse. All rights reserved.
+  Copyright (c) 2025 Luc LEBOSSE. All rights reserved.
   Licensed under GNU Lesser General Public License v2.1 or later.
 */
 
@@ -12,13 +12,13 @@
 static phy_switch_config_t switch_config;
 static bool is_initialized = false;
 
-// Table de correspondance pour les 4 états (basée sur 000, 100, 010, 001)
+// Table de correspondance pour les 4 états (basée sur 000, 001, 100, 010)
 static const uint32_t state_to_key_code[8] = {
-    0, // 000: Position 0 (aucune broche active)
-    3, // 001: Position 3 (GPIO39 à 0)
-    2, // 010: Position 2 (GPIO35 à 0)
+    0, // 000: Position 0 (X)
+    1, // 001: Position 1 (Y)
+    3, // 010: Position 3 (C)
     0, // 011: Non utilisé
-    1, // 100: Position 1 (GPIO34 à 0)
+    2, // 100: Position 2 (Z)
     0, // 101: Non utilisé
     0, // 110: Non utilisé
     0  // 111: Non utilisé
@@ -101,19 +101,14 @@ esp_err_t phy_switch_read(bool *states)
     }
 
     // Loguer les niveaux bruts des pins
-   // esp3d_log_d("Switch pins (39,35,34): %d%d%d", 
-   //             !gpio_get_level(switch_config.pins[2]), 
-   //             !gpio_get_level(switch_config.pins[1]), 
-   //             !gpio_get_level(switch_config.pins[0]));
-   #if TFT_LOG_LEVEL >= ESP_LOG_DEBUG
-   if (changed){
-    esp3d_log_d("Switch pins (39,35,34): %d%d%d", 
-                prevstate[2], 
-                prevstate[1], 
-                prevstate[0]);
-   }
-
-   #endif // TFT_LOG_LEVEL >= ESP_LOG_DEBUG
+    #if TFT_LOG_LEVEL >= ESP_LOG_DEBUG
+    if (changed) {
+        esp3d_log_d("Switch pins (34,39,35): %d%d%d", 
+                    prevstate[0], 
+                    prevstate[1], 
+                    prevstate[2]);
+    }
+    #endif // TFT_LOG_LEVEL >= ESP_LOG_DEBUG
 
     // Mapper l'état à un code de touche
     uint32_t new_key_code = state_to_key_code[state];
