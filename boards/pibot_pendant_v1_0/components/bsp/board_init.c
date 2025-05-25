@@ -45,6 +45,7 @@ static lv_indev_t *touch_indev = NULL;
 static lv_indev_t *button_indev = NULL;
 static lv_indev_t *encoder_indev = NULL;
 static lv_indev_t *switch_indev = NULL;
+static lv_indev_t *potentiometer_indev = NULL;
 
 // Callback function to notify LVGL when flush is complete
 static bool notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io,
@@ -75,7 +76,7 @@ static void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px
 // LVGL touch input read callback
 void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
-    // Disabled for button, switch, and encoder focus
+    // Disabled for button, switch, encoder, and potentiometer focus
     data->state = LV_INDEV_STATE_RELEASED;
 }
 
@@ -209,6 +210,46 @@ void switch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
         data->state = LV_INDEV_STATE_RELEASED;
     } else {
         esp3d_log_e("Failed to read switch");
+        data->state = LV_INDEV_STATE_RELEASED;
+    }
+}
+
+// LVGL potentiometer input read callback
+void potentiometer_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
+{
+    static control_event_t potentiometer_event = {
+        NULL, 0, LV_INDEV_TYPE_POINTER, CONTROL_FAMILY_POTENTIOMETER, 0
+    };
+    static uint32_t last_value = UINT32_MAX;
+    lv_obj_t *active_screen = lv_screen_active();
+    if (!active_screen) {
+        esp3d_log_e("Active screen is NULL in potentiometer_read_cb");
+        data->state = LV_INDEV_STATE_RELEASED;
+        return;
+    }
+    // Initialize indev handle
+    potentiometer_event.indev = indev;
+    uint32_t adc_value;
+    if (phy_potentiometer_read(&adc_value) == ESP_OK) {
+        // Map ADC value (0–4095) to 0–100
+        int32_t mapped_value = (adc_value * 100) / 4095;
+        if (last_value == UINT32_MAX) {
+            last_value = mapped_value;
+        }
+        int32_t delta = mapped_value - last_value;
+        // Only send event if change is significant (e.g., ±5)
+        if (abs(delta) >= 5) {
+            potentiometer_event.steps = mapped_value; // Absolute value
+            data->state = LV_INDEV_STATE_PRESSED;
+            lv_obj_send_event(active_screen, LV_EVENT_VALUE_CHANGED, &potentiometer_event);
+            esp3d_log_d("Potentiometer: adc_value=%ld, mapped_value=%ld, delta=%ld", 
+                       adc_value, mapped_value, delta);
+            last_value = mapped_value;
+        } else {
+            data->state = LV_INDEV_STATE_RELEASED;
+        }
+    } else {
+        esp3d_log_e("Failed to read potentiometer");
         data->state = LV_INDEV_STATE_RELEASED;
     }
 }
@@ -348,6 +389,11 @@ static esp_err_t init_lvgl(void)
     static lv_point_t switch_points[4] = {{0, 0}, {0, 0}, {0, 0}, {0, 0}};
     lv_indev_set_button_points(switch_indev, switch_points);
 
+    potentiometer_indev = lv_indev_create();
+    lv_indev_set_type(potentiometer_indev, LV_INDEV_TYPE_POINTER);
+    lv_indev_set_read_cb(potentiometer_indev, potentiometer_read_cb);
+    lv_indev_set_display(potentiometer_indev, lvgl_display);
+
     esp3d_log("LVGL initialized successfully");
     return ESP_OK;
 }
@@ -404,6 +450,15 @@ lv_indev_t *get_switch_indev(void)
 {
 #if ESP3D_DISPLAY_FEATURE
     return switch_indev;
+#else
+    return NULL;
+#endif
+}
+
+lv_indev_t *get_potentiometer_indev(void)
+{
+#if ESP3D_DISPLAY_FEATURE
+    return potentiometer_indev;
 #else
     return NULL;
 #endif

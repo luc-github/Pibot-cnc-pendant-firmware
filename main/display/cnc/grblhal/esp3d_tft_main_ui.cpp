@@ -12,6 +12,7 @@
 #include "lvgl.h"
 #include "disp_backlight.h"
 #include "phy_switch.h"
+#include "phy_potentiometer.h"
 
 lv_timer_t *screen_on_delay_timer = nullptr;
 
@@ -24,7 +25,7 @@ void screen_on_delay_timer_cb(lv_timer_t *timer) {
 static lv_obj_t *touch_label = NULL;      // Label pour les coordonnées du touch
 static lv_obj_t *button_label = NULL;     // Label pour le dernier bouton pressé et l'encodeur
 static lv_obj_t *switch_label = NULL;     // Label pour l'état actuel du switch
-static lv_obj_t *encoder_slider = NULL;   // Slider pour l'encodeur
+static lv_obj_t *encoder_slider = NULL;   // Slider pour l'encodeur et potentiomètre
 static lv_group_t *encoder_group = NULL;  // Groupe pour l'encodeur
 
 // Callback pour les boutons physiques
@@ -89,6 +90,23 @@ static void encoder_event_cb(lv_event_t *e)
     }
 }
 
+// Callback pour le potentiomètre
+static void potentiometer_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *label = button_label;
+    if (code == LV_EVENT_VALUE_CHANGED) {
+        control_event_t *event = (control_event_t *)lv_event_get_param(e);
+        if (event && event->family_id == CONTROL_FAMILY_POTENTIOMETER) {
+            int32_t value = event->steps; // Mapped value (0–100)
+            lv_obj_t *slider = encoder_slider;
+            lv_slider_set_value(slider, value, LV_ANIM_OFF);
+            lv_label_set_text_fmt(label, "Potentiometer: %ld", value);
+            esp3d_log_d("Potentiometer: value=%ld", value);
+        }
+    }
+}
+
 // Créer l'interface utilisateur
 void create_application(void) {
     esp3d_log("Creating LVGL application UI");
@@ -127,7 +145,7 @@ void create_application(void) {
     lv_obj_set_style_text_color(touch_label, lv_color_white(), LV_PART_MAIN);
     esp3d_log_d("Touch label created: %p", touch_label);
 
-    // Créer un label pour le dernier bouton pressé et l'encodeur
+    // Créer un label pour le dernier bouton pressé, l'encodeur et le potentiomètre
     button_label = lv_label_create(main_container);
     lv_label_set_text(button_label, "Dernier bouton: Aucun");
     lv_obj_align(button_label, LV_ALIGN_TOP_MID, 0, 20);
@@ -141,7 +159,7 @@ void create_application(void) {
     lv_obj_set_style_text_color(switch_label, lv_color_white(), LV_PART_MAIN);
     esp3d_log_d("Switch label created: %p", switch_label);
 
-    // Créer un slider pour l'encodeur
+    // Créer un slider pour l'encodeur et le potentiomètre
     encoder_slider = lv_slider_create(main_container);
     lv_obj_set_size(encoder_slider, 200, 20);
     lv_obj_align(encoder_slider, LV_ALIGN_TOP_MID, 0, 60);
@@ -184,10 +202,22 @@ void create_application(void) {
         esp3d_log_e("Failed to get initial switch state");
     }
 
+    // Initialiser l'UI avec l'état actuel du potentiomètre
+    uint32_t initial_adc_value;
+    if (phy_potentiometer_read(&initial_adc_value) == ESP_OK) {
+        int32_t initial_value = (initial_adc_value * 100) / 4095;
+        lv_slider_set_value(encoder_slider, initial_value, LV_ANIM_OFF);
+        lv_label_set_text_fmt(button_label, "Potentiometer: %ld", initial_value);
+        esp3d_log_d("Potentiometer initialized with value: %ld", initial_value);
+    } else {
+        esp3d_log_e("Failed to get initial potentiometer state");
+    }
+
     // Attacher les gestionnaires d'événements à l'écran actif
     lv_obj_add_event_cb(screen, button_event_cb, LV_EVENT_PRESSED, NULL);
     lv_obj_add_event_cb(screen, switch_event_cb, LV_EVENT_PRESSED, NULL);
     lv_obj_add_event_cb(screen, encoder_event_cb, LV_EVENT_KEY, NULL);
+    lv_obj_add_event_cb(screen, potentiometer_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
     esp3d_log("LVGL application UI created");
     screen_on_delay_timer = lv_timer_create(screen_on_delay_timer_cb, 50, NULL);

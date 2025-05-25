@@ -11,8 +11,8 @@ typedef enum {
     CONTROL_FAMILY_BUTTONS = 0, // Buttons (3 physical buttons)
     CONTROL_FAMILY_SWITCH,     // 4-position switch
     CONTROL_FAMILY_TOUCH,       // Touchscreen (future)
-    CONTROL_FAMILY_ENCODER,     // Rotary encoder (future)
-    CONTROL_FAMILY_POTENTIOMETER // Potentiometer (future)
+    CONTROL_FAMILY_ENCODER,     // Rotary encoder
+    CONTROL_FAMILY_POTENTIOMETER // Potentiometer
 } control_family_t;
 
 #endif // CONTROL_TYPES_H
