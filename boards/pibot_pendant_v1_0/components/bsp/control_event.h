@@ -12,9 +12,10 @@
 
 typedef struct {
     lv_indev_t *indev;        // Input device handle
-    uint32_t btn_id;          // Control ID
+    uint32_t btn_id;          // Control ID (for buttons, switch)
     lv_indev_type_t type;     // Input device type
     control_family_t family_id; // Family ID (CONTROL_FAMILY_BUTTONS, CONTROL_FAMILY_SWITCH, etc.)
+    int steps;                // Step count for encoder (e.g., +1, -1)
 } control_event_t;
 
 #endif // CONTROL_EVENT_H

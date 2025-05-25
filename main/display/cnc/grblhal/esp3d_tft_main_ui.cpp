@@ -34,7 +34,7 @@ static void button_event_cb(lv_event_t *e)
     lv_obj_t *label = button_label;
     if (code == LV_EVENT_PRESSED) {
         control_event_t *event = (control_event_t *)lv_event_get_param(e);
-        if (event && event->family_id == CONTROL_FAMILY_BUTTONS) { // Family ID pour boutons
+        if (event && event->family_id == CONTROL_FAMILY_BUTTONS) {
             uint32_t btn_id = event->btn_id;
             esp3d_log_d("Button key: %ld, family_id: %d", btn_id, event->family_id);
             switch (btn_id) {
@@ -54,7 +54,7 @@ static void switch_event_cb(lv_event_t *e)
     lv_obj_t *label = switch_label;
     if (code == LV_EVENT_PRESSED) {
         control_event_t *event = (control_event_t *)lv_event_get_param(e);
-        if (event && event->family_id == CONTROL_FAMILY_SWITCH) { // Family ID pour switch
+        if (event && event->family_id == CONTROL_FAMILY_SWITCH) {
             uint32_t btn_id = event->btn_id;
             esp3d_log_d("Switch button key: %ld, family_id: %d", btn_id, event->family_id);
             switch (btn_id) {
@@ -64,6 +64,27 @@ static void switch_event_cb(lv_event_t *e)
                 case 3: lv_label_set_text(label, "Axe: C"); break;
                 default: lv_label_set_text(label, "Axe: Inconnu"); break;
             }
+        }
+    }
+}
+
+// Callback pour l'encodeur
+static void encoder_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *label = button_label;
+    if (code == LV_EVENT_KEY) {
+        control_event_t *event = (control_event_t *)lv_event_get_param(e);
+        if (event && event->family_id == CONTROL_FAMILY_ENCODER) {
+            int32_t steps = event->steps; // Positive for right, negative for left
+            lv_obj_t *slider = encoder_slider;
+            int32_t value = lv_slider_get_value(slider);
+            value += steps * 5; // Adjust by 5 per step
+            if (value < 0) value = 0;
+            if (value > 100) value = 100;
+            lv_slider_set_value(slider, value, LV_ANIM_OFF);
+            lv_label_set_text_fmt(label, "Encoder: %ld", value);
+            esp3d_log_d("Encoder: steps=%ld, value=%ld", steps, value);
         }
     }
 }
@@ -128,11 +149,11 @@ void create_application(void) {
     lv_slider_set_value(encoder_slider, 50, LV_ANIM_OFF);
     esp3d_log_d("Encoder slider created: %p", encoder_slider);
 
-    // Créer le groupe pour l'encodeur (kept for future re-enabling)
+    // Créer le groupe pour l'encodeur
     encoder_group = lv_group_create();
     esp3d_log_d("Encoder group created: %p", encoder_group);
 
-    // Associer l'indev encodeur au groupe (kept for future re-enabling)
+    // Associer l'indev encodeur au groupe
     lv_indev_t *encoder_indev = get_encoder_indev();
     if (encoder_indev) {
         lv_indev_set_group(encoder_indev, encoder_group);
@@ -141,11 +162,11 @@ void create_application(void) {
         esp3d_log_e("Encoder indev is NULL");
     }
 
-    // Ajouter le slider à encoder_group (kept for future re-enabling)
+    // Ajouter le slider à encoder_group
     lv_group_add_obj(encoder_group, encoder_slider);
     esp3d_log_d("Slider added to encoder group");
 
-    // Activer le mode édition pour le slider (kept for future re-enabling)
+    // Activer le mode édition pour le slider
     lv_group_set_editing(encoder_group, true);
 
     // Initialiser l'UI avec l'état actuel du switch
@@ -166,6 +187,7 @@ void create_application(void) {
     // Attacher les gestionnaires d'événements à l'écran actif
     lv_obj_add_event_cb(screen, button_event_cb, LV_EVENT_PRESSED, NULL);
     lv_obj_add_event_cb(screen, switch_event_cb, LV_EVENT_PRESSED, NULL);
+    lv_obj_add_event_cb(screen, encoder_event_cb, LV_EVENT_KEY, NULL);
 
     esp3d_log("LVGL application UI created");
     screen_on_delay_timer = lv_timer_create(screen_on_delay_timer_cb, 50, NULL);

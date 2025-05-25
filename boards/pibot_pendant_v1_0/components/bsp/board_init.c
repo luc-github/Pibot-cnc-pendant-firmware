@@ -75,7 +75,7 @@ static void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px
 // LVGL touch input read callback
 void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
-    // Disabled for button and switch focus
+    // Disabled for button, switch, and encoder focus
     data->state = LV_INDEV_STATE_RELEASED;
 }
 
@@ -84,9 +84,9 @@ void button_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
     static bool last_states[3] = {0, 0, 0};
     static control_event_t button_events[3] = {
-        {NULL, 0, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_BUTTONS},
-        {NULL, 1, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_BUTTONS},
-        {NULL, 2, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_BUTTONS}
+        {NULL, 0, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_BUTTONS, 0},
+        {NULL, 1, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_BUTTONS, 0},
+        {NULL, 2, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_BUTTONS, 0}
     };
     bool states[3];
     phy_buttons_read(states);
@@ -121,9 +121,52 @@ void button_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 // LVGL encoder input read callback
 void encoder_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
-    // Disabled for button and switch focus
-    data->key = 0;
-    data->state = LV_INDEV_STATE_RELEASED;
+    static control_event_t encoder_event = {
+        NULL, 0, LV_INDEV_TYPE_ENCODER, CONTROL_FAMILY_ENCODER, 0
+    };
+    static uint32_t last_output_time = 0;
+    uint32_t current_time = esp_timer_get_time() / 1000; // Temps en ms
+    lv_obj_t *active_screen = lv_screen_active();
+    if (!active_screen) {
+        esp3d_log_e("Active screen is NULL in encoder_read_cb");
+        data->key = 0;
+        data->state = LV_INDEV_STATE_RELEASED;
+        return;
+    }
+    // Initialize indev handle
+    encoder_event.indev = indev;
+    int32_t steps;
+    if (phy_encoder_read(&steps) == ESP_OK && steps != 0) {
+        uint32_t time_since_last = current_time - last_output_time;
+        if (time_since_last == 40) {
+            data->key = 0;
+            data->state = LV_INDEV_STATE_RELEASED;
+            return;
+        }
+        uint32_t min_interval;
+        if (time_since_last < 200) {
+            min_interval = 60;
+        } else {
+            min_interval = 120;
+        }
+        if (time_since_last >= min_interval) {
+            // Adjust steps based on ENCODER_ROTATION_CW
+            int32_t adjusted_steps = ENCODER_ROTATION_CW ? steps : -steps;
+            data->key = (adjusted_steps > 0) ? LV_KEY_RIGHT : LV_KEY_LEFT;
+            data->state = LV_INDEV_STATE_PRESSED;
+            encoder_event.steps = adjusted_steps;
+            lv_obj_send_event(active_screen, LV_EVENT_KEY, &encoder_event);
+            esp3d_log_d("LVGL encoder: key=%ld (steps: %ld, adjusted_steps: %ld, interval: %lu)",
+                       data->key, steps, adjusted_steps, time_since_last);
+            last_output_time = current_time;
+        } else {
+            data->key = 0;
+            data->state = LV_INDEV_STATE_RELEASED;
+        }
+    } else {
+        data->key = 0;
+        data->state = LV_INDEV_STATE_RELEASED;
+    }
 }
 
 // LVGL switch input read callback
@@ -131,10 +174,10 @@ void switch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
     static bool last_states[4] = {0, 0, 0, 0};
     static control_event_t switch_events[4] = {
-        {NULL, 0, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH},
-        {NULL, 1, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH},
-        {NULL, 2, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH},
-        {NULL, 3, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH}
+        {NULL, 0, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH, 0},
+        {NULL, 1, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH, 0},
+        {NULL, 2, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH, 0},
+        {NULL, 3, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH, 0}
     };
     bool states[4];
     lv_obj_t *active_screen = lv_screen_active();
@@ -290,7 +333,7 @@ static esp_err_t init_lvgl(void)
     lv_indev_set_type(button_indev, LV_INDEV_TYPE_BUTTON);
     lv_indev_set_read_cb(button_indev, button_read_cb);
     lv_indev_set_display(button_indev, lvgl_display);
-    static lv_point_t button_points[3] = {{0, 0}, {0, 0}, {0, 0}}; // Identical coordinates
+    static lv_point_t button_points[3] = {{0, 0}, {0, 0}, {0, 0}};
     lv_indev_set_button_points(button_indev, button_points);
 
     encoder_indev = lv_indev_create();
@@ -302,7 +345,7 @@ static esp_err_t init_lvgl(void)
     lv_indev_set_type(switch_indev, LV_INDEV_TYPE_BUTTON);
     lv_indev_set_read_cb(switch_indev, switch_read_cb);
     lv_indev_set_display(switch_indev, lvgl_display);
-    static lv_point_t switch_points[4] = {{0, 0}, {0, 0}, {0, 0}, {0, 0}}; // Identical coordinates
+    static lv_point_t switch_points[4] = {{0, 0}, {0, 0}, {0, 0}, {0, 0}};
     lv_indev_set_button_points(switch_indev, switch_points);
 
     esp3d_log("LVGL initialized successfully");
