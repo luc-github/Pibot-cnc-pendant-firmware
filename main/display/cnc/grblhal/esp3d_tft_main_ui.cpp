@@ -26,7 +26,6 @@ static lv_obj_t *button_label = NULL;  // Label pour le dernier bouton pressé, 
 static lv_obj_t *switch_label = NULL;  // Label pour l'état du switch
 static lv_obj_t *backlight_slider = NULL;  // Slider pour le backlight
 static lv_obj_t *encoder_slider = NULL;  // Slider pour l'encodeur et potentiomètre
-static lv_group_t *encoder_group = NULL;  // Groupe pour l'encodeur
 static lv_obj_t *touch_button = NULL;  // Bouton pour tester le touch
 static lv_obj_t *touch_counter_label = NULL;  // Label pour le compteur de touch
 static uint32_t touch_press_count = 0;     // Compteur de pressions sur le bouton
@@ -170,7 +169,7 @@ static void touch_event_cb(lv_event_t *e)
     {
         touch_press_count++;
         lv_label_set_text_fmt(label, "Touch presses: %ld", touch_press_count);
-        esp3d_log_e("Touch event without valid control_event_t");
+        esp3d_log_d("Touch presses: %ld", touch_press_count);
     }
 }
 
@@ -285,28 +284,7 @@ void create_application(void)
     lv_obj_set_style_text_color(touch_counter_label, lv_color_white(), LV_PART_MAIN);
     esp3d_log_d("Touch counter label created: %p", touch_counter_label);
 
-    // Créer le groupe pour l'encodeur
-    encoder_group = lv_group_create();
-    esp3d_log_d("Encoder group created: %p", encoder_group);
 
-    // Associer l'indev encodeur au groupe
-    lv_indev_t *encoder_indev = get_encoder_indev();
-    if (encoder_indev)
-    {
-        lv_indev_set_group(encoder_indev, encoder_group);
-        esp3d_log_d("Encoder indev %p assigned to group %p", encoder_indev, encoder_group);
-    }
-    else
-    {
-        esp3d_log_e("Encoder indev is NULL");
-    }
-
-    // Ajouter le slider à encoder_group
-    lv_group_add_obj(encoder_group, encoder_slider);
-    esp3d_log_d("Slider added to encoder group");
-
-    // Activer le mode édition pour le slider
-    lv_group_set_editing(encoder_group, true);
 
     // Initialiser l'UI avec l'état actuel du switch
     uint32_t initial_key_code;
