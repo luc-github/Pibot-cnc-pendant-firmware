@@ -67,7 +67,7 @@ extern "C" {
 #define BACKLIGHT_PIN               GPIO_NUM_21
 #define BACKLIGHT_ACTIVE_HIGH_FLAG  1       // GPIO level for backlight on
 #define BACKLIGHT_DEFAULT_LEVEL_PCT 100     // Default brightness level (0-100)
-#define BACKLIGHT_PWM_ENABLED_FLAG  0       // 0: GPIO control, 1: PWM control
+#define BACKLIGHT_PWM_ENABLED_FLAG  1       // 0: GPIO control, 1: PWM control
 
 // PWM specific settings (only used if BACKLIGHT_PWM_ENABLED is 1)
 #define BACKLIGHT_PWM_FREQ_HZ       5000    // PWM frequency in Hz

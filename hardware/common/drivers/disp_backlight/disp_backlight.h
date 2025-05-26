@@ -42,7 +42,6 @@ extern "C" { /* extern "C" */
  * configuration.
  *
  * @param config Pointer to the backlight configuration.
- * @param bckl Pointer to the created backlight instance.
  * @return `ESP_OK` if the backlight instance is created successfully, or an
  * error code if it fails.
  */
@@ -62,7 +61,14 @@ esp_err_t backlight_configure(const backlight_config_t *config);
  */
 esp_err_t backlight_set(int brightness_percent);
 
-
+/**
+ * @brief Gets the current brightness of the display backlight.
+ *
+ * This function returns the current brightness level as a percentage.
+ *
+ * @return The current brightness level (0-100) if initialized, or -1 if not initialized.
+ */
+int backlight_get_current(void);
 
 #ifdef __cplusplus
 } /* extern "C" */

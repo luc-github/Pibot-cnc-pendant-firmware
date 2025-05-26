@@ -18,27 +18,32 @@
 
 lv_timer_t *screen_on_delay_timer = nullptr;
 
-void screen_on_delay_timer_cb(lv_timer_t *timer)
-{
-    lv_timer_del(screen_on_delay_timer);
-    backlight_set(100);
-}
+
 
 // Widgets pour l'UI
 static lv_obj_t *touch_label = NULL;  // Label pour les coordonnées du touch
 static lv_obj_t *button_label = NULL;  // Label pour le dernier bouton pressé, l'encodeur et le potentiomètre
-static lv_obj_t *switch_label        = NULL;  // Label pour l'état du switch
-static lv_obj_t *encoder_slider      = NULL;  // Slider pour l'encodeur et potentiomètre
-static lv_group_t *encoder_group     = NULL;  // Groupe pour l'encodeur
-static lv_obj_t *touch_button        = NULL;  // Bouton pour tester le touch
+static lv_obj_t *switch_label = NULL;  // Label pour l'état du switch
+static lv_obj_t *backlight_slider = NULL;  // Slider pour le backlight
+static lv_obj_t *encoder_slider = NULL;  // Slider pour l'encodeur et potentiomètre
+static lv_group_t *encoder_group = NULL;  // Groupe pour l'encodeur
+static lv_obj_t *touch_button = NULL;  // Bouton pour tester le touch
 static lv_obj_t *touch_counter_label = NULL;  // Label pour le compteur de touch
-static uint32_t touch_press_count    = 0;     // Compteur de pressions sur le bouton
+static uint32_t touch_press_count = 0;     // Compteur de pressions sur le bouton
+
+
+void screen_on_delay_timer_cb(lv_timer_t *timer)
+{
+    lv_timer_del(screen_on_delay_timer);
+    backlight_set(100);
+   lv_slider_set_value(backlight_slider, 100, LV_ANIM_OFF);
+}
 
 // Callback pour les boutons physiques
 static void button_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
-    lv_obj_t *label      = button_label;
+    lv_obj_t *label = button_label;
     if (code == LV_EVENT_PRESSED)
     {
         control_event_t *event = (control_event_t *)lv_event_get_param(e);
@@ -47,27 +52,28 @@ static void button_event_cb(lv_event_t *e)
             uint32_t btn_id = event->btn_id;
             esp3d_log_d("Button key: %ld, family_id: %d", btn_id, event->family_id);
             buzzer_tone_t tones[] = {
-                {1000, 500}, // A4, full volume
-                {523, 500},  // C5, half volume
-                {1000, 500} ,  // E5, quarter volume
+                {1000, 500},
+                {523, 500},
+                {1000, 500}
             };
-          
+            const int tone_count = sizeof(tones) / sizeof(tones[0]);
+
             switch (btn_id)
             {
                 case 0:
                     lv_label_set_text(label, "Dernier bouton: 1");
-                    buzzer_set_loud(true); // Set loud mode
-                    buzzer_bip(1000,500);
+                    buzzer_set_loud(true);
+                    buzzer_bip(1000, 500);
                     break;
                 case 1:
                     lv_label_set_text(label, "Dernier bouton: 2");
                     buzzer_set_loud(false);
-                    buzzer_play(tones, 4);
+                    buzzer_play(tones, tone_count);
                     break;
                 case 2:
-                    buzzer_set_loud(true);
                     lv_label_set_text(label, "Dernier bouton: 3");
-                    buzzer_play(tones, 4);
+                    buzzer_set_loud(true);
+                    buzzer_play(tones, tone_count);
                     break;
                 default:
                     lv_label_set_text(label, "Dernier bouton: Inconnu");
@@ -81,7 +87,7 @@ static void button_event_cb(lv_event_t *e)
 static void switch_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
-    lv_obj_t *label      = switch_label;
+    lv_obj_t *label = switch_label;
     if (code == LV_EVENT_PRESSED)
     {
         control_event_t *event = (control_event_t *)lv_event_get_param(e);
@@ -115,15 +121,15 @@ static void switch_event_cb(lv_event_t *e)
 static void encoder_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
-    lv_obj_t *label      = button_label;
+    lv_obj_t *label = button_label;
     if (code == LV_EVENT_KEY)
     {
         control_event_t *event = (control_event_t *)lv_event_get_param(e);
         if (event && event->family_id == CONTROL_FAMILY_ENCODER)
         {
-            int32_t steps    = event->steps;
+            int32_t steps = event->steps;
             lv_obj_t *slider = encoder_slider;
-            int32_t value    = lv_slider_get_value(slider);
+            int32_t value = lv_slider_get_value(slider);
             value += steps * 5;
             if (value < 0)
                 value = 0;
@@ -140,13 +146,13 @@ static void encoder_event_cb(lv_event_t *e)
 static void potentiometer_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
-    lv_obj_t *label      = button_label;
+    lv_obj_t *label = button_label;
     if (code == LV_EVENT_VALUE_CHANGED)
     {
         control_event_t *event = (control_event_t *)lv_event_get_param(e);
         if (event && event->family_id == CONTROL_FAMILY_POTENTIOMETER)
         {
-            int32_t value    = event->steps;
+            int32_t value = event->steps;
             lv_obj_t *slider = encoder_slider;
             lv_slider_set_value(slider, value, LV_ANIM_OFF);
             lv_label_set_text_fmt(label, "Potentiometer: %ld", value);
@@ -159,13 +165,28 @@ static void potentiometer_event_cb(lv_event_t *e)
 static void touch_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
-    lv_obj_t *label      = touch_counter_label;
+    lv_obj_t *label = touch_counter_label;
     if (code == LV_EVENT_PRESSED)
     {
-
         touch_press_count++;
         lv_label_set_text_fmt(label, "Touch presses: %ld", touch_press_count);
         esp3d_log_e("Touch event without valid control_event_t");
+    }
+}
+
+// Callback pour le slider de backlight
+static void backlight_slider_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_VALUE_CHANGED) {
+        lv_obj_t *slider = (lv_obj_t *)lv_event_get_target(e);
+        int32_t value = lv_slider_get_value(slider);
+        esp_err_t ret = backlight_set(value);
+        if (ret != ESP_OK) {
+            esp3d_log_e("Failed to set backlight to %ld%%", value);
+        } else {
+            esp3d_log_d("Backlight set to %ld%%", value);
+        }
     }
 }
 
@@ -232,10 +253,26 @@ void create_application(void)
     lv_slider_set_value(encoder_slider, 50, LV_ANIM_OFF);
     esp3d_log_d("Encoder slider created: %p", encoder_slider);
 
+    // Créer un slider pour le backlight
+    backlight_slider = lv_slider_create(main_container);
+    lv_obj_set_size(backlight_slider, 200, 20);
+    lv_obj_align(backlight_slider, LV_ALIGN_TOP_MID, 0, 90);
+    lv_slider_set_range(backlight_slider, 0, 100);
+    int initial_brightness = backlight_get_current();
+    if (initial_brightness >= 0) {
+        lv_slider_set_value(backlight_slider, initial_brightness, LV_ANIM_OFF);
+        esp3d_log_d("Backlight slider initialized to %d%%", initial_brightness);
+    } else {
+        lv_slider_set_value(backlight_slider, 100, LV_ANIM_OFF);
+        esp3d_log_w("Backlight not initialized, defaulting to 100%%");
+    }
+    lv_obj_add_event_cb(backlight_slider, backlight_slider_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    esp3d_log_d("Backlight slider created: %p", backlight_slider);
+
     // Créer un bouton pour tester le touch
     touch_button = lv_btn_create(main_container);
     lv_obj_set_size(touch_button, 100, 40);
-    lv_obj_align(touch_button, LV_ALIGN_TOP_MID, 0, 90);
+    lv_obj_align(touch_button, LV_ALIGN_TOP_MID, 0, 120);
     lv_obj_t *btn_label = lv_label_create(touch_button);
     lv_label_set_text(btn_label, "Touch Me");
     lv_obj_center(btn_label);
@@ -244,7 +281,7 @@ void create_application(void)
     // Créer un label pour le compteur de touch
     touch_counter_label = lv_label_create(main_container);
     lv_label_set_text(touch_counter_label, "Touch presses: 0");
-    lv_obj_align(touch_counter_label, LV_ALIGN_TOP_MID, 0, 110);
+    lv_obj_align(touch_counter_label, LV_ALIGN_TOP_MID, 0, 170);
     lv_obj_set_style_text_color(touch_counter_label, lv_color_white(), LV_PART_MAIN);
     esp3d_log_d("Touch counter label created: %p", touch_counter_label);
 

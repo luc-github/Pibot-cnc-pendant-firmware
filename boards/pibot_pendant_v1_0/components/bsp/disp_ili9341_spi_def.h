@@ -50,7 +50,7 @@ const spi_ili9341_config_t ili9341_default_config = {
         .quadhd_pin = -1,  // Not using quad SPI
     },
     .backlight = {
-        .pin = BACKLIGHT_PIN,
+        .pin = -1,
         .on_level = BACKLIGHT_ACTIVE_HIGH_FLAG,
     },
     .display = {
