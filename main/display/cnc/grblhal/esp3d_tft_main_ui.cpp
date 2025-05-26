@@ -50,7 +50,6 @@ static void button_event_cb(lv_event_t *e)
                 {1000, 500}, // A4, full volume
                 {523, 500},  // C5, half volume
                 {1000, 500} ,  // E5, quarter volume
-                {1000, 500}   // E5, quarter volume
             };
           
             switch (btn_id)
@@ -59,9 +58,6 @@ static void button_event_cb(lv_event_t *e)
                     lv_label_set_text(label, "Dernier bouton: 1");
                     buzzer_set_loud(true); // Set loud mode
                     buzzer_bip(1000,500);
-                    esp3d_hal::wait(2000);
-                    buzzer_set_loud(false);
-                     buzzer_bip(1000,500);
                     break;
                 case 1:
                     lv_label_set_text(label, "Dernier bouton: 2");
