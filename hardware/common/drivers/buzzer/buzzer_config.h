@@ -34,7 +34,8 @@ typedef struct {
     int channel_idx;          // LEDC channel index
     uint16_t freq_hz;         // Default PWM frequency in Hz
     uint8_t resolution_bits;  // PWM resolution in bits
-    uint8_t duty;             // Default duty cycle (0-100%)
+    uint8_t duty;             // Default duty cycle for normal mode (0-100%)
+    uint8_t loud_duty;        // Duty cycle for loud mode (0-100%)
 } buzzer_config_t;
 
 #ifdef __cplusplus

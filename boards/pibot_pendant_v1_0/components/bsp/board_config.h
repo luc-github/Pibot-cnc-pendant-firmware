@@ -127,7 +127,8 @@ extern "C" {
 #define BUZZER_PIN                  GPIO_NUM_26
 #define BUZZER_PWM_ENABLED_FLAG     1       // 0: GPIO control, 1: PWM control
 #define BUZZER_ACTIVE_HIGH_FLAG     1       // GPIO level for buzzer on (1: active high, 0: active low)
-#define BUZZER_DEFAULT_DUTY_PCT     50      // Default duty cycle (0-100)
+#define BUZZER_DEFAULT_DUTY_PCT     100      // Default duty cycle for quiet mode (0-100)
+#define BUZZER_LOUD_DUTY_PCT        50       // Duty cycle for loud mode (0-100)
 #define BUZZER_PWM_FREQ_HZ          2000    // Default buzzer frequency in Hz
 #define BUZZER_PWM_RESOLUTION_BITS  8       // Duty resolution
 #define BUZZER_PWM_TIMER_IDX        1       // Timer to use

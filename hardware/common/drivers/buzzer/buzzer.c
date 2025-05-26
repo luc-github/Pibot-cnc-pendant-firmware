@@ -26,6 +26,7 @@
 
 static buzzer_config_t buzzer_config;
 static bool _is_initialized = false;
+static bool _is_loud = false; // Default to normal mode
 
 /**
  * @brief Configures the buzzer instance
@@ -91,6 +92,24 @@ esp_err_t buzzer_configure(const buzzer_config_t *config)
 }
 
 /**
+ * @brief Sets the loudness mode for the buzzer
+ *
+ * @param loud True for loud mode, false for normal mode
+ * @return ESP_OK on success, or an error code on failure
+ */
+esp_err_t buzzer_set_loud(bool loud)
+{
+    if (!_is_initialized) {
+        esp3d_log_e("Buzzer not configured");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    _is_loud = loud;
+    esp3d_log("Buzzer loud mode set to: %s", loud ? "loud" : "normal");
+    return ESP_OK;
+}
+
+/**
  * @brief Plays a single tone on the buzzer
  *
  * @param freq_hz Frequency of the tone in Hz
@@ -115,11 +134,13 @@ esp_err_t buzzer_bip(uint16_t freq_hz, uint32_t duration_ms)
         return ESP_OK;
     }
 
-    esp3d_log("Playing tone: %d Hz for %ld ms", freq_hz, duration_ms);
+    uint8_t duty = _is_loud ? buzzer_config.loud_duty : buzzer_config.duty;
+    esp3d_log("Playing tone: %d Hz for %ld ms with %s mode (duty: %d%%)", 
+              freq_hz, duration_ms, _is_loud ? "loud" : "normal", duty);
 
     if (buzzer_config.pwm_control) {
         uint32_t max_duty = (1 << buzzer_config.resolution_bits) - 1;
-        uint32_t duty_cycle = (max_duty * buzzer_config.duty) / 100;
+        uint32_t duty_cycle = (max_duty * duty) / 100;
 
         // Set frequency
         ledc_set_freq(LEDC_LOW_SPEED_MODE, buzzer_config.timer_idx, freq_hz);
@@ -134,17 +155,24 @@ esp_err_t buzzer_bip(uint16_t freq_hz, uint32_t duration_ms)
         ledc_set_duty(LEDC_LOW_SPEED_MODE, buzzer_config.channel_idx, 0);
         ledc_update_duty(LEDC_LOW_SPEED_MODE, buzzer_config.channel_idx);
     } else {
-        // Simple square wave for GPIO control
+        // Simple square wave for GPIO
         uint32_t period_us = 1000000 / freq_hz; // Period in microseconds
         uint32_t half_period_us = period_us / 2;
+        // Use duty to scale on-time for GPIO mode
+        uint32_t on_time_us = (half_period_us * duty) / 100;
+        uint32_t off_time_us = half_period_us - on_time_us;
         uint32_t start_time = esp_timer_get_time() / 1000; // Current time in ms
         uint32_t end_time = start_time + duration_ms;
 
         while ((esp_timer_get_time() / 1000) < end_time) {
-            gpio_set_level(buzzer_config.gpio_num, buzzer_config.output_invert ? 0 : 1);
-            esp_rom_delay_us(half_period_us);
-            gpio_set_level(buzzer_config.gpio_num, buzzer_config.output_invert ? 1 : 0);
-            esp_rom_delay_us(half_period_us);
+            if (on_time_us > 0) {
+                gpio_set_level(buzzer_config.gpio_num, buzzer_config.output_invert ? 0 : 1);
+                esp_rom_delay_us(on_time_us);
+            }
+            if (off_time_us > 0) {
+                gpio_set_level(buzzer_config.gpio_num, buzzer_config.output_invert ? 1 : 0);
+                esp_rom_delay_us(off_time_us);
+            }
         }
     }
 
@@ -171,7 +199,7 @@ esp_err_t buzzer_play(const buzzer_tone_t *tones, uint32_t count)
         return ESP_ERR_INVALID_ARG;
     }
 
-    esp3d_log("Playing %ld tones", count);
+    esp3d_log("Playing %ld tones with %s mode", count, _is_loud ? "loud" : "normal");
 
     for (uint32_t i = 0; i < count; i++) {
         esp_err_t ret = buzzer_bip(tones[i].freq_hz, tones[i].duration_ms);

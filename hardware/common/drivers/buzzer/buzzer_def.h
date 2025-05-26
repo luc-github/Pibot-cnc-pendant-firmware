@@ -30,7 +30,8 @@ buzzer_config_t buzzer_cfg = {
     .channel_idx = BUZZER_PWM_CHANNEL_IDX,
     .freq_hz = BUZZER_PWM_FREQ_HZ,
     .resolution_bits = BUZZER_PWM_RESOLUTION_BITS,
-    .duty = BUZZER_DEFAULT_DUTY_PCT
+    .duty = BUZZER_DEFAULT_DUTY_PCT,
+    .loud_duty = BUZZER_LOUD_DUTY_PCT
 };
 
 #ifdef __cplusplus

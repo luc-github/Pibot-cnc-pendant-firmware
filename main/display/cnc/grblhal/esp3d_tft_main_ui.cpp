@@ -10,6 +10,7 @@
 #include "disp_backlight.h"
 #include "esp3d_log.h"
 #include "esp3d_version.h"
+#include "esp3d_hal.h"
 #include "lvgl.h"
 #include "phy_potentiometer.h"
 #include "phy_switch.h"
@@ -45,21 +46,31 @@ static void button_event_cb(lv_event_t *e)
         {
             uint32_t btn_id = event->btn_id;
             esp3d_log_d("Button key: %ld, family_id: %d", btn_id, event->family_id);
-            buzzer_tone_t tones[] = {{440, 500}, {523, 500}, {659, 500}};
+            buzzer_tone_t tones[] = {
+                {440, 500}, // A4, full volume
+                {523, 500},  // C5, half volume
+                {659, 500}   // E5, quarter volume
+            };
+          
             switch (btn_id)
             {
                 case 0:
                     lv_label_set_text(label, "Dernier bouton: 1");
-                    buzzer_bip(1000, 200); // 1kHz tone for 200ms
-    
+                    buzzer_set_loud(true); // Set loud mode
+                    buzzer_bip(1000,500);
+                    esp3d_hal::wait(2000);
+                    buzzer_set_loud(false);
+                     buzzer_bip(1000,500);
                     break;
                 case 1:
                     lv_label_set_text(label, "Dernier bouton: 2");
-                    
+                    buzzer_set_loud(false);
                     buzzer_play(tones, 3);
                     break;
                 case 2:
+                    buzzer_set_loud(true);
                     lv_label_set_text(label, "Dernier bouton: 3");
+                    buzzer_play(tones, 3);
                     break;
                 default:
                     lv_label_set_text(label, "Dernier bouton: Inconnu");
