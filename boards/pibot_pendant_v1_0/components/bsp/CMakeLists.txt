@@ -22,6 +22,7 @@ set(BSP_REQUIRES
     "phy_encoder"
     "phy_switch"
     "phy_potentiometer"
+    "buzzer"
     "lvgl"
 )
 

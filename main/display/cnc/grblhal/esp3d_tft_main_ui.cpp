@@ -13,6 +13,7 @@
 #include "lvgl.h"
 #include "phy_potentiometer.h"
 #include "phy_switch.h"
+#include "buzzer.h"
 
 lv_timer_t *screen_on_delay_timer = nullptr;
 
@@ -44,13 +45,18 @@ static void button_event_cb(lv_event_t *e)
         {
             uint32_t btn_id = event->btn_id;
             esp3d_log_d("Button key: %ld, family_id: %d", btn_id, event->family_id);
+            buzzer_tone_t tones[] = {{440, 500}, {523, 500}, {659, 500}};
             switch (btn_id)
             {
                 case 0:
                     lv_label_set_text(label, "Dernier bouton: 1");
+                    buzzer_bip(1000, 200); // 1kHz tone for 200ms
+    
                     break;
                 case 1:
                     lv_label_set_text(label, "Dernier bouton: 2");
+                    
+                    buzzer_play(tones, 3);
                     break;
                 case 2:
                     lv_label_set_text(label, "Dernier bouton: 3");

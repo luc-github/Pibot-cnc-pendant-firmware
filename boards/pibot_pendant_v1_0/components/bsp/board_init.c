@@ -14,6 +14,8 @@
 #include "disp_backlight_def.h"
 #include "disp_ili9341_spi.h"
 #include "disp_ili9341_spi_def.h"
+#include "buzzer.h"
+#include "buzzer_def.h"
 #include "driver/gpio.h"
 #include "driver/spi_common.h"
 #include "phy_buttons.h"
@@ -90,7 +92,6 @@ static void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
         data->state = LV_INDEV_STATE_RELEASED;
     }
 }
-
 
 // LVGL button input read callback
 void button_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
@@ -524,6 +525,12 @@ esp_err_t board_init(void)
     ret = phy_potentiometer_configure(&phy_potentiometer_cfg);
     if (ret != ESP_OK) {
         esp3d_log_e("Potentiometer initialization failed");
+        return ret;
+    }
+
+    ret = buzzer_configure(&buzzer_cfg);
+    if (ret != ESP_OK) {
+        esp3d_log_e("Buzzer initialization failed");
         return ret;
     }
 

@@ -85,7 +85,6 @@ extern "C" {
 #define SD_DETECT_PIN       GPIO_NUM_NC   // Card detect pin
 #define SD_DETECT_VALUE     0             // Card detect value (0 = LOW, 1 = HIGH)
 
-
 // SD Card SPI configuration
 #define SD_SPI_HOST_IDX     SPI2_HOST
 #define SD_SPI_FREQ_HZ      (20 * 1000 * 1000)  // 20 MHz
@@ -93,7 +92,6 @@ extern "C" {
 #define SD_SPI_SPEED_DIVIDER  1  // SPI speed divider (1 = 25 MHz, 2 = 12.5 MHz, etc.)
 #define SD_MAX_TRANSFER_SIZE 4096
 #define SD_ALLOCATION_SIZE   (4 * 1024)  // Allocation size for SD card
-
 
 /* Button Matrix Configuration */
 #define BUTTON_1_PIN        GPIO_NUM_4
@@ -126,11 +124,14 @@ extern "C" {
 #define ANALOG_FILTER_SAMPLES_NB 5  // Number of samples for filtering
 
 /* Buzzer Configuration */
-#define BUZZER_PIN          GPIO_NUM_26
-#define BUZZER_PWM_FREQ_HZ       2000  // Default buzzer frequency in Hz
-#define BUZZER_PWM_RESOLUTION_BITS 8   // Duty resolution
-#define BUZZER_PWM_TIMER_IDX      1    // Timer to use
-#define BUZZER_PWM_CHANNEL_IDX    1    // Channel to use
+#define BUZZER_PIN                  GPIO_NUM_26
+#define BUZZER_PWM_ENABLED_FLAG     1       // 0: GPIO control, 1: PWM control
+#define BUZZER_ACTIVE_HIGH_FLAG     1       // GPIO level for buzzer on (1: active high, 0: active low)
+#define BUZZER_DEFAULT_DUTY_PCT     50      // Default duty cycle (0-100)
+#define BUZZER_PWM_FREQ_HZ          2000    // Default buzzer frequency in Hz
+#define BUZZER_PWM_RESOLUTION_BITS  8       // Duty resolution
+#define BUZZER_PWM_TIMER_IDX        1       // Timer to use
+#define BUZZER_PWM_CHANNEL_IDX      1       // Channel to use
 
 /* UART Configuration */
 #define UART_TX_PIN         GPIO_NUM_1
@@ -155,7 +156,6 @@ extern "C" {
 #define LVGL_TASK_PRIORITY 3
 #define LVGL_TASK_CORE 1
 #define LVGL_TASK_STACK_SIZE 8192
-
 
 #ifdef __cplusplus
 } /* extern "C" */
