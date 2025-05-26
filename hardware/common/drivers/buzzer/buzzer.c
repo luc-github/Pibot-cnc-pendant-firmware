@@ -21,12 +21,52 @@
 #include <soc/gpio_sig_map.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <freertos/semphr.h>
 #include <esp_timer.h>
 #include <esp_rom_sys.h>
+#include <string.h>
 
 static buzzer_config_t buzzer_config;
 static bool _is_initialized = false;
 static bool _is_loud = false; // Default to normal mode
+static SemaphoreHandle_t _buzzer_mutex = NULL;
+static TaskHandle_t _play_task_handle = NULL;
+
+/**
+ * @brief Playback task for non-blocking buzzer_play
+ */
+static void buzzer_play_task(void *arg)
+{
+    buzzer_tone_t *tones = (buzzer_tone_t *)arg;
+    uint32_t count = tones[0].duration_ms; // Store count in first tone's duration_ms
+    tones[0].duration_ms = 0; // Reset to avoid affecting playback
+
+    esp3d_log("Playback task started with %ld tones", count);
+
+    for (uint32_t i = 0; i < count; i++) {
+        esp_err_t ret;
+        if (xSemaphoreTake(_buzzer_mutex, portMAX_DELAY) == pdTRUE) {
+            ret = buzzer_bip(tones[i + 1].freq_hz, tones[i + 1].duration_ms);
+            xSemaphoreGive(_buzzer_mutex);
+        } else {
+            ret = ESP_ERR_TIMEOUT;
+        }
+        if (ret != ESP_OK) {
+            esp3d_log_e("Failed to play tone %ld", i);
+            break;
+        }
+        vTaskDelay(pdMS_TO_TICKS(10)); // Small delay between tones
+    }
+
+    // Free tones and clean up
+    free(tones);
+    if (xSemaphoreTake(_buzzer_mutex, portMAX_DELAY) == pdTRUE) {
+        _play_task_handle = NULL;
+        xSemaphoreGive(_buzzer_mutex);
+    }
+    esp3d_log("Playback task completed");
+    vTaskDelete(NULL);
+}
 
 /**
  * @brief Configures the buzzer instance
@@ -41,11 +81,23 @@ esp_err_t buzzer_configure(const buzzer_config_t *config)
         return ESP_ERR_INVALID_ARG;
     }
 
+    if (_is_initialized) {
+        esp3d_log_e("Buzzer already configured");
+        return ESP_ERR_INVALID_STATE;
+    }
+
     memcpy(&buzzer_config, config, sizeof(buzzer_config_t));
 
     if (!GPIO_IS_VALID_OUTPUT_GPIO(buzzer_config.gpio_num)) {
         esp3d_log_e("Invalid GPIO number");
         return ESP_ERR_INVALID_ARG;
+    }
+
+    // Create mutex
+    _buzzer_mutex = xSemaphoreCreateMutex();
+    if (_buzzer_mutex == NULL) {
+        esp3d_log_e("Failed to create buzzer mutex");
+        return ESP_ERR_NO_MEM;
     }
 
     if (buzzer_config.pwm_control) {
@@ -68,10 +120,12 @@ esp_err_t buzzer_configure(const buzzer_config_t *config)
         };
 
         if (ledc_timer_config(&buzzer_timer) != ESP_OK) {
+            vSemaphoreDelete(_buzzer_mutex);
             esp3d_log_e("Failed to configure LEDC timer");
             return ESP_ERR_INVALID_ARG;
         }
         if (ledc_channel_config(&buzzer_channel) != ESP_OK) {
+            vSemaphoreDelete(_buzzer_mutex);
             esp3d_log_e("Failed to configure LEDC channel");
             return ESP_ERR_INVALID_ARG;
         }
@@ -79,6 +133,7 @@ esp_err_t buzzer_configure(const buzzer_config_t *config)
         esp3d_log("Configuring buzzer with GPIO control");
         esp_rom_gpio_pad_select_gpio(buzzer_config.gpio_num);
         if (gpio_set_direction(buzzer_config.gpio_num, GPIO_MODE_OUTPUT) != ESP_OK) {
+            vSemaphoreDelete(_buzzer_mutex);
             esp3d_log_e("Failed to set GPIO direction");
             return ESP_ERR_INVALID_ARG;
         }
@@ -94,7 +149,7 @@ esp_err_t buzzer_configure(const buzzer_config_t *config)
 /**
  * @brief Sets the loudness mode for the buzzer
  *
- * @param loud True for loud mode, false for normal mode
+ * @param loud True for loud mode (50% duty, louder), false for normal mode (100% duty, quieter)
  * @return ESP_OK on success, or an error code on failure
  */
 esp_err_t buzzer_set_loud(bool loud)
@@ -104,13 +159,19 @@ esp_err_t buzzer_set_loud(bool loud)
         return ESP_ERR_INVALID_STATE;
     }
 
-    _is_loud = loud;
-    esp3d_log("Buzzer loud mode set to: %s", loud ? "loud" : "normal");
-    return ESP_OK;
+    if (xSemaphoreTake(_buzzer_mutex, portMAX_DELAY) == pdTRUE) {
+        _is_loud = loud;
+        esp3d_log("Buzzer loud mode set to: %s", loud ? "loud" : "normal");
+        xSemaphoreGive(_buzzer_mutex);
+        return ESP_OK;
+    }
+
+    esp3d_log_e("Failed to acquire mutex");
+    return ESP_ERR_TIMEOUT;
 }
 
 /**
- * @brief Plays a single tone on the buzzer
+ * @brief Plays a single tone on the buzzer (blocking)
  *
  * @param freq_hz Frequency of the tone in Hz
  * @param duration_ms Duration of the tone in milliseconds
@@ -181,7 +242,7 @@ esp_err_t buzzer_bip(uint16_t freq_hz, uint32_t duration_ms)
 }
 
 /**
- * @brief Plays a sequence of tones on the buzzer
+ * @brief Plays a sequence of tones on the buzzer (non-blocking)
  *
  * @param tones Array of tones to play
  * @param count Number of tones in the array
@@ -199,18 +260,47 @@ esp_err_t buzzer_play(const buzzer_tone_t *tones, uint32_t count)
         return ESP_ERR_INVALID_ARG;
     }
 
-    esp3d_log("Playing %ld tones with %s mode", count, _is_loud ? "loud" : "normal");
-
-    for (uint32_t i = 0; i < count; i++) {
-        esp_err_t ret = buzzer_bip(tones[i].freq_hz, tones[i].duration_ms);
-        if (ret != ESP_OK) {
-            esp3d_log_e("Failed to play tone %ld", i);
-            return ret;
+    if (xSemaphoreTake(_buzzer_mutex, portMAX_DELAY) == pdTRUE) {
+        if (_play_task_handle != NULL) {
+            xSemaphoreGive(_buzzer_mutex);
+            esp3d_log_e("Playback already in progress");
+            return ESP_ERR_INVALID_STATE;
         }
-        // Small delay between tones to distinguish them
-        vTaskDelay(pdMS_TO_TICKS(10));
+
+        // Allocate memory for tones copy (count + 1 for count storage)
+        buzzer_tone_t *tones_copy = (buzzer_tone_t *)malloc((count + 1) * sizeof(buzzer_tone_t));
+        if (tones_copy == NULL) {
+            xSemaphoreGive(_buzzer_mutex);
+            esp3d_log_e("Failed to allocate memory for tones");
+            return ESP_ERR_NO_MEM;
+        }
+
+        // Copy tones and store count in first tone's duration_ms
+        tones_copy[0].duration_ms = count; // Store count
+        memcpy(&tones_copy[1], tones, count * sizeof(buzzer_tone_t));
+
+        // Create playback task
+        BaseType_t ret = xTaskCreate(
+            buzzer_play_task,
+            "buzzer_play",
+            2048, // Stack size
+            tones_copy,
+            tskIDLE_PRIORITY + 1, // Priority
+            &_play_task_handle
+        );
+
+        if (ret != pdPASS) {
+            free(tones_copy);
+            xSemaphoreGive(_buzzer_mutex);
+            esp3d_log_e("Failed to create playback task");
+            return ESP_ERR_NO_MEM;
+        }
+
+        xSemaphoreGive(_buzzer_mutex);
+        esp3d_log("Started non-blocking playback of %ld tones with %s mode", count, _is_loud ? "loud" : "normal");
+        return ESP_OK;
     }
 
-    esp3d_log("Sequence played successfully");
-    return ESP_OK;
+    esp3d_log_e("Failed to acquire mutex");
+    return ESP_ERR_TIMEOUT;
 }

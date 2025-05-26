@@ -47,9 +47,10 @@ static void button_event_cb(lv_event_t *e)
             uint32_t btn_id = event->btn_id;
             esp3d_log_d("Button key: %ld, family_id: %d", btn_id, event->family_id);
             buzzer_tone_t tones[] = {
-                {440, 500}, // A4, full volume
+                {1000, 500}, // A4, full volume
                 {523, 500},  // C5, half volume
-                {659, 500}   // E5, quarter volume
+                {1000, 500} ,  // E5, quarter volume
+                {1000, 500}   // E5, quarter volume
             };
           
             switch (btn_id)
@@ -65,12 +66,12 @@ static void button_event_cb(lv_event_t *e)
                 case 1:
                     lv_label_set_text(label, "Dernier bouton: 2");
                     buzzer_set_loud(false);
-                    buzzer_play(tones, 3);
+                    buzzer_play(tones, 4);
                     break;
                 case 2:
                     buzzer_set_loud(true);
                     lv_label_set_text(label, "Dernier bouton: 3");
-                    buzzer_play(tones, 3);
+                    buzzer_play(tones, 4);
                     break;
                 default:
                     lv_label_set_text(label, "Dernier bouton: Inconnu");

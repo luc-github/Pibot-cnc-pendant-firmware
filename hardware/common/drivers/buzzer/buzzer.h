@@ -42,13 +42,13 @@ esp_err_t buzzer_configure(const buzzer_config_t *config);
 /**
  * @brief Sets the loudness mode for the buzzer
  *
- * @param loud True for loud mode, false for normal mode
+ * @param loud True for loud mode (50% duty, louder), false for normal mode (100% duty, quieter)
  * @return ESP_OK on success, or an error code on failure
  */
 esp_err_t buzzer_set_loud(bool loud);
 
 /**
- * @brief Plays a single tone on the buzzer
+ * @brief Plays a single tone on the buzzer (blocking)
  *
  * @param freq_hz Frequency of the tone in Hz
  * @param duration_ms Duration of the tone in milliseconds
@@ -57,7 +57,10 @@ esp_err_t buzzer_set_loud(bool loud);
 esp_err_t buzzer_bip(uint16_t freq_hz, uint32_t duration_ms);
 
 /**
- * @brief Plays a sequence of tones on the buzzer
+ * @brief Plays a sequence of tones on the buzzer (non-blocking)
+ *
+ * Starts a background task to play the sequence, returning immediately.
+ * Only one sequence can play at a time; subsequent calls return ESP_ERR_INVALID_STATE if a sequence is active.
  *
  * @param tones Array of tones to play
  * @param count Number of tones in the array
