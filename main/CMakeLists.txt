@@ -66,6 +66,8 @@ endif()
 
 if(BT_SERVICE)
     # TODO: add bluetooth support?
+    list(APPEND SOURCES "modules/bt_serial")
+    list(APPEND SOURCES "modules/bt_ble")
 endif()
 
 if(SD_CARD_SERVICE)

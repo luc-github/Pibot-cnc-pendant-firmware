@@ -1,5 +1,5 @@
 /*
-  esp3d_client_types.h
+  bt_ble_config.h
 
   Copyright (c) 2022 Luc Lebosse. All rights reserved.
 
@@ -17,32 +17,32 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-
 #pragma once
-
-#include <stdio.h>
+#include "esp_bt.h"
+#include "esp_gatt_common_api.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-enum class ESP3DClientType : uint8_t {
-  no_client = 0,
-  serial = 1,
-  usb_serial = 2,
-  stream = 3,
-  telnet = 4,
-  webui = 5,
-  webui_websocket = 6,
-  websocket = 7,
-  rendering = 8,
-  bt_serial,  // Bluetooth Classic Serial
-  bt_ble,     // Bluetooth Low Energy
-  command,  // origin only
-  system,   // origin only
-  all_clients
-};
+typedef struct {
+  // Configuration BLE
+  char device_name[32];          // Nom du périphérique BLE
+  uint16_t service_uuid;         // UUID du service personnalisé
+  uint16_t char_uuid;            // UUID de la caractéristique texte
+  bool advertise;                // Activer l'advertising
+  
+  // Buffer sizes
+  size_t rx_buffer_size;         // Taille du buffer Rx
+  size_t tx_buffer_size;         // Taille du buffer Tx
+  uint16_t rx_flush_timeout;     // Timeout pour flush Rx
+  
+  // Task configuration
+  uint32_t task_priority;        // Priorité de la tâche
+  uint32_t task_stack_size;      // Taille de la pile
+  BaseType_t task_core;          // Cœur pour la tâche
+} esp3d_bt_ble_config_t;
 
 #ifdef __cplusplus
-}  // extern "C"
+} /* extern "C" */
 #endif
