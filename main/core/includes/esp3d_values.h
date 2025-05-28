@@ -75,6 +75,10 @@ class ESP3DValues final {
   ESP3DValues();
   ~ESP3DValues();
   bool intialize();
+  void initialize_target() {
+    // This function is used to initialize target specific values
+    // It can be overridden in target specific files
+  }
   void clear();
   void handle();
   const ESP3DValuesDescription* get_description(ESP3DValuesIndex index);

@@ -24,14 +24,15 @@
 
 #include <string>
 
-#include "esp_wifi.h"
-#include "freertos/event_groups.h"
-#include "lwip/ip_addr.h"
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 #if ESP3D_WIFI_FEATURE
+#include "esp_wifi.h"
+#include "freertos/event_groups.h"
+#include "lwip/ip_addr.h"
 struct ESP3DIpInfos {
   esp_netif_ip_info_t ip_info;
   esp_netif_dns_info_t dns_info;

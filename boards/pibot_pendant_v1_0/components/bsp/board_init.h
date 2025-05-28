@@ -21,7 +21,9 @@
 #pragma once
 
 #include "esp_err.h"
+#if ESP3D_DISPLAY_FEATURE
 #include "lvgl.h"
+#endif // ESP3D_DISPLAY_FEATURE
 #include <sys/lock.h>
 
 #ifdef __cplusplus
@@ -59,6 +61,7 @@ const char* board_get_name(void);
  */
 const char* board_get_version(void);
 
+#if ESP3D_DISPLAY_FEATURE
 /**
  * @brief Get the LVGL display handle
  * 
@@ -82,6 +85,7 @@ lv_indev_t *get_button_indev(void);
 lv_indev_t *get_encoder_indev(void);
 
 lv_indev_t *get_switch_indev(void);
+#endif // ESP3D_DISPLAY_FEATURE
 
 #ifdef __cplusplus
 }

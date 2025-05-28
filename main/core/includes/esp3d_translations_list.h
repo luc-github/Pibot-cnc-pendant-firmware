@@ -68,7 +68,6 @@ enum class ESP3DLabel : uint16_t {
   enabled,
   disabled,
   motors_disabled,
-  fan_controls,
   information,
   workspace_width,
   workspace_depth,
@@ -84,6 +83,8 @@ enum class ESP3DLabel : uint16_t {
   command_error,
   stream_error,
   target_firmware,
+  // Include target specific translations ids
+  #include "esp3d_target_translations_list.inc"  // Target labels
   unknown_index,  // must be last
 };
 

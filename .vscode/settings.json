@@ -16,6 +16,19 @@
         "backlight_def.h": "c",
         "esp_lcd_panel_vendor.h": "c",
         "lv_global.h": "c",
-        "list": "cpp"
+        "list": "cpp",
+        "charconv": "cpp",
+        "chrono": "cpp",
+        "optional": "cpp",
+        "ratio": "cpp",
+        "system_error": "cpp",
+        "array": "cpp",
+        "functional": "cpp",
+        "regex": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp",
+        "cstdint": "cpp",
+        "esp_log.h": "c"
     }
 }

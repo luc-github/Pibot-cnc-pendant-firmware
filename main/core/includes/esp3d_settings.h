@@ -90,13 +90,11 @@ enum class ESP3DSettingIndex : uint16_t {
   esp3d_ui_language,
   esp3d_jog_type,
   esp3d_polling_on,
-  esp3d_auto_level_on,
-  esp3d_workspace_width,
-  esp3d_workspace_depth,
   esp3d_inverved_x,
   esp3d_inverved_y,
+  esp3d_workspace_width,
+  esp3d_workspace_depth,
   esp3d_extensions,         // json setting, in preferences.json
-  esp3d_show_fan_controls,  // json setting, in preferences.json
   esp3d_pause_script,
   esp3d_stop_script,
   esp3d_resume_script,
@@ -106,6 +104,11 @@ enum class ESP3DSettingIndex : uint16_t {
   esp3d_time_server3,
   esp3d_timezone,
   esp3d_webdav_on,
+  esp3d_btserial_id,
+  esp3d_btserial_pin,
+  esp3d_btble_id,
+  esp3d_btble_passkey,
+  #include "esp3d_target_settings_list.inc" 
   unknown_index
 };
 
@@ -165,8 +168,14 @@ class ESP3DSettings final {
                               ESP3DSettingIndex settingElement);
   bool isValidStringSetting(const char* value,
                             ESP3DSettingIndex settingElement);
+   bool isValidStringTargetSetting(const char* value,
+                            ESP3DSettingIndex settingElement);
   bool isValidIntegerSetting(uint32_t value, ESP3DSettingIndex settingElement);
+  bool isValidIntegerTargetSetting(uint32_t value,
+                                   ESP3DSettingIndex settingElement);
   bool isValidByteSetting(uint8_t value, ESP3DSettingIndex settingElement);
+  bool isValidByteTargetSetting(uint8_t value,
+                                ESP3DSettingIndex settingElement);
   uint32_t getDefaultIntegerSetting(ESP3DSettingIndex settingElement);
   const char* getDefaultStringSetting(ESP3DSettingIndex settingElement);
   uint8_t getDefaultByteSetting(ESP3DSettingIndex settingElement);

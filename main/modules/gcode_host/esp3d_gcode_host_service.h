@@ -23,7 +23,8 @@
 #include <stdio.h>
 
 #include <list>
-
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "authentication/esp3d_authentication_types.h"
 #include "esp3d_client.h"
 #include "esp3d_gcode_host_types.h"

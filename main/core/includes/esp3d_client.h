@@ -19,8 +19,9 @@
 */
 
 #pragma once
-
+#if ESP3D_HTTP_FEATURE
 #include <esp_http_server.h>
+#endif // ESP3D_HTTP_FEATURE
 #include <pthread.h>
 #include <stdio.h>
 
@@ -35,7 +36,9 @@ extern "C" {
 
 union ESP3DRequest {
   uint id;
+  #if ESP3D_HTTP_FEATURE
   httpd_req_t *http_request;
+  #endif  // ESP3D_HTTP_FEATURE
 };
 
 enum class ESP3DMessageType : uint8_t { head, core, tail, unique };

@@ -1,7 +1,7 @@
 /*
-  bt_ble_config.h
+  esp3d_bt_serial_config.h
 
-  Copyright (c) 2022 Luc Lebosse. All rights reserved.
+  Copyright (c) 2025 Luc Lebosse. All rights reserved.
 
   This code is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -18,31 +18,33 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
+
+#if ESP3D_BT_FEATURE
+
 #include "esp_bt.h"
-#include "esp_gatt_common_api.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef struct {
-  // Configuration BLE
-  char device_name[32];          // Nom du périphérique BLE
-  uint16_t service_uuid;         // UUID du service personnalisé
-  uint16_t char_uuid;            // UUID de la caractéristique texte
-  bool advertise;                // Activer l'advertising
-  
+  // Configuration Bluetooth Classic (SPP)
+  uint32_t spp_channel;          // Canal SPP (par défaut : 1)
+  char device_name[32];          // Nom du périphérique BT (ex. "PibotCNC")
+  bool discoverable;             // Visibilité du périphérique
+  bool connectable;              // Peut accepter des connexions
+  uint16_t scan_duration;        // Durée du scan en secondes (ex. 10)
+
   // Buffer sizes
-  size_t rx_buffer_size;         // Taille du buffer Rx
-  size_t tx_buffer_size;         // Taille du buffer Tx
-  uint16_t rx_flush_timeout;     // Timeout pour flush Rx
-  
-  // Task configuration
-  uint32_t task_priority;        // Priorité de la tâche
-  uint32_t task_stack_size;      // Taille de la pile
-  BaseType_t task_core;          // Cœur pour la tâche
-} esp3d_bt_ble_config_t;
+  size_t rx_buffer_size;         // Taille du buffer Rx (ex. 1024)
+  size_t tx_buffer_size;         // Taille du buffer Tx (ex. 1024)
+} esp3d_bt_serial_config_t;
+
+// Configuration par défaut (à définir dans bt_services_def.h)
+extern esp3d_bt_serial_config_t esp3dBTSerialConfig;
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
+
+#endif // ESP3D_BT_FEATURE

@@ -66,7 +66,6 @@ void ESP3DTranslationService::init() {
       {ESP3DLabel::enabled, "Enabled"},
       {ESP3DLabel::disabled, "Disabled"},
       {ESP3DLabel::information, "Information"},
-      {ESP3DLabel::fan_controls, "Fan controls"},
       {ESP3DLabel::serial, "Serial"},
       {ESP3DLabel::workspace_width, "Workspace width"},
       {ESP3DLabel::workspace_depth, "Workspace depth"},
@@ -81,6 +80,8 @@ void ESP3DTranslationService::init() {
       {ESP3DLabel::streaming_error, "Streaming error, operation aborted!"},
       {ESP3DLabel::command_error, "Command failed: '%s'"},
       {ESP3DLabel::stream_error, "Stream failed: '%s'"},
+      //Include target specific labels
+      #include "esp3d_target_tanslations_init.inc"  // Target labels
       {ESP3DLabel::target_firmware, "Target firmware"},
   };
 }

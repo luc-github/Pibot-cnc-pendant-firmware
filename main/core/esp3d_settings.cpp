@@ -84,6 +84,9 @@ const ESP3DSettingDescription ESP3DSettingsData[] = {
     {ESP3DSettingIndex::esp3d_ui_language, ESP3DSettingType::string_t,
      SIZE_OF_UI_LANGUAGE, "default"},  // Language
 
+//Include target specific settings
+#include "esp3d_target_settings_values.inc"  // Target values
+
 #if ESP3D_USB_SERIAL_FEATURE
     {ESP3DSettingIndex::esp3d_usb_serial_baud_rate, ESP3DSettingType::integer_t,
      4, ESP3D_USB_SERIAL_BAUDRATE},  // BaudRate
@@ -170,7 +173,6 @@ const ESP3DSettingDescription ESP3DSettingsData[] = {
     {ESP3DSettingIndex::esp3d_polling_on, ESP3DSettingType::byte_t, 1, "1"},
     {ESP3DSettingIndex::esp3d_inverved_x, ESP3DSettingType::byte_t, 1, "0"},
     {ESP3DSettingIndex::esp3d_inverved_y, ESP3DSettingType::byte_t, 1, "0"},
-    {ESP3DSettingIndex::esp3d_auto_level_on, ESP3DSettingType::byte_t, 1, "0"},
     {ESP3DSettingIndex::esp3d_workspace_width, ESP3DSettingType::float_t, 3,
      "100.00"},
     {ESP3DSettingIndex::esp3d_workspace_depth, ESP3DSettingType::float_t, 3,
@@ -313,7 +315,7 @@ bool ESP3DSettings::isValidStringSetting(const char* value,
       return len <= SIZE_OF_LOCAL_PASSWORD;  // any string from 0 to 20
 #endif                                       // ESP3D_AUTHENTICATION_FEATURE
     default:
-      return false;
+      return isValidStringTargetSetting(value,settingElement) ;
   }
   return false;
 }
@@ -354,7 +356,7 @@ bool ESP3DSettings::isValidIntegerSetting(uint32_t value,
 #endif  // ESP3D_HTTP_FEATURE  || ESP3D_TELNET_FEATURE
 
     default:
-      return false;
+      return isValidIntegerTargetSetting(value,settingElement) ;
   }
   return false;
 }
@@ -380,7 +382,6 @@ bool ESP3DSettings::isValidByteSetting(uint8_t value,
     case ESP3DSettingIndex::esp3d_inverved_y:
     case ESP3DSettingIndex::esp3d_jog_type:
     case ESP3DSettingIndex::esp3d_polling_on:
-    case ESP3DSettingIndex::esp3d_auto_level_on:
 #endif  // ESP3D_DISPLAY_FEATURE
     case ESP3DSettingIndex::esp3d_setup:
 #if ESP3D_TELNET_FEATURE
@@ -497,6 +498,7 @@ bool ESP3DSettings::isValidByteSetting(uint8_t value,
 
       break;
     default:
+      return isValidByteTargetSetting(value,settingElement) ;
       break;
   }
   return false;
