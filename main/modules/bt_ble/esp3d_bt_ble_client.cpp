@@ -1,21 +1,7 @@
 /*
   esp3d_bt_ble_client
 
-  Copyright (c) 2022 Luc Lebosse. All rights reserved.
-
-  This code is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This code is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+  Copyright (c) 2025 Luc Lebosse. All rights reserved.
 */
 #if ESP3D_BT_FEATURE
 
@@ -34,7 +20,7 @@
 
 ESP3DBTBleClient btBleClient;
 
-bool ESP3DBTBleClient::configure(esp3d_bt_config_t* config) {
+bool ESP3DBTBleClient::configure(esp3d_bt_ble_config_t* config) {
   esp3d_log("Configure BT BLE Client");
   if (config) {
     _config = config;
@@ -95,7 +81,19 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
       esp_ble_gatts_start_service(param->add_char.service_handle);
       break;
     case ESP_GATTS_WRITE_EVT:
-      btBleClient.pushMsgToRxQueue(param->write.value, param->write.len);
+      for (size_t i = 0; i < param->write.len; i++) {
+        if (btBleClient._rxBufferPos < btBleClient._config->rx_buffer_size) {
+          btBleClient._rxBuffer[btBleClient._rxBufferPos++] = param->write.value[i];
+        } else {
+          esp3d_log_e("Rx buffer overflow");
+          btBleClient._rxBufferPos = 0;
+          break;
+        }
+        if (btBleClient.isEndChar(param->write.value[i])) {
+          btBleClient.pushMsgToRxQueue(btBleClient._rxBuffer, btBleClient._rxBufferPos);
+          btBleClient._rxBufferPos = 0;
+        }
+      }
       break;
     default:
       break;
@@ -112,7 +110,6 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event,
     case ESP_GATTC_OPEN_EVT:
       if (param->open.status == ESP_GATT_OK) {
         esp3d_log("GATT client connected");
-        // Lancer la découverte des services
         esp_ble_gattc_search_service(gattc_if, param->open.conn_id, NULL);
       } else {
         esp3d_log_e("GATT client connection failed, status %d", param->open.status);
@@ -122,7 +119,6 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event,
       if (param->search_res.srvc_id.uuid.len == ESP_UUID_LEN_16 &&
           param->search_res.srvc_id.uuid.uuid.uuid16 == btBleClient._config->service_uuid) {
         esp3d_log("Found target service UUID: 0x%04x", btBleClient._config->service_uuid);
-        // TODO: Découvrir les caractéristiques
       }
       break;
     case ESP_GATTC_SEARCH_CMPL_EVT:
@@ -133,29 +129,12 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event,
   }
 }
 
-void ESP3DBTBleClient::readBLE() {
-  // La lecture est gérée via le callback GATT
-}
-
-static void esp3d_bt_ble_rx_task(void* pvParameter) {
-  while (1) {
-    esp3d_hal::wait(1);
-    if (!btBleClient.started()) {
-      break;
-    }
-    btBleClient.readBLE();
-  }
-  vTaskDelete(NULL);
-}
-
 ESP3DBTBleClient::ESP3DBTBleClient() {
   _started = false;
-  _xHandle = NULL;
-  _data = NULL;
-  _buffer = NULL;
-  _bufferPos = 0;
   _config = NULL;
   _gatt_handle = 0;
+  _rxBuffer = NULL;
+  _rxBufferPos = 0;
 }
 
 ESP3DBTBleClient::~ESP3DBTBleClient() {
@@ -163,12 +142,21 @@ ESP3DBTBleClient::~ESP3DBTBleClient() {
 }
 
 void ESP3DBTBleClient::process(ESP3DMessage* msg) {
-  esp3d_log("Add message to queue");
+  esp3d_log("Processing message for BT BLE");
+  if (!msg) {
+    esp3d_log_e("Null message");
+    return;
+  }
+  if (!isConnected()) {
+    esp3d_log_w("BT BLE not connected, discarding message");
+    ESP3DClient::deleteMsg(msg);
+    return;
+  }
   if (!addTxData(msg)) {
     flush();
     if (!addTxData(msg)) {
       esp3d_log_e("Cannot add msg to client queue");
-      deleteMsg(msg);
+      ESP3DClient::deleteMsg(msg);
     }
   } else {
     flush();
@@ -176,7 +164,7 @@ void ESP3DBTBleClient::process(ESP3DMessage* msg) {
 }
 
 bool ESP3DBTBleClient::isEndChar(uint8_t ch) {
-  return ((char)ch == '\n' || (char)ch == '\r');
+  return ((char)ch == '\n');
 }
 
 bool ESP3DBTBleClient::connect(esp_bd_addr_t addr) {
@@ -195,49 +183,36 @@ bool ESP3DBTBleClient::connect(esp_bd_addr_t addr) {
 
 bool ESP3DBTBleClient::begin() {
   end();
-  configure(&esp3dBTConfig);
+  configure(&esp3dBTBleConfig);
   if (!_config) {
     esp3d_log_e("BT BLE not configured");
     return false;
   }
 
-  // Allouer les buffers
-  _data = (uint8_t*)malloc(_config->rx_buffer_size);
-  if (!_data) {
-    esp3d_log_e("Failed to allocate memory for data buffer");
+  _rxBuffer = (uint8_t*)malloc(_config->rx_buffer_size);
+  if (!_rxBuffer) {
+    esp3d_log_e("Failed to allocate memory for rx buffer");
     return false;
   }
-  _buffer = (uint8_t*)malloc(_config->rx_buffer_size);
-  if (!_buffer) {
-    free(_data);
-    _data = NULL;
-    esp3d_log_e("Failed to allocate memory for buffer");
-    return false;
-  }
+  _rxBufferPos = 0;
 
-  // Initialiser les mutex
   if (pthread_mutex_init(&_rx_mutex, NULL) != 0) {
-    free(_data);
-    free(_buffer);
-    _data = NULL;
-    _buffer = NULL;
+    free(_rxBuffer);
+    _rxBuffer = NULL;
     esp3d_log_e("Mutex creation for rx failed");
     return false;
   }
   setRxMutex(&_rx_mutex);
 
   if (pthread_mutex_init(&_tx_mutex, NULL) != 0) {
-    free(_data);
-    free(_buffer);
-    _data = NULL;
-    _buffer = NULL;
+    free(_rxBuffer);
+    _rxBuffer = NULL;
     pthread_mutex_destroy(&_rx_mutex);
     esp3d_log_e("Mutex creation for tx failed");
     return false;
   }
   setTxMutex(&_tx_mutex);
 
-  // Initialiser Bluetooth BLE
   esp_err_t ret;
   ret = esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT);
   if (ret != ESP_OK) {
@@ -270,7 +245,6 @@ bool ESP3DBTBleClient::begin() {
     return false;
   }
 
-  // Enregistrer les callbacks GATT (serveur et client)
   ret = esp_ble_gatts_register_callback(gatts_profile_event_handler);
   if (ret != ESP_OK) {
     esp3d_log_e("Failed to register GATT server callback");
@@ -295,7 +269,6 @@ bool ESP3DBTBleClient::begin() {
     return false;
   }
 
-  // Configurer le nom et l'advertising
   char hostname[32] = "PibotCNC";
   esp3dTftsettings.readString(ESP3DSettingIndex::esp3d_hostname, hostname, sizeof(hostname));
   strncpy(_config->device_name, hostname, sizeof(_config->device_name) - 1);
@@ -303,22 +276,9 @@ bool ESP3DBTBleClient::begin() {
   esp_ble_gap_set_device_name(_config->device_name);
   esp_ble_gap_config_adv_data_raw(NULL, 0); // À configurer selon vos besoins
 
-  // Créer la tâche Rx
   _started = true;
-  BaseType_t res = xTaskCreatePinnedToCore(
-      esp3d_bt_ble_rx_task, "esp3d_bt_ble_rx_task",
-      _config->task_stack_size, NULL, _config->task_priority,
-      &_xHandle, _config->task_core);
-
-  if (res == pdPASS && _xHandle) {
-    esp3d_log("Created BT BLE Task");
-    flush();
-    return true;
-  } else {
-    esp3d_log_e("BT BLE Task creation failed");
-    _started = false;
-    return false;
-  }
+  flush();
+  return true;
 }
 
 bool ESP3DBTBleClient::pushMsgToRxQueue(const uint8_t* msg, size_t size) {
@@ -345,14 +305,14 @@ bool ESP3DBTBleClient::pushMsgToRxQueue(const uint8_t* msg, size_t size) {
 }
 
 void ESP3DBTBleClient::handle() {
-  if (_started) {
+  if (_started && isConnected()) {
     if (getRxMsgsCount() > 0) {
       ESP3DMessage* msg = popRx();
       if (msg) {
         esp3dCommands.process(msg);
       }
     }
-    if (getTxMsgsCount() > 0 && _gatt_handle != 0) {
+    if (getTxMsgsCount() > 0) {
       ESP3DMessage* msg = popTx();
       if (msg) {
         esp_ble_gatts_send_response(0, 0, _gatt_handle, msg->size, msg->data, false);
@@ -391,18 +351,11 @@ void ESP3DBTBleClient::end() {
     esp_bt_controller_disable();
     esp_bt_controller_deinit();
   }
-  if (_xHandle) {
-    vTaskDelete(_xHandle);
-    _xHandle = NULL;
+  if (_rxBuffer) {
+    free(_rxBuffer);
+    _rxBuffer = NULL;
   }
-  if (_data) {
-    free(_data);
-    _data = NULL;
-  }
-  if (_buffer) {
-    free(_buffer);
-    _buffer = NULL;
-  }
+  _rxBufferPos = 0;
 }
 
 bool ESP3DBTBleClient::scan(std::vector<BLEDevice>& devices) {

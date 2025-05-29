@@ -19,7 +19,7 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "esp3d_settings.h"
-
+#include "esp3d_target_settings.h"
 #include "nvs_flash.h"
 #include "nvs_handle.hpp"
 
@@ -97,6 +97,16 @@ const ESP3DSettingDescription ESP3DSettingsData[] = {
     {ESP3DSettingIndex::esp3d_radio_boot_mode, ESP3DSettingType::byte_t, 1,
      "1"},
     {ESP3DSettingIndex::esp3d_radio_mode, ESP3DSettingType::byte_t, 1, "3"},
+#if ESP3D_BT_FEATURE
+{ESP3DSettingIndex::esp3d_btserial_id, ESP3DSettingType::string_t,
+     SIZE_OF_BT_SERIAL_ID, BT_NAME_TARGET},
+    {ESP3DSettingIndex::esp3d_btserial_pin, ESP3DSettingType::string_t,
+     SIZE_OF_BT_SERIAL_PIN, BTSERIAL_PIN_TARGET},
+    {ESP3DSettingIndex::esp3d_btble_id, ESP3DSettingType::string_t,
+     SIZE_OF_BT_BLE_ID, BT_NAME_TARGET},
+    {ESP3DSettingIndex::esp3d_btble_passkey, ESP3DSettingType::string_t,
+     SIZE_OF_BT_BLE_PASSKEY, BTBLE_PIN_TARGET},
+#endif  // ESP3D_BT_FEATURE
 #if ESP3D_WIFI_FEATURE
     {ESP3DSettingIndex::esp3d_fallback_mode, ESP3DSettingType::byte_t, 1, "3"},
     {ESP3DSettingIndex::esp3d_sta_ssid, ESP3DSettingType::string_t,
@@ -273,6 +283,19 @@ bool ESP3DSettings::isValidStringSetting(const char* value,
     case ESP3DSettingIndex::esp3d_time_server3:
 #endif              // ESP3D_TIMESTAMP_FEATURE
       return true;  // len test already done so return true
+#if ESP3D_BT_FEATURE
+    case ESP3DSettingIndex::esp3d_btserial_id:
+      return (len > 0 &&
+              len <= SIZE_OF_BT_SERIAL_ID);  // any string from 1 to 32
+    case ESP3DSettingIndex::esp3d_btble_id:
+      return (len > 0 &&
+              len <= SIZE_OF_BT_BLE_ID);  // any string from 1 to 32
+    case ESP3DSettingIndex::esp3d_btserial_pin:
+      return (len == 0 || len== SIZE_OF_BT_SERIAL_PIN);  // any string of size 4 or 0
+
+    case ESP3DSettingIndex::esp3d_btble_passkey:
+      return (len >= 0 && len <= SIZE_OF_BT_SERIAL_PIN);  // any string from 0 to 16 
+#endif // ESP3D_BT_FEATURE
 #if ESP3D_WIFI_FEATURE
     case ESP3DSettingIndex::esp3d_ap_ssid:
     case ESP3DSettingIndex::esp3d_sta_ssid:
