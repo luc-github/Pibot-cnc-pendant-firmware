@@ -9,9 +9,13 @@
 
 #include <pthread.h>
 #include <vector>
-#include "../esp3d_client.h"
-#include "../bt_services_def.h"
+#include <string>
+#include "esp3d_client.h"
 #include "esp_bt.h"
+#include "esp_bt_main.h"
+#include "esp_gap_bt_api.h"
+#include "esp_spp_api.h"
+#include "esp3d_bt_serial_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,6 +43,8 @@ class ESP3DBTSerialClient : public ESP3DClient {
   bool getDeviceAddress(const std::string& name, esp_bd_addr_t& addr);
   bool connect(esp_bd_addr_t addr);
   bool isConnected() { return _spp_handle != -1; }
+  void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t* param);
+  void sppCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t* param);
 
  private:
   esp3d_bt_serial_config_t* _config;

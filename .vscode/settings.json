@@ -1,34 +1,7 @@
 {
-    "C_Cpp.intelliSenseEngine": "default",
     "idf.espIdfPathWin": "C:\\Users\\luc\\esp\\v5.4.1\\esp-idf",
-    "idf.pythonInstallPath": "C:\\Users\\luc\\.espressif\\tools\\idf-python\\3.11.2\\python.exe",
-    "idf.openOcdConfigs": [
-        "board/esp32-wrover-kit-3.3v.cfg"
-    ],
-    "idf.portWin": "COM17",
     "idf.toolsPathWin": "C:\\Users\\luc\\.espressif",
+    "idf.pythonInstallPath": "C:\\Users\\luc\\.espressif\\tools\\idf-python\\3.11.2\\python.exe",
     "idf.flashType": "UART",
-    "files.associations": {
-        "display_def.h": "c",
-        "format": "c",
-        "thread": "c",
-        "spi_common.h": "c",
-        "backlight_def.h": "c",
-        "esp_lcd_panel_vendor.h": "c",
-        "lv_global.h": "c",
-        "list": "cpp",
-        "charconv": "cpp",
-        "chrono": "cpp",
-        "optional": "cpp",
-        "ratio": "cpp",
-        "system_error": "cpp",
-        "array": "cpp",
-        "functional": "cpp",
-        "regex": "cpp",
-        "tuple": "cpp",
-        "type_traits": "cpp",
-        "utility": "cpp",
-        "cstdint": "cpp",
-        "esp_log.h": "c"
-    }
+    "idf.portWin": "COM17"
 }

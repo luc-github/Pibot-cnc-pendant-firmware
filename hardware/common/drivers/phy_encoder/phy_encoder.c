@@ -6,6 +6,7 @@
 
 #include "phy_encoder.h"
 #include "esp3d_log.h"
+#include "driver/pulse_cnt.h"
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
@@ -15,48 +16,22 @@ static phy_encoder_config_t encoder_config;
 static bool is_initialized = false;
 static volatile int32_t encoder_steps = 0;
 static QueueHandle_t encoder_queue = NULL;
+static pcnt_unit_handle_t pcnt_unit = NULL;
+static int32_t accumulated_pulses = 0; // Accumulate all pulses from PCNT
 
-// Transition table for quadrature decoding (based on A and B states)
-static const int8_t transition_table[16] = {
-    0,  // 00 -> 00: No change
-    -1, // 00 -> 01: Counterclockwise
-    1,  // 00 -> 10: Clockwise
-    0,  // 00 -> 11: Invalid
-    1,  // 01 -> 00: Clockwise
-    0,  // 01 -> 01: No change
-    0,  // 01 -> 10: Invalid
-    -1, // 01 -> 11: Counterclockwise
-    -1, // 10 -> 00: Counterclockwise
-    0,  // 10 -> 01: Invalid
-    0,  // 10 -> 10: No change
-    1,  // 10 -> 11: Clockwise
-    0,  // 11 -> 00: Invalid
-    1,  // 11 -> 01: Clockwise
-    -1, // 11 -> 10: Counterclockwise
-    0   // 11 -> 11: No change
-};
-
-// GPIO interrupt handler for encoder signals
-static void IRAM_ATTR encoder_isr_handler(void *arg)
+// Callback function for PCNT watch events (limit reached)
+static bool encoder_pcnt_on_reach(pcnt_unit_handle_t unit, const pcnt_watch_event_data_t *edata, void *user_ctx)
 {
-    static uint8_t prev_state = 0;
-    uint8_t curr_state = (gpio_get_level(encoder_config.pin_a) << 1) | gpio_get_level(encoder_config.pin_b);
-    uint8_t transition = (prev_state << 2) | curr_state;
-    int8_t step = transition_table[transition];
-    
-    if (step != 0) {
-        encoder_steps += step;
-        BaseType_t higher_priority_task_woken = pdFALSE;
-        xQueueSendFromISR(encoder_queue, &step, &higher_priority_task_woken);
-        portYIELD_FROM_ISR(higher_priority_task_woken);
-    }
-    prev_state = curr_state;
+    BaseType_t high_task_wakeup;
+    QueueHandle_t queue = (QueueHandle_t)user_ctx;
+    int watch_point_value = edata->watch_point_value;
+    // Send the watch point value to the queue
+    xQueueSendFromISR(queue, &watch_point_value, &high_task_wakeup);
+    return (high_task_wakeup == pdTRUE);
 }
 
 /**
- * @brief Configure the rotary encoder
- *
- * This function initializes the GPIO pins for the encoder based on the provided configuration.
+ * @brief Configure the rotary encoder using PCNT
  *
  * @param config Pointer to the encoder configuration
  * @return ESP_OK on success, or an error code on failure
@@ -76,62 +51,89 @@ esp_err_t phy_encoder_configure(const phy_encoder_config_t *config)
         return ESP_ERR_INVALID_ARG;
     }
 
-    // Validate configuration values
-    if (encoder_config.debounce_us == 0 || encoder_config.min_step_interval_us == 0) {
-        esp3d_log_e("Invalid debounce or step interval configuration");
-        return ESP_ERR_INVALID_ARG;
-    }
-
-    // Configure GPIO pins
-    gpio_config_t io_conf = {
-        .pin_bit_mask = (1ULL << encoder_config.pin_a) | (1ULL << encoder_config.pin_b),
-        .mode = GPIO_MODE_INPUT,
-        .pull_up_en = encoder_config.pullups_enabled ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_ANYEDGE
+    // Initialize PCNT unit
+    esp3d_log("Install PCNT unit");
+    pcnt_unit_config_t unit_config = {
+        .high_limit = encoder_config.pcnt_high_limit,
+        .low_limit = encoder_config.pcnt_low_limit,
+        .intr_priority = 1, // Set a low interrupt priority to avoid interfering with other peripherals
     };
-    
-    if (gpio_config(&io_conf) != ESP_OK) {
-        esp3d_log_e("Failed to configure GPIO for encoder");
-        return ESP_ERR_INVALID_ARG;
+    ESP_ERROR_CHECK(pcnt_new_unit(&unit_config, &pcnt_unit));
+
+    // Set glitch filter
+    esp3d_log("Set glitch filter");
+    pcnt_glitch_filter_config_t filter_config = {
+        .max_glitch_ns = 500, // Reduced from 1000 to 500 ns to improve sensitivity
+    };
+    ESP_ERROR_CHECK(pcnt_unit_set_glitch_filter(pcnt_unit, &filter_config));
+
+    // Install PCNT channels
+    esp3d_log("Install PCNT channels");
+    pcnt_chan_config_t chan_a_config = {
+        .edge_gpio_num = encoder_config.pin_a,
+        .level_gpio_num = encoder_config.pin_b,
+    };
+    pcnt_channel_handle_t pcnt_chan_a = NULL;
+    ESP_ERROR_CHECK(pcnt_new_channel(pcnt_unit, &chan_a_config, &pcnt_chan_a));
+
+    pcnt_chan_config_t chan_b_config = {
+        .edge_gpio_num = encoder_config.pin_b,
+        .level_gpio_num = encoder_config.pin_a,
+    };
+    pcnt_channel_handle_t pcnt_chan_b = NULL;
+    ESP_ERROR_CHECK(pcnt_new_channel(pcnt_unit, &chan_b_config, &pcnt_chan_b));
+
+    // Set edge and level actions for PCNT channels (quadrature decoding)
+    esp3d_log("Set edge and level actions for PCNT channels");
+    ESP_ERROR_CHECK(pcnt_channel_set_edge_action(pcnt_chan_a, PCNT_CHANNEL_EDGE_ACTION_DECREASE, PCNT_CHANNEL_EDGE_ACTION_INCREASE));
+    ESP_ERROR_CHECK(pcnt_channel_set_level_action(pcnt_chan_a, PCNT_CHANNEL_LEVEL_ACTION_KEEP, PCNT_CHANNEL_LEVEL_ACTION_INVERSE));
+    ESP_ERROR_CHECK(pcnt_channel_set_edge_action(pcnt_chan_b, PCNT_CHANNEL_EDGE_ACTION_INCREASE, PCNT_CHANNEL_EDGE_ACTION_DECREASE));
+    ESP_ERROR_CHECK(pcnt_channel_set_level_action(pcnt_chan_b, PCNT_CHANNEL_LEVEL_ACTION_KEEP, PCNT_CHANNEL_LEVEL_ACTION_INVERSE));
+
+    // Add watch points for limits (only high and low limits)
+    esp3d_log("Add watch points and register callbacks");
+    int watch_points[] = {encoder_config.pcnt_low_limit, encoder_config.pcnt_high_limit};
+    for (size_t i = 0; i < sizeof(watch_points) / sizeof(watch_points[0]); i++) {
+        ESP_ERROR_CHECK(pcnt_unit_add_watch_point(pcnt_unit, watch_points[i]));
     }
 
-    // Create queue for interrupt events
-    encoder_queue = xQueueCreate(20, sizeof(int8_t)); // Increased for high resolution encoder
+    // Create a queue for watch events
+    encoder_queue = xQueueCreate(10, sizeof(int));
     if (encoder_queue == NULL) {
         esp3d_log_e("Failed to create encoder queue");
         return ESP_ERR_NO_MEM;
     }
 
-    // Install interrupt handler service
-    if (gpio_install_isr_service(0) != ESP_OK) {
-        esp3d_log("ISR service already installed");
-    }
-    
-    if (gpio_isr_handler_add(encoder_config.pin_a, encoder_isr_handler, NULL) != ESP_OK ||
-        gpio_isr_handler_add(encoder_config.pin_b, encoder_isr_handler, NULL) != ESP_OK) {
-        esp3d_log_e("Failed to add ISR handler");
-        vQueueDelete(encoder_queue);
-        return ESP_ERR_INVALID_STATE;
-    }
+    // Register callback for watch events
+    pcnt_event_callbacks_t cbs = {
+        .on_reach = encoder_pcnt_on_reach,
+    };
+    ESP_ERROR_CHECK(pcnt_unit_register_event_callbacks(pcnt_unit, &cbs, encoder_queue));
 
-    // Reset variables
+    // Enable and start PCNT unit
+    esp3d_log("Enable PCNT unit");
+    ESP_ERROR_CHECK(pcnt_unit_enable(pcnt_unit));
+    esp3d_log("Clear PCNT unit");
+    ESP_ERROR_CHECK(pcnt_unit_clear_count(pcnt_unit));
+    esp3d_log("Start PCNT unit");
+    ESP_ERROR_CHECK(pcnt_unit_start(pcnt_unit));
+
+    // Reset global step counter and accumulated pulses
     encoder_steps = 0;
+    accumulated_pulses = 0;
 
     is_initialized = true;
-    esp3d_log("Rotary encoder configured successfully (pins A:%d, B:%d, debounce:%luµs, min_interval:%luµs, steps_per_rev:%lu)", 
-              encoder_config.pin_a, encoder_config.pin_b, 
-              encoder_config.debounce_us, encoder_config.min_step_interval_us, 
-              encoder_config.steps_per_rev);
+    esp3d_log_d("Rotary encoder configured successfully (pins A:%d, B:%d, steps_per_rev:%lu)",
+              encoder_config.pin_a, encoder_config.pin_b, encoder_config.steps_per_rev);
     return ESP_OK;
 }
 
 /**
- * @brief Read the encoder state with advanced filtering
+ * @brief Read the encoder state using PCNT
  *
- * This function reads the current encoder steps with debounce and step interval filtering.
+ * This function reads the accumulated steps since the last call.
  *
- * @param steps Pointer to store the filtered step count
+ * @param steps Pointer to store the step count
  * @return ESP_OK on success, or an error code on failure
  */
 esp_err_t phy_encoder_read(int32_t *steps)
@@ -146,31 +148,39 @@ esp_err_t phy_encoder_read(int32_t *steps)
         return ESP_ERR_INVALID_ARG;
     }
 
-    int32_t total_steps = 0;
-    int8_t step;
-    uint64_t current_time = esp_timer_get_time();
-    static uint64_t last_debounce_time = 0;
-    static uint64_t last_valid_step_time = 0;
+    // Get the current count from PCNT
+    int pulse_count = 0;
+    ESP_ERROR_CHECK(pcnt_unit_get_count(pcnt_unit, &pulse_count));
+    //esp3d_log_d("Raw pulse count: %d", pulse_count);
 
-    // Read events from queue with dual filtering
-    while (xQueueReceive(encoder_queue, &step, 0)) {
-        // First filter: hardware debounce
-        if ((current_time - last_debounce_time) >= encoder_config.debounce_us) {
-            // Second filter: minimum step interval
-            if ((current_time - last_valid_step_time) >= encoder_config.min_step_interval_us) {
-                total_steps += step;
-                last_valid_step_time = current_time;
-                esp3d_log("Encoder step: %d (total: %ld)", step, total_steps);
-            } else {
-                esp3d_log("Encoder step filtered out (too fast): %d", step);
-            }
-            last_debounce_time = current_time;
-        } else {
-            esp3d_log("Encoder step debounced: %d", step);
+    // Check for watch events (limits reached)
+    int event_count = 0;
+    while (xQueueReceive(encoder_queue, &event_count, 0)) {
+        esp3d_log_d("Watch point event, count: %d", event_count);
+        // Reset the counter if a limit is reached
+        if (event_count == encoder_config.pcnt_high_limit || event_count == encoder_config.pcnt_low_limit) {
+            ESP_ERROR_CHECK(pcnt_unit_clear_count(pcnt_unit));
+            accumulated_pulses = 0; // Reset accumulated pulses
+            pulse_count = 0;
         }
     }
 
-    *steps = total_steps;
+    // Accumulate pulses
+    accumulated_pulses += pulse_count;
+
+    // Calculate clicks based on accumulated pulses
+    int32_t new_clicks = accumulated_pulses / 4; // 4 pulses per click in 4X mode
+    int32_t clicks = new_clicks - encoder_steps; // Difference since last read
+
+    // Update global steps
+    encoder_steps = new_clicks;
+
+    // Clear the PCNT counter after reading
+    ESP_ERROR_CHECK(pcnt_unit_clear_count(pcnt_unit));
+
+    *steps = clicks;
+    //esp3d_log_d("Encoder clicks: %ld (total steps: %ld, accumulated pulses: %ld)", clicks, encoder_steps, accumulated_pulses);
+
     return ESP_OK;
 }
 
@@ -209,7 +219,9 @@ esp_err_t phy_encoder_reset_steps(void)
     }
 
     encoder_steps = 0;
-    esp3d_log("Encoder steps counter reset");
+    accumulated_pulses = 0;
+    ESP_ERROR_CHECK(pcnt_unit_clear_count(pcnt_unit));
+    esp3d_log_d("Encoder steps counter reset");
     return ESP_OK;
 }
 
@@ -246,9 +258,14 @@ esp_err_t phy_encoder_deinit(void)
         return ESP_OK; // Already deinitialized
     }
 
-    // Remove interrupt handlers
-    gpio_isr_handler_remove(encoder_config.pin_a);
-    gpio_isr_handler_remove(encoder_config.pin_b);
+    // Stop and disable PCNT unit
+    ESP_ERROR_CHECK(pcnt_unit_stop(pcnt_unit));
+    ESP_ERROR_CHECK(pcnt_unit_disable(pcnt_unit));
+    ESP_ERROR_CHECK(pcnt_unit_clear_count(pcnt_unit));
+
+    // Delete PCNT unit
+    ESP_ERROR_CHECK(pcnt_del_unit(pcnt_unit));
+    pcnt_unit = NULL;
 
     // Delete queue
     if (encoder_queue != NULL) {
@@ -258,8 +275,9 @@ esp_err_t phy_encoder_deinit(void)
 
     // Reset variables
     encoder_steps = 0;
+    accumulated_pulses = 0;
     is_initialized = false;
 
-    esp3d_log("Rotary encoder deinitialized");
+    esp3d_log_d("Rotary encoder deinitialized");
     return ESP_OK;
 }

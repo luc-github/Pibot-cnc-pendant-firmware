@@ -294,7 +294,7 @@ bool ESP3DSettings::isValidStringSetting(const char* value,
       return (len == 0 || len== SIZE_OF_BT_SERIAL_PIN);  // any string of size 4 or 0
 
     case ESP3DSettingIndex::esp3d_btble_passkey:
-      return (len >= 0 && len <= SIZE_OF_BT_SERIAL_PIN);  // any string from 0 to 16 
+      return (len <= SIZE_OF_BT_SERIAL_PIN);  // any string from 0 to 16 
 #endif // ESP3D_BT_FEATURE
 #if ESP3D_WIFI_FEATURE
     case ESP3DSettingIndex::esp3d_ap_ssid:

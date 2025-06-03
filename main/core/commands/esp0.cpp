@@ -28,9 +28,11 @@
 
 const char* help[] = {
     "[ESP](id) - display this help",
-#if ESP3D_WIFI_FEATURE
+#if ESP3D_WIFI_FEATURE || ESP3D_BT_FEATURE
     "[ESP100](SSID) - display/set STA SSID",
     "[ESP101](Password)/(NOPASSWORD)- set STA password",
+#endif // ESP3D_WIFI_FEATURE || ESP3D_BT_FEATURE
+#if  ESP3D_WIFI_FEATURE
     "[ESP102](Mode) - display/set STA IP mode (DHCP/STATIC)",
     "[ESP103](IP=xxxx MSK=xxxx GW=xxxx DNS=XXXXX) - display/set STA "
     "IP/Mask/GW/DNS",
@@ -145,8 +147,11 @@ const char* help[] = {
 
 const uint cmdlist[] = {
     0,
-#if ESP3D_WIFI_FEATURE
-    100, 101, 102, 103, 104, 105, 106, 107, 108,
+#if ESP3D_WIFI_FEATURE || ESP3D_BT_FEATURE
+    100, 101,
+ #endif  // ESP3D_WIFI_FEATURE || ESP3D_BT_FEATURE
+#if ESP3D_WIFI_FEATURE   
+    102, 103, 104, 105, 106, 107, 108,
 #endif  // ESP3D_WIFI_FEATURE
     110,
 #if ESP3D_WIFI_FEATURE

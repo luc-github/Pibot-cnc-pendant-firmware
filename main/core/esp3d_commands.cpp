@@ -867,13 +867,15 @@ void ESP3DCommands::execute_internal_command(int cmd, int cmd_params_pos,
     case 0:
       ESP0(cmd_params_pos, msg);
       break;
-#if ESP3D_WIFI_FEATURE
+#if ESP3D_WIFI_FEATURE || ESP3D_BT_FEATURE
     case 100:
       ESP100(cmd_params_pos, msg);
       break;
     case 101:
       ESP101(cmd_params_pos, msg);
       break;
+#endif // ESP3D_WIFI_FEATURE || ESP3D_BT_FEATURE
+#if ESP3D_WIFI_FEATURE
     case 102:
       ESP102(cmd_params_pos, msg);
       break;

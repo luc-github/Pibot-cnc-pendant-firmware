@@ -26,6 +26,8 @@
 #include "esp3d_fs_types.h"
 #include "esp_vfs.h"
 #include "esp3d_sd_config.h"
+#include "sdkconfig.h"
+
 
 enum class ESP3DSdState : uint8_t {
   idle,

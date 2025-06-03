@@ -133,6 +133,8 @@ void button_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 }
 
 // LVGL encoder input read callback
+// LVGL encoder input read callback
+// LVGL encoder input read callback
 void encoder_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
     static control_event_t encoder_event = {
@@ -149,8 +151,8 @@ void encoder_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
     }
     // Initialize indev handle
     encoder_event.indev = indev;
-    int32_t steps;
-    if (phy_encoder_read(&steps) == ESP_OK && steps != 0) {
+    int32_t clicks;
+    if (phy_encoder_read(&clicks) == ESP_OK && clicks != 0) {
         uint32_t time_since_last = current_time - last_output_time;
         if (time_since_last == 40) {
             data->key = 0;
@@ -158,20 +160,29 @@ void encoder_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
             return;
         }
         uint32_t min_interval;
-        if (time_since_last < 200) {
-            min_interval = 60;
+        // Adaptive speed levels based on time_since_last
+        if (time_since_last >= ENCODER_SPEED_THRESHOLD_SLOW_MS) {
+            min_interval = ENCODER_MIN_INTERVAL_SLOW_MS; // Slow speed
+        } else if (time_since_last >= ENCODER_SPEED_THRESHOLD_NORMAL_MS) {
+            min_interval = ENCODER_MIN_INTERVAL_NORMAL_MS; // Normal speed
+        } else if (time_since_last >= ENCODER_SPEED_THRESHOLD_FAST_MS) {
+            min_interval = ENCODER_MIN_INTERVAL_FAST_MS; // Fast speed
         } else {
-            min_interval = 120;
+            min_interval = ENCODER_MIN_INTERVAL_SUPER_FAST_MS; // Super fast speed
         }
         if (time_since_last >= min_interval) {
             // Adjust steps based on ENCODER_INVERT_ROTATION
-            int32_t adjusted_steps = ENCODER_INVERT_ROTATION ? -steps : steps;
-            data->key = (adjusted_steps > 0) ? LV_KEY_RIGHT : LV_KEY_LEFT;
+            int32_t adjusted_clicks = ENCODER_INVERT_ROTATION ? -clicks : clicks;
+            data->key = (adjusted_clicks > 0) ? LV_KEY_RIGHT : LV_KEY_LEFT;
             data->state = LV_INDEV_STATE_PRESSED;
-            encoder_event.steps = adjusted_steps;
-            lv_obj_send_event(active_screen, LV_EVENT_KEY, &encoder_event);
-            esp3d_log_d("LVGL encoder: key=%ld (steps: %ld, adjusted_steps: %ld, interval: %lu)",
-                       data->key, steps, adjusted_steps, time_since_last);
+            encoder_event.steps = adjusted_clicks;
+            // Generate multiple events based on the total clicks accumulated
+            int32_t abs_clicks = abs(adjusted_clicks);
+            for (int32_t i = 0; i < abs_clicks; i++) {
+                lv_obj_send_event(active_screen, LV_EVENT_KEY, &encoder_event);
+                esp3d_log_d("LVGL encoder: key=%ld (clicks: %ld, adjusted_clicks: %ld, interval: %lu)",
+                           data->key, clicks, adjusted_clicks, time_since_last);
+            }
             last_output_time = current_time;
         } else {
             data->key = 0;

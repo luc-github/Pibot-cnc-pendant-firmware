@@ -43,8 +43,8 @@ extern "C" {
 #define DISPLAY_INVERT_FLAG      1
 
 // Display buffer configuration
-#define DISPLAY_USE_DOUBLE_BUFFER_FLAG   1
-#define DISPLAY_BUFFER_LINES_NB          12  // 12 lines buffer
+#define DISPLAY_USE_DOUBLE_BUFFER_FLAG   0
+#define DISPLAY_BUFFER_LINES_NB          6  // 12 lines buffer
 
 /* Touch Controller Configuration */
 // Touch controller pin definitions
@@ -72,7 +72,7 @@ extern "C" {
 // PWM specific settings (only used if BACKLIGHT_PWM_ENABLED is 1)
 #define BACKLIGHT_PWM_FREQ_HZ       5000    // PWM frequency in Hz
 #define BACKLIGHT_PWM_RESOLUTION_BITS 8     // Duty resolution
-#define BACKLIGHT_PWM_TIMER_IDX     0       // Timer to use
+#define BACKLIGHT_PWM_TIMER_IDX     1       // Timer to use
 #define BACKLIGHT_PWM_CHANNEL_IDX   0       // Channel to use
 
 /* SD Card Configuration */
@@ -104,9 +104,25 @@ extern "C" {
 #define ENCODER_B_PIN       GPIO_NUM_27
 #define ENCODER_STEPS_PER_REV_NB  100  // Reference value
 #define ENCODER_PULLUPS_ENABLED_FLAG 0  // No pull-up resistors installed
-#define ENCODER_DEBOUNCE_US 1000           // 5ms debounce hardware
-#define ENCODER_MIN_STEP_INTERVAL_US 10000 // 50ms anti-double-click
-#define ENCODER_INVERT_ROTATION 0 // rotation positive 
+#define ENCODER_DEBOUNCE_US 10000       // 10ms debounce hardware (not used with PCNT)
+#define ENCODER_MIN_STEP_INTERVAL_US 0  // Not used with PCNT
+#define ENCODER_INVERT_ROTATION 0       // Rotation positive
+
+// PCNT-specific configuration
+#define ENCODER_PCNT_HIGH_LIMIT 1000    // High limit for PCNT counter
+#define ENCODER_PCNT_LOW_LIMIT -1000    // Low limit for PCNT counter
+#define ENCODER_PCNT_GLITCH_NS 1000     // Glitch filter threshold in nanoseconds
+
+// Adaptive speed thresholds for encoder (in milliseconds)
+#define ENCODER_SPEED_THRESHOLD_SLOW_MS      500  // Threshold for slow speed
+#define ENCODER_SPEED_THRESHOLD_NORMAL_MS    200  // Threshold for normal speed
+#define ENCODER_SPEED_THRESHOLD_FAST_MS      100  // Threshold for fast speed
+
+// Minimum intervals for each speed level (in milliseconds)
+#define ENCODER_MIN_INTERVAL_SLOW_MS         200  // Slow speed min interval
+#define ENCODER_MIN_INTERVAL_NORMAL_MS       100  // Normal speed min interval
+#define ENCODER_MIN_INTERVAL_FAST_MS         50   // Fast speed min interval
+#define ENCODER_MIN_INTERVAL_SUPER_FAST_MS   30   // Super fast speed min interval
 
 /* 4-Position Switch Configuration */
 #define SWITCH_POS_1_PIN    GPIO_NUM_34
@@ -154,9 +170,9 @@ extern "C" {
 
 /* LVGL Configuration */
 #define LVGL_TICK_PERIOD_MS 10
-#define LVGL_TASK_PRIORITY 3
+#define LVGL_TASK_PRIORITY 5
 #define LVGL_TASK_CORE 1
-#define LVGL_TASK_STACK_SIZE 8192
+#define LVGL_TASK_STACK_SIZE 6144
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -3,7 +3,7 @@
 
   Copyright (c) 2025 Luc Lebosse. All rights reserved.
 */
-#if ESP3D_BT_FEATURE
+#if ESP3D_BT_FEATURE1
 
 #include "esp3d_bt_ble_client.h"
 #include "esp_bt.h"
@@ -11,10 +11,10 @@
 #include "esp_gatt_common_api.h"
 #include "esp_gatts_api.h"
 #include "esp_gattc_api.h"
-#include "../esp3d_commands.h"
-#include "../esp3d_hal.h"
-#include "../esp3d_log.h"
-#include "../esp3d_settings.h"
+#include "esp3d_commands.h"
+#include "esp3d_hal.h"
+#include "esp3d_log.h"
+#include "esp3d_settings.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -33,6 +33,10 @@ bool ESP3DBTBleClient::configure(esp3d_bt_ble_config_t* config) {
 static std::vector<BLEDevice> discovered_ble_devices;
 
 static void esp_ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param) {
+  btBleClient.esp_ble_gap_cb(event, param);
+}
+
+void ESP3DBTBleClient::esp_ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param)
   switch (event) {
     case ESP_GAP_BLE_SCAN_RESULT_EVT:
       if (param->scan_rst.search_evt == ESP_GAP_SEARCH_INQ_RES_EVT) {

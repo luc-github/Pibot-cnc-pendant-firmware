@@ -24,6 +24,7 @@ set(BSP_REQUIRES
     "phy_potentiometer"
     "buzzer"
     "lvgl"
+    "bt"
 )
 
 message(STATUS "${Cyan}Adds Required:${White} ${BSP_REQUIRES}${ColourReset}\n\n")

@@ -78,6 +78,9 @@ endif()
 # ===========================================
 # Network Services
 # ===========================================
+if(BT_SERVICE)
+    add_compile_options(-DESP3D_BT_FEATURE=1)
+endif()
 if(WIFI_SERVICE)
     add_compile_options(-DESP3D_WIFI_FEATURE=1)
 
@@ -100,9 +103,6 @@ if(WIFI_SERVICE)
         if(CAMERA_SERVICE)
             add_compile_options(-DESP3D_CAMERA_FEATURE=1)
         endif()
-    endif()
-    if(BT_SERVICE)
-        add_compile_options(-DESP3D_BT_FEATURE=1)
     endif()
     if(TELNET_SERVICE)
         add_compile_options(-DESP3D_TELNET_FEATURE=1)

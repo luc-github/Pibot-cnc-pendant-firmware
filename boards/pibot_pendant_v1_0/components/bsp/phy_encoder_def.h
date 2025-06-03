@@ -19,7 +19,10 @@ phy_encoder_config_t phy_encoder_cfg = {
     .pullups_enabled = ENCODER_PULLUPS_ENABLED_FLAG,
     .debounce_us = ENCODER_DEBOUNCE_US,
     .min_step_interval_us = ENCODER_MIN_STEP_INTERVAL_US,
-    .steps_per_rev = ENCODER_STEPS_PER_REV_NB
+    .steps_per_rev = ENCODER_STEPS_PER_REV_NB,
+    .pcnt_high_limit = ENCODER_PCNT_HIGH_LIMIT,
+    .pcnt_low_limit = ENCODER_PCNT_LOW_LIMIT,
+    .pcnt_glitch_ns = ENCODER_PCNT_GLITCH_NS
 };
 
 #ifdef __cplusplus

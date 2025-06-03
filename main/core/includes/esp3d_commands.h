@@ -65,9 +65,11 @@ class ESP3DCommands {
   bool dispatchAuthenticationError(ESP3DMessage* msg, uint cmdid, bool json);
   bool formatCommand(char* cmd, size_t len);
   void ESP0(int cmd_params_pos, ESP3DMessage* msg);
-#if ESP3D_WIFI_FEATURE
+#if ESP3D_WIFI_FEATURE || ESP3D_BT_FEATURE
   void ESP100(int cmd_params_pos, ESP3DMessage* msg);
   void ESP101(int cmd_params_pos, ESP3DMessage* msg);
+#endif  // ESP3D_WIFI_FEATURE || ESP3D_BT_FEATURE
+#if ESP3D_WIFI_FEATURE
   void ESP102(int cmd_params_pos, ESP3DMessage* msg);
   void ESP103(int cmd_params_pos, ESP3DMessage* msg);
   void ESP104(int cmd_params_pos, ESP3DMessage* msg);

@@ -3,18 +3,19 @@
 
   Copyright (c) 2025 Luc Lebosse. All rights reserved.
 */
-#if ESP3D_BT_FEATURE
+#if ESP3D_BT_FEATURE2
 
 #include "esp3d_bt_serial_client.h"
 #include "esp_bt.h"
 #include "esp_bt_main.h"
 #include "esp_spp_api.h"
-#include "../esp3d_commands.h"
-#include "../esp3d_hal.h"
-#include "../esp3d_log.h"
-#include "../esp3d_settings.h"
+#include "esp3d_commands.h"
+#include "esp3d_hal.h"
+#include "esp3d_log.h"
+#include "esp3d_settings.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include <string>
 
 ESP3DBTSerialClient btSerialClient;
 
@@ -30,7 +31,70 @@ bool ESP3DBTSerialClient::configure(esp3d_bt_serial_config_t* config) {
 
 static std::vector<BTDevice> discovered_devices;
 
-static void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t* param) {
+static void esp_bt_gap_callback(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t* param) {
+  btSerialClient.esp_bt_gap_cb(event, param);
+}
+
+static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t* param) {
+  btSerialClient.sppCallback(event, param);
+}
+
+void ESP3DBTSerialClient::sppCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t* param) {
+  switch (event) {
+    case ESP_SPP_SRV_OPEN_EVT:
+    case ESP_SPP_CL_INIT_EVT:
+      esp3d_log("SPP Connection opened, handle: %d", param->srv_open.handle);
+      _spp_handle = param->srv_open.handle;
+      break;
+    case ESP_SPP_CLOSE_EVT:
+      esp3d_log("SPP Connection closed");
+      _spp_handle = -1;
+      break;
+    case ESP_SPP_DATA_IND_EVT: {
+      for (size_t i = 0; i < param->data_ind.len; i++) {
+        if (_rxBufferPos < _config->rx_buffer_size) {
+          _rxBuffer[_rxBufferPos++] = param->data_ind.data[i];
+        } else {
+          esp3d_log_e("Rx buffer overflow");
+          _rxBufferPos = 0;
+          break;
+        }
+        if (isEndChar(param->data_ind.data[i])) {
+          pushMsgToRxQueue(_rxBuffer, _rxBufferPos);
+          _rxBufferPos = 0;
+        }
+      }
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+// Helper function to parse EIR data and extract device name
+static bool get_name_from_eir(uint8_t* eir, char* name, uint8_t len) {
+  if (!eir || len == 0) return false;
+
+  uint8_t* ptr = eir;
+  while (ptr < eir + len) {
+    uint8_t field_len = ptr[0];
+    if (field_len == 0) break; // End of EIR data
+    uint8_t field_type = ptr[1];
+
+    if (field_type == ESP_BT_EIR_TYPE_CMPL_LOCAL_NAME || 
+        field_type == ESP_BT_EIR_TYPE_SHORT_LOCAL_NAME) {
+      uint8_t name_len = field_len - 1; // Subtract type byte
+      if (name_len > 31) name_len = 31; // Truncate to fit buffer
+      memcpy(name, ptr + 2, name_len);
+      name[name_len] = '\0';
+      return true;
+    }
+    ptr += field_len + 1;
+  }
+  return false;
+}
+
+void ESP3DBTSerialClient::esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t* param) {
   switch (event) {
     case ESP_BT_GAP_DISC_RES_EVT: {
       BTDevice device;
@@ -41,7 +105,7 @@ static void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t* pa
           uint8_t* eir = (uint8_t*)param->disc_res.prop[i].val;
           uint8_t len = param->disc_res.prop[i].len;
           char name[32] = {0};
-          if (esp_bt_gap_get_name_from_eir(eir, name, len)) {
+          if (get_name_from_eir(eir, name, len)) {
             device.name = name;
           }
         }
@@ -53,40 +117,9 @@ static void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t* pa
                 device.addr[3], device.addr[4], device.addr[5]);
       break;
     }
-    case ESP_BT_GAP_DISC_STATE_CHANGED_EVT:
-      if (param->disc_state_changed.state == ESP_BT_GAP_DISCOVERY_STOPPED) {
+    case ESP_BT_GAP_DISC_STATE_CHANGED_EVT: {
+      if (param->disc_st_chg.state == ESP_BT_GAP_DISCOVERY_STOPPED) {
         esp3d_log("BT scan completed");
-      }
-      break;
-    default:
-      break;
-  }
-}
-
-static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t* param) {
-  switch (event) {
-    case ESP_SPP_SRV_OPEN_EVT:
-    case ESP_SPP_CL_INIT_EVT:
-      esp3d_log("SPP Connection opened, handle: %d", param->srv_open.handle);
-      btSerialClient._spp_handle = param->srv_open.handle;
-      break;
-    case ESP_SPP_CLOSE_EVT:
-      esp3d_log("SPP Connection closed");
-      btSerialClient._spp_handle = -1;
-      break;
-    case ESP_SPP_DATA_IND_EVT: {
-      for (size_t i = 0; i < param->data_ind.len; i++) {
-        if (btSerialClient._rxBufferPos < btSerialClient._config->rx_buffer_size) {
-          btSerialClient._rxBuffer[btSerialClient._rxBufferPos++] = param->data_ind.data[i];
-        } else {
-          esp3d_log_e("Rx buffer overflow");
-          btSerialClient._rxBufferPos = 0;
-          break;
-        }
-        if (btSerialClient.isEndChar(param->data_ind.data[i])) {
-          btSerialClient.pushMsgToRxQueue(btSerialClient._rxBuffer, btSerialClient._rxBufferPos);
-          btSerialClient._rxBufferPos = 0;
-        }
       }
       break;
     }
@@ -215,7 +248,12 @@ bool ESP3DBTSerialClient::begin() {
     return false;
   }
 
-  ret = esp_spp_init(ESP_SPP_MODE_CB);
+  esp_spp_cfg_t spp_config = {
+      .mode = ESP_SPP_MODE_CB,
+      .enable_l2cap_ertm = false,
+      .tx_buffer_size = 0,
+  };
+  ret = esp_spp_enhanced_init(&spp_config);
   if (ret != ESP_OK) {
     esp3d_log_e("Failed to init SPP");
     return false;
@@ -225,7 +263,7 @@ bool ESP3DBTSerialClient::begin() {
   esp3dTftsettings.readString(ESP3DSettingIndex::esp3d_hostname, hostname, sizeof(hostname));
   strncpy(_config->device_name, hostname, sizeof(_config->device_name) - 1);
   _config->device_name[sizeof(_config->device_name) - 1] = '\0';
-  esp_bt_dev_set_device_name(_config->device_name);
+  esp_bt_gap_set_device_name(_config->device_name);
   esp_bt_gap_set_scan_mode(_config->connectable ? ESP_BT_CONNECTABLE : ESP_BT_NON_CONNECTABLE,
                            _config->discoverable ? ESP_BT_GENERAL_DISCOVERABLE : ESP_BT_NON_DISCOVERABLE);
 
@@ -340,7 +378,7 @@ bool ESP3DBTSerialClient::scan(std::vector<BTDevice>& devices) {
 
   discovered_devices.clear();
   _last_scan_results.clear();
-  esp_err_t ret = esp_bt_gap_register_callback(esp_bt_gap_cb);
+  esp_err_t ret = esp_bt_gap_register_callback(esp_bt_gap_callback);
   if (ret != ESP_OK) {
     esp3d_log_e("Failed to register GAP callback");
     return false;
