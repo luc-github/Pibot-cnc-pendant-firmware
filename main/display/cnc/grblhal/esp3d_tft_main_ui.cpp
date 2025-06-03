@@ -28,8 +28,9 @@ void screen_on_delay_timer_cb(lv_timer_t *timer)
 
 #define CIRCLE_DIAMETER 240
 #define BORDER_WIDTH 3
-#define SELECTION_ARC 45 // 360/8 = 45 degrés pour 1/8
 #define NUM_SECTIONS 8   // Nombre de sections (8 pour 1/8 de cercle)
+#define SELECTION_ARC 360/8 // 360/8 = 45 degrés pour 1/8
+
 #define INNER_CIRCLE_DIAMETER 130 // Diamètre du cercle central
 #define INNER_ARC_WIDTH 54 // Largeur de l'arc intérieur (approximation de (237-130)/2)
 #define ICON_ZONE_DIAMETER 40 // Diamètre des zones cliquables
@@ -47,6 +48,7 @@ static lv_obj_t *arc; // Arc bleu extérieur
 static lv_obj_t *inner_arc; // Arc intérieur gris clair
 static lv_obj_t *click_zones[NUM_SECTIONS]; // Tableau pour stocker les zones cliquables
 static lv_obj_t *icons[NUM_SECTIONS]; // Tableau pour stocker les références des icônes
+static lv_obj_t *bottom_button_labels[3]; // Tableau pour stocker les références des labels des boutons du bas
 static int32_t current_section = 0; // Suivre la section actuelle (0 à 7)
 
 // Tableau des icônes pour chaque zone
@@ -213,6 +215,11 @@ static void bottom_button_event_cb(lv_event_t *e)
         esp3d_log_d("Bottom button pressed: index=%ld", button_idx);
         press_start_time[button_idx] = esp_timer_get_time() / 1000; // Temps en ms
         trigger_button_beep();
+        if (bottom_button_labels[button_idx]) {
+            // Set label text color to blue on press
+            lv_obj_set_style_text_color(bottom_button_labels[button_idx], lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN);
+            esp3d_log_d("Bottom button %ld label set to blue", button_idx);
+        }
         if (button_idx == 0) {
             simulate_click_on_active_section();
         }
@@ -220,6 +227,11 @@ static void bottom_button_event_cb(lv_event_t *e)
     else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST)
     {
         uint32_t duration = (esp_timer_get_time() / 1000) - press_start_time[button_idx];
+        if (bottom_button_labels[button_idx]) {
+            // Reset label text color to white on release
+            lv_obj_set_style_text_color(bottom_button_labels[button_idx], lv_color_hex(ICON_COLOR), LV_PART_MAIN);
+            esp3d_log_d("Bottom button %ld label reset to white", button_idx);
+        }
         if (button_idx == 0) {
             // Après relâchement ou perte de pression, revenir à l'état normal
             update_icon_styles();
@@ -243,6 +255,11 @@ void create_circular_menu(lv_obj_t *screen, int32_t initial_section_id, int32_t 
         esp3d_log_w("Invalid initial_section_id, defaulting to 0");
     }
     current_section = initial_section_id;
+
+    // Initialize bottom button labels array
+    for (int i = 0; i < 3; i++) {
+        bottom_button_labels[i] = nullptr;
+    }
 
     // Create container for the circular menu
     lv_obj_t *menu = lv_obj_create(screen);
@@ -353,7 +370,7 @@ void create_circular_menu(lv_obj_t *screen, int32_t initial_section_id, int32_t 
         lv_obj_set_style_bg_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_border_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_shadow_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_outline_opa(icon, LV_PART_MAIN | LV_STATE_DEFAULT, LV_OPA_TRANSP);
+        lv_obj_set_style_outline_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_border_width(icon, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_pad_all(icon, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -369,15 +386,15 @@ void create_circular_menu(lv_obj_t *screen, int32_t initial_section_id, int32_t 
         lv_obj_t *button = lv_btn_create(screen);
         lv_obj_set_size(button, BOTTOM_BUTTON_SIZE, BOTTOM_BUTTON_SIZE);
         lv_obj_set_style_radius(button, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-        // Default state: gray background, gray border
-        lv_obj_set_style_bg_color(button, lv_color_hex(BORDER_COLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+        // Default state: black background, dark gray border
+        lv_obj_set_style_bg_color(button, lv_color_hex(BACKGROUND_COLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_bg_opa(button, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_border_color(button, lv_color_hex(BORDER_COLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_border_width(button, BORDER_WIDTH, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_border_opa(button, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_shadow_opa(button, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-        // Pressed state: gray background, blue border
-        lv_obj_set_style_bg_color(button, lv_color_hex(BORDER_COLOR), LV_PART_MAIN | LV_STATE_PRESSED);
+        // Pressed state: black background, blue border
+        lv_obj_set_style_bg_color(button, lv_color_hex(BACKGROUND_COLOR), LV_PART_MAIN | LV_STATE_PRESSED);
         lv_obj_set_style_bg_opa(button, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_PRESSED);
         lv_obj_set_style_border_color(button, lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN | LV_STATE_PRESSED);
         lv_obj_set_style_border_width(button, BORDER_WIDTH, LV_PART_MAIN | LV_STATE_PRESSED);
@@ -394,14 +411,21 @@ void create_circular_menu(lv_obj_t *screen, int32_t initial_section_id, int32_t 
         lv_obj_center(icon);
         // Default state: white icon
         lv_obj_set_style_text_color(icon, lv_color_hex(ICON_COLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
-        // Pressed state: blue icon
+        // Pressed state: blue icon (fallback)
         lv_obj_set_style_text_color(icon, lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN | LV_STATE_PRESSED);
+        lv_obj_set_style_text_opa(icon, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT | LV_STATE_PRESSED);
         lv_obj_set_style_bg_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN);
         lv_obj_set_style_border_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN);
         lv_obj_set_style_shadow_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN);
         lv_obj_set_style_outline_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN);
         lv_obj_set_style_border_width(icon, 0, LV_PART_MAIN);
         lv_obj_set_style_pad_all(icon, 0, LV_PART_MAIN);
+
+        // Store the label reference
+        bottom_button_labels[i] = icon;
+
+        // Log to confirm button creation
+        esp3d_log_d("Bottom button %d created with label reference", i);
 
         // Associate the press and release events
         lv_obj_add_event_cb(button, bottom_button_event_cb, LV_EVENT_PRESSED, (void *)(intptr_t)i);
