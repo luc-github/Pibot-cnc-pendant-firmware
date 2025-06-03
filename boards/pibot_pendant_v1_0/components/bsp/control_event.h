@@ -11,11 +11,12 @@
 #include "control_types.h"
 
 typedef struct {
-    lv_indev_t *indev;        // Input device handle
-    uint32_t btn_id;          // Control ID (for buttons, switch)
-    lv_indev_type_t type;     // Input device type
-    control_family_t family_id; // Family ID (CONTROL_FAMILY_BUTTONS, CONTROL_FAMILY_SWITCH, etc.)
-    int steps;                // Step count for encoder (e.g., +1, -1)
+    lv_indev_t *indev;
+    uint32_t btn_id;
+    lv_indev_type_t type;
+    control_family_t family_id;
+    int32_t steps;
+    uint32_t press_duration; // Duration of press in milliseconds
 } control_event_t;
 
 #endif // CONTROL_EVENT_H

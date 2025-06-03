@@ -98,10 +98,11 @@ void button_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
     static bool last_states[3] = {0, 0, 0};
     static control_event_t button_events[3] = {
-        {NULL, 0, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_BUTTONS, 0},
-        {NULL, 1, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_BUTTONS, 0},
-        {NULL, 2, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_BUTTONS, 0}
+        {NULL, 0, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_BUTTONS, 0, 0},
+        {NULL, 1, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_BUTTONS, 0, 0},
+        {NULL, 2, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_BUTTONS, 0, 0}
     };
+    static uint32_t press_start_time[3] = {0, 0, 0};
     bool states[3];
     phy_buttons_read(states);
     lv_obj_t *active_screen = lv_screen_active();
@@ -114,17 +115,23 @@ void button_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
     for (int i = 0; i < 3; i++) {
         button_events[i].indev = indev;
     }
+    uint32_t current_time = esp_timer_get_time() / 1000; // Temps en ms
     for (int i = 0; i < 3; i++) {
         if (states[i] && !last_states[i]) {
+            // Button pressed
             data->state = LV_INDEV_STATE_PRESSED;
+            press_start_time[i] = current_time;
+            button_events[i].press_duration = 0;
             lv_obj_send_event(active_screen, LV_EVENT_PRESSED, &button_events[i]);
             esp3d_log_d("Button %d pressed (btn_id: %d)", i + 1, i);
             last_states[i] = states[i];
             return;
         } else if (!states[i] && last_states[i]) {
+            // Button released
             data->state = LV_INDEV_STATE_RELEASED;
+            button_events[i].press_duration = current_time - press_start_time[i];
             lv_obj_send_event(active_screen, LV_EVENT_RELEASED, &button_events[i]);
-            esp3d_log_d("Button %d released (btn_id: %d)", i + 1, i);
+            esp3d_log_d("Button %d released (btn_id: %d, duration: %ld ms)", i + 1, i, button_events[i].press_duration);
             last_states[i] = states[i];
             return;
         }
@@ -133,12 +140,10 @@ void button_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 }
 
 // LVGL encoder input read callback
-// LVGL encoder input read callback
-// LVGL encoder input read callback
 void encoder_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
     static control_event_t encoder_event = {
-        NULL, 0, LV_INDEV_TYPE_ENCODER, CONTROL_FAMILY_ENCODER, 0
+        NULL, 0, LV_INDEV_TYPE_ENCODER, CONTROL_FAMILY_ENCODER, 0, 0
     };
     static uint32_t last_output_time = 0;
     uint32_t current_time = esp_timer_get_time() / 1000; // Temps en ms
@@ -199,10 +204,10 @@ void switch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
     static bool last_states[4] = {0, 0, 0, 0};
     static control_event_t switch_events[4] = {
-        {NULL, 0, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH, 0},
-        {NULL, 1, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH, 0},
-        {NULL, 2, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH, 0},
-        {NULL, 3, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH, 0}
+        {NULL, 0, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH, 0, 0},
+        {NULL, 1, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH, 0, 0},
+        {NULL, 2, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH, 0, 0},
+        {NULL, 3, LV_INDEV_TYPE_BUTTON, CONTROL_FAMILY_SWITCH, 0, 0}
     };
     bool states[4];
     lv_obj_t *active_screen = lv_screen_active();
@@ -242,7 +247,7 @@ void switch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 void potentiometer_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
     static control_event_t potentiometer_event = {
-        NULL, 0, LV_INDEV_TYPE_POINTER, CONTROL_FAMILY_POTENTIOMETER, 0
+        NULL, 0, LV_INDEV_TYPE_POINTER, CONTROL_FAMILY_POTENTIOMETER, 0, 0
     };
     static uint32_t last_value = UINT32_MAX;
     lv_obj_t *active_screen = lv_screen_active();

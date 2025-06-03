@@ -15,6 +15,7 @@
 #include "phy_potentiometer.h"
 #include "phy_switch.h"
 #include "buzzer.h"
+#include <esp_timer.h>
 #include <math.h>
 
 lv_timer_t *screen_on_delay_timer = nullptr;
@@ -33,6 +34,7 @@ void screen_on_delay_timer_cb(lv_timer_t *timer)
 #define INNER_ARC_WIDTH 54 // Largeur de l'arc intérieur (approximation de (237-130)/2)
 #define ICON_ZONE_DIAMETER 40 // Diamètre des zones cliquables
 #define BOTTOM_BUTTON_SIZE 50 // Size of bottom buttons
+#define LONG_PRESS_THRESHOLD_MS 800 // Seuil pour un appui long (ms)
 
 // Définitions des couleurs
 #define BACKGROUND_COLOR 0x000000 // Noir pour le fond
@@ -65,6 +67,13 @@ static const char *bottom_button_icons[3] = {
     LV_SYMBOL_CLOSE,
     LV_SYMBOL_REFRESH
 };
+
+// Helper function to trigger a short beep
+static void trigger_button_beep(void)
+{
+    buzzer_set_loud(false);
+    buzzer_bip(1000, 100); // Beep de 100 ms
+}
 
 // Fonction pour mettre à jour les styles des icônes
 static void update_icon_styles(void)
@@ -100,32 +109,32 @@ static void simulate_click_on_active_section(void)
 static void button_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
+    control_event_t *event = (control_event_t *)lv_event_get_param(e);
+    if (!event || event->family_id != CONTROL_FAMILY_BUTTONS) {
+        return;
+    }
+    uint32_t btn_id = event->btn_id;
+
     if (code == LV_EVENT_PRESSED)
     {
-        control_event_t *event = (control_event_t *)lv_event_get_param(e);
-        if (event && event->family_id == CONTROL_FAMILY_BUTTONS)
-        {
-            uint32_t btn_id = event->btn_id;
-            esp3d_log_d("Button key: %ld, family_id: %d", btn_id, event->family_id);
-            switch (btn_id)
-            {
-                case 0:
-                    esp3d_log_d("Button 1 pressed");
-                    buzzer_set_loud(false);
-                    buzzer_bip(1000, 500);
-                    simulate_click_on_active_section();
-                    update_icon_styles(); // Reset icon styles immediately
-                    break;
-                case 1:
-                    esp3d_log_d("Button 2 pressed");
-                    break;
-                case 2:
-                    esp3d_log_d("Button 3 pressed");
-                    break;
-                default:
-                    esp3d_log_e("Button unknown pressed");
-                    break;
-            }
+        esp3d_log_d("Button %ld pressed", btn_id + 1);
+        trigger_button_beep();
+        if (btn_id == 0) {
+            simulate_click_on_active_section();
+        }
+    }
+    else if (code == LV_EVENT_RELEASED)
+    {
+        uint32_t duration = event->press_duration;
+        if (btn_id == 0) {
+            // Après relâchement, revenir à l'état normal pour le bouton 0
+            update_icon_styles();
+        }
+        if (duration < LONG_PRESS_THRESHOLD_MS) {
+            esp3d_log_d("Button %ld short press released (duration: %ld ms)", btn_id + 1, duration);
+        } else {
+            esp3d_log_d("Button %ld long press released (duration: %ld ms)", btn_id + 1, duration);
+            // Add long press logic here if needed
         }
     }
 }
@@ -197,28 +206,36 @@ static void bottom_button_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
     int32_t button_idx = (int32_t)(intptr_t)lv_event_get_user_data(e);
+    static uint32_t press_start_time[3] = {0, 0, 0};
 
     if (code == LV_EVENT_PRESSED)
     {
         esp3d_log_d("Bottom button pressed: index=%ld", button_idx);
+        press_start_time[button_idx] = esp_timer_get_time() / 1000; // Temps en ms
+        trigger_button_beep();
         if (button_idx == 0) {
             simulate_click_on_active_section();
         }
     }
     else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST)
     {
+        uint32_t duration = (esp_timer_get_time() / 1000) - press_start_time[button_idx];
         if (button_idx == 0) {
             // Après relâchement ou perte de pression, revenir à l'état normal
             update_icon_styles();
-            buzzer_set_loud(false);
-            buzzer_bip(1000, 500);
+        }
+        if (duration < LONG_PRESS_THRESHOLD_MS) {
+            esp3d_log_d("Bottom button %ld short press released (duration: %ld ms)", button_idx, duration);
+        } else {
+            esp3d_log_d("Bottom button %ld long press released (duration: %ld ms)", button_idx, duration);
+            // Add long press logic here if needed
         }
     }
 }
 
 // Fonction pour créer le menu circulaire
 void create_circular_menu(lv_obj_t *screen, int32_t initial_section_id, int32_t bottom_button_spacing) {
-    #pragma GCC diagnostic push
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-enum-enum-conversion"
     // Validate initial section ID
     if (initial_section_id < 0 || initial_section_id >= NUM_SECTIONS) {
@@ -400,7 +417,8 @@ void create_circular_menu(lv_obj_t *screen, int32_t initial_section_id, int32_t 
 
     // Associate the physical button event to the screen
     lv_obj_add_event_cb(screen, button_event_cb, LV_EVENT_PRESSED, NULL);
-    #pragma GCC diagnostic pop
+    lv_obj_add_event_cb(screen, button_event_cb, LV_EVENT_RELEASED, NULL);
+#pragma GCC diagnostic pop
 }
 
 // Créer l'interface utilisateur
