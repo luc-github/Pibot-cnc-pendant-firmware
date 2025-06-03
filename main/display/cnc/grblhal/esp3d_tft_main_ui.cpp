@@ -23,33 +23,31 @@ void screen_on_delay_timer_cb(lv_timer_t *timer)
 {
     lv_timer_del(screen_on_delay_timer);
     backlight_set(90);
-  // lv_slider_set_value(backlight_slider, 100, LV_ANIM_OFF);
 }
-
 
 #define CIRCLE_DIAMETER 240
 #define BORDER_WIDTH 3
-#define SELECTION_ARC 45 // 360/8 = 45 degrees for 1/8
-#define NUM_SECTIONS 8   // Number of sections (8 for 1/8 of circle)
-#define INNER_CIRCLE_DIAMETER 130 // Diameter of the central circle
-#define INNER_ARC_WIDTH 54 // Width of the inner arc (approximation of (237-130)/2)
-#define ICON_ZONE_DIAMETER 40 // Diameter of clickable zones
+#define SELECTION_ARC 45 // 360/8 = 45 degrés pour 1/8
+#define NUM_SECTIONS 8   // Nombre de sections (8 pour 1/8 de cercle)
+#define INNER_CIRCLE_DIAMETER 130 // Diamètre du cercle central
+#define INNER_ARC_WIDTH 54 // Largeur de l'arc intérieur (approximation de (237-130)/2)
+#define ICON_ZONE_DIAMETER 40 // Diamètre des zones cliquables
 #define BOTTOM_BUTTON_SIZE 50 // Size of bottom buttons
 
-// Color definitions
-#define BACKGROUND_COLOR 0x000000 // Black for background
-#define BORDER_COLOR 0x404040     // Dark gray for outer border and default button border
-#define INNER_COLOR 0x222222      // Light gray for central circle and inner arc
-#define SELECTOR_COLOR 0x00BFFF   // Light blue for selection arc and pressed button border/icon
-#define ICON_COLOR 0xFFFFFF       // White for default icons
+// Définitions des couleurs
+#define BACKGROUND_COLOR 0x000000 // Noir pour le fond
+#define BORDER_COLOR 0x404040     // Gris foncé pour la bordure extérieure
+#define INNER_COLOR 0x222222      // Gris clair pour le cercle central
+#define SELECTOR_COLOR 0x00BFFF   // Bleu clair pour l'arc de sélection
+#define ICON_COLOR 0xFFFFFF       // Blanc pour les icônes par défaut
 
-static lv_obj_t *arc; // Outer blue arc
-static lv_obj_t *inner_arc; // Inner light gray arc
-static lv_obj_t *click_zones[NUM_SECTIONS]; // Array to store clickable zones
-static lv_obj_t *icons[NUM_SECTIONS]; // Array to store icon references
-static int32_t current_section = 0; // Track the current section (0 to 7)
+static lv_obj_t *arc; // Arc bleu extérieur
+static lv_obj_t *inner_arc; // Arc intérieur gris clair
+static lv_obj_t *click_zones[NUM_SECTIONS]; // Tableau pour stocker les zones cliquables
+static lv_obj_t *icons[NUM_SECTIONS]; // Tableau pour stocker les références des icônes
+static int32_t current_section = 0; // Suivre la section actuelle (0 à 7)
 
-// Array of icons for each circular menu section
+// Tableau des icônes pour chaque zone
 static const char *button_icons[NUM_SECTIONS] = {
     LV_SYMBOL_SETTINGS,
     LV_SYMBOL_LIST,
@@ -61,15 +59,44 @@ static const char *button_icons[NUM_SECTIONS] = {
     LV_SYMBOL_STOP
 };
 
-// Array of icons for bottom buttons (replace with your symbols)
+// Array of icons for bottom buttons
 static const char *bottom_button_icons[3] = {
     LV_SYMBOL_OK,
     LV_SYMBOL_CLOSE,
     LV_SYMBOL_REFRESH
 };
 
+// Fonction pour mettre à jour les styles des icônes
+static void update_icon_styles(void)
+{
+    for (int i = 0; i < NUM_SECTIONS; i++) {
+        if (i == current_section) {
+            // Icône sélectionnée : blanche
+            lv_obj_set_style_text_color(icons[i], lv_color_hex(ICON_COLOR), LV_PART_MAIN);
+        } else {
+            // Icône inactif : blanche
+            lv_obj_set_style_text_color(icons[i], lv_color_hex(ICON_COLOR), LV_PART_MAIN);
+        }
+    }
+}
 
-//Physical Buttons callback 
+// Function to get the active section ID
+int32_t get_active_section_id(void)
+{
+    return current_section;
+}
+
+// Helper function to simulate a click on the active section
+static void simulate_click_on_active_section(void)
+{
+    // Icône pressée : bleue (SELECTOR_COLOR)
+    lv_obj_set_style_text_color(icons[current_section], lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN);
+
+    // Log the simulated click
+    esp3d_log_d("Click zone pressed: active_section_id=%ld", current_section);
+}
+
+// Physical Buttons callback 
 static void button_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -86,14 +113,14 @@ static void button_event_cb(lv_event_t *e)
                     esp3d_log_d("Button 1 pressed");
                     buzzer_set_loud(false);
                     buzzer_bip(1000, 500);
+                    simulate_click_on_active_section();
+                    update_icon_styles(); // Reset icon styles immediately
                     break;
                 case 1:
                     esp3d_log_d("Button 2 pressed");
-                    
                     break;
                 case 2:
                     esp3d_log_d("Button 3 pressed");
-                    
                     break;
                 default:
                     esp3d_log_e("Button unknown pressed");
@@ -103,28 +130,7 @@ static void button_event_cb(lv_event_t *e)
     }
 }
 
-
-// Function to update icon styles
-static void update_icon_styles(void)
-{
-    for (int i = 0; i < NUM_SECTIONS; i++) {
-        if (i == current_section) {
-            // Selected icon: white
-            lv_obj_set_style_text_color(icons[i], lv_color_hex(ICON_COLOR), LV_PART_MAIN);
-        } else {
-            // Inactive icon: white
-            lv_obj_set_style_text_color(icons[i], lv_color_hex(ICON_COLOR), LV_PART_MAIN);
-        }
-    }
-}
-
-// Function to get the active section ID
-int32_t get_active_section_id(void)
-{
-    return current_section;
-}
-
-// Callback for encoder
+// Callback pour l'encodeur
 static void encoder_event_cb(lv_event_t *e)
 {
     static int32_t menuId = 0;
@@ -137,27 +143,27 @@ static void encoder_event_cb(lv_event_t *e)
             int32_t steps = event->steps;
             menuId += steps;
 
-            // Update the current section (0 to 7)
+            // Mettre à jour la section actuelle (0 à 7)
             current_section = (current_section + steps) % NUM_SECTIONS;
             if (current_section < 0) {
                 current_section += NUM_SECTIONS;
             }
 
-            // Update the angles of both arcs
+            // Mettre à jour les angles des deux arcs
             int32_t start_angle = current_section * SELECTION_ARC;
             int32_t end_angle = start_angle + SELECTION_ARC;
             lv_arc_set_angles(arc, start_angle, end_angle);
             lv_arc_set_angles(inner_arc, start_angle, end_angle);
 
-            // Update icon styles
+            // Mettre à jour les styles des icônes
             update_icon_styles();
 
-            esp3d_log_d("Encoder: steps=%ld, menuId=%ld, active_section_id=%ld", steps, menuId, current_section);
+            esp3d_log_d("Encoder: steps=%ld, menuId=%ld, section=%ld", steps, menuId, current_section);
         }
     }
 }
 
-// Callback for clickable zones
+// Callback pour les zones cliquables
 static void click_zone_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -165,23 +171,23 @@ static void click_zone_event_cb(lv_event_t *e)
 
     if (code == LV_EVENT_PRESSED)
     {
-        // Pressed icon: blue (SELECTOR_COLOR)
+        // Icône pressée : bleue (SELECTOR_COLOR)
         lv_obj_set_style_text_color(icons[section], lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN);
 
-        // Update the current section
+        // Mettre à jour la section actuelle
         current_section = section;
 
-        // Update the angles of both arcs
+        // Mettre à jour les angles des deux arcs
         int32_t start_angle = current_section * SELECTION_ARC;
         int32_t end_angle = start_angle + SELECTION_ARC;
         lv_arc_set_angles(arc, start_angle, end_angle);
         lv_arc_set_angles(inner_arc, start_angle, end_angle);
 
-        esp3d_log_d("Click zone pressed: active_section_id=%ld", current_section);
+        esp3d_log_d("Click zone pressed: section=%ld", current_section);
     }
     else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST)
     {
-        // After release or press lost, return to normal state
+        // Après relâchement ou perte de pression, revenir à l'état normal
         update_icon_styles();
     }
 }
@@ -195,13 +201,24 @@ static void bottom_button_event_cb(lv_event_t *e)
     if (code == LV_EVENT_PRESSED)
     {
         esp3d_log_d("Bottom button pressed: index=%ld", button_idx);
-        // Add specific logic for each button here
+        if (button_idx == 0) {
+            simulate_click_on_active_section();
+        }
+    }
+    else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST)
+    {
+        if (button_idx == 0) {
+            // Après relâchement ou perte de pression, revenir à l'état normal
+            update_icon_styles();
+            buzzer_set_loud(false);
+            buzzer_bip(1000, 500);
+        }
     }
 }
 
-// Function to create the circular menu
+// Fonction pour créer le menu circulaire
 void create_circular_menu(lv_obj_t *screen, int32_t initial_section_id, int32_t bottom_button_spacing) {
-#pragma GCC diagnostic push
+    #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-enum-enum-conversion"
     // Validate initial section ID
     if (initial_section_id < 0 || initial_section_id >= NUM_SECTIONS) {
@@ -233,24 +250,24 @@ void create_circular_menu(lv_obj_t *screen, int32_t initial_section_id, int32_t 
     lv_obj_set_style_border_width(circle, BORDER_WIDTH, LV_PART_MAIN);
     lv_obj_set_style_border_opa(circle, LV_OPA_COVER, LV_PART_MAIN);
 
-    // Create the central circle (light gray, filled)
+    // Créer le cercle central (gris clair, rempli)
     lv_obj_t *inner_circle = lv_obj_create(menu);
     lv_obj_set_size(inner_circle, INNER_CIRCLE_DIAMETER, INNER_CIRCLE_DIAMETER);
     lv_obj_center(inner_circle);
     lv_obj_set_style_radius(inner_circle, LV_RADIUS_CIRCLE, LV_PART_MAIN);
     lv_obj_set_style_bg_color(inner_circle, lv_color_hex(INNER_COLOR), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(inner_circle, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_border_width(inner_circle, 0, LV_PART_MAIN);
+    lv_obj_set_style_border_width(inner_circle, 0, LV_PART_MAIN); // Pas de bordure
 
-    // Create the inner arc (light gray) between the central circle and blue arc
+    // Créer l'arc intérieur (gris clair) entre le cercle central et l'arc bleu
     inner_arc = lv_arc_create(menu);
-    lv_obj_set_size(inner_arc, CIRCLE_DIAMETER - (2 * BORDER_WIDTH), CIRCLE_DIAMETER - (2 * BORDER_WIDTH));
+    lv_obj_set_size(inner_arc, CIRCLE_DIAMETER - (2 * BORDER_WIDTH), CIRCLE_DIAMETER - (2 * BORDER_WIDTH)); // 237 px de diamètre
     lv_obj_center(inner_arc);
     lv_arc_set_angles(inner_arc, initial_section_id * SELECTION_ARC, initial_section_id * SELECTION_ARC + SELECTION_ARC);
-    lv_obj_set_style_arc_width(inner_arc, INNER_ARC_WIDTH, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_width(inner_arc, INNER_ARC_WIDTH, LV_PART_INDICATOR); // Largeur pour couvrir l'espace
     lv_obj_set_style_arc_color(inner_arc, lv_color_hex(INNER_COLOR), LV_PART_INDICATOR);
     lv_obj_set_style_arc_opa(inner_arc, LV_OPA_COVER, LV_PART_INDICATOR);
-    lv_obj_set_style_arc_rounded(inner_arc, false, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_rounded(inner_arc, false, LV_PART_INDICATOR); // Extrémités droites (non arrondies)
     lv_obj_set_style_bg_opa(inner_arc, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_arc_set_bg_angles(inner_arc, 0, 0);
     lv_obj_set_style_arc_opa(inner_arc, LV_OPA_TRANSP, LV_PART_MAIN);
@@ -258,7 +275,7 @@ void create_circular_menu(lv_obj_t *screen, int32_t initial_section_id, int32_t 
     lv_obj_set_style_size(inner_arc, 0, 0, LV_PART_KNOB);
     lv_obj_set_style_radius(inner_arc, 0, LV_PART_KNOB);
 
-    // Create the selection arc (blue, 45°)
+    // Créer l'arc de sélection (bleu, 45°)
     arc = lv_arc_create(menu);
     lv_obj_set_size(arc, CIRCLE_DIAMETER, CIRCLE_DIAMETER);
     lv_obj_center(arc);
@@ -273,22 +290,22 @@ void create_circular_menu(lv_obj_t *screen, int32_t initial_section_id, int32_t 
     lv_obj_set_style_size(arc, 0, 0, LV_PART_KNOB);
     lv_obj_set_style_radius(arc, 0, LV_PART_KNOB);
 
-    // Create clickable zones with icons for each section
+    // Créer les zones cliquables avec icônes pour chaque section
     for (int i = 0; i < NUM_SECTIONS; i++) {
-        // Create a clickable zone (base object)
+        // Créer une zone cliquable (objet de base)
         lv_obj_t *click_zone = lv_obj_create(menu);
         click_zones[i] = click_zone;
         lv_obj_set_size(click_zone, ICON_ZONE_DIAMETER, ICON_ZONE_DIAMETER);
         lv_obj_set_style_radius(click_zone, LV_RADIUS_CIRCLE, LV_PART_MAIN);
 
-        // Position the zone at the center of the section
-        float mid_angle_rad = (i * SELECTION_ARC + SELECTION_ARC / 2) * (M_PI / 180.0);
-        int32_t radius = (CIRCLE_DIAMETER - INNER_CIRCLE_DIAMETER) / 4 + INNER_CIRCLE_DIAMETER / 2;
+        // Positionner la zone au centre de la section
+        float mid_angle_rad = (i * SELECTION_ARC + SELECTION_ARC / 2) * (M_PI / 180.0); // Angle moyen de la section
+        int32_t radius = (CIRCLE_DIAMETER - INNER_CIRCLE_DIAMETER) / 4 + INNER_CIRCLE_DIAMETER / 2; // Position à mi-chemin entre les cercles
         int32_t offset_x = (int32_t)(cos(mid_angle_rad) * radius);
         int32_t offset_y = (int32_t)(sin(mid_angle_rad) * radius);
         lv_obj_align(click_zone, LV_ALIGN_CENTER, offset_x, offset_y);
 
-        // Make the zone completely transparent for all states
+        // Rendre la zone complètement transparente pour tous les états
         lv_obj_set_style_bg_opa(click_zone, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_border_opa(click_zone, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_shadow_opa(click_zone, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -296,7 +313,7 @@ void create_circular_menu(lv_obj_t *screen, int32_t initial_section_id, int32_t 
         lv_obj_set_style_border_width(click_zone, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_pad_all(click_zone, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-        // Ensure no default styles are applied for pressed state
+        // S'assurer qu'aucun style par défaut n'est appliqué pour l'état pressé
         lv_obj_set_style_bg_opa(click_zone, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_PRESSED);
         lv_obj_set_style_border_opa(click_zone, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_PRESSED);
         lv_obj_set_style_shadow_opa(click_zone, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_PRESSED);
@@ -307,23 +324,23 @@ void create_circular_menu(lv_obj_t *screen, int32_t initial_section_id, int32_t 
         lv_obj_set_style_bg_main_stop(click_zone, 0, LV_PART_MAIN | LV_STATE_PRESSED);
         lv_obj_set_style_bg_grad_stop(click_zone, 0, LV_PART_MAIN | LV_STATE_PRESSED);
 
-        // Ensure the zone captures events
+        // S'assurer que la zone capture les événements
         lv_obj_add_flag(click_zone, LV_OBJ_FLAG_CLICKABLE);
 
-        // Add a label for the icon
+        // Ajouter une étiquette pour l'icône
         lv_obj_t *icon = lv_label_create(click_zone);
-        icons[i] = icon;
+        icons[i] = icon; // Stocker la référence de l'icône
         lv_label_set_text(icon, button_icons[i]);
         lv_obj_center(icon);
         lv_obj_set_style_text_color(icon, lv_color_hex(ICON_COLOR), LV_PART_MAIN);
         lv_obj_set_style_bg_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_border_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_shadow_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_outline_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_outline_opa(icon, LV_PART_MAIN | LV_STATE_DEFAULT, LV_OPA_TRANSP);
         lv_obj_set_style_border_width(icon, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_pad_all(icon, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-        // Associate press and release events
+        // Associer les événements de pression et de relâchement
         lv_obj_add_event_cb(click_zone, click_zone_event_cb, LV_EVENT_PRESSED, (void *)(intptr_t)i);
         lv_obj_add_event_cb(click_zone, click_zone_event_cb, LV_EVENT_RELEASED, (void *)(intptr_t)i);
         lv_obj_add_event_cb(click_zone, click_zone_event_cb, LV_EVENT_PRESS_LOST, (void *)(intptr_t)i);
@@ -369,22 +386,24 @@ void create_circular_menu(lv_obj_t *screen, int32_t initial_section_id, int32_t 
         lv_obj_set_style_border_width(icon, 0, LV_PART_MAIN);
         lv_obj_set_style_pad_all(icon, 0, LV_PART_MAIN);
 
-        // Associate the press event
+        // Associate the press and release events
         lv_obj_add_event_cb(button, bottom_button_event_cb, LV_EVENT_PRESSED, (void *)(intptr_t)i);
+        lv_obj_add_event_cb(button, bottom_button_event_cb, LV_EVENT_RELEASED, (void *)(intptr_t)i);
+        lv_obj_add_event_cb(button, bottom_button_event_cb, LV_EVENT_PRESS_LOST, (void *)(intptr_t)i);
     }
 
-    // Update icon styles to reflect the initial section
+    // Mettre à jour les styles des icônes pour refléter la section initiale (current_section = 0)
     update_icon_styles();
 
-    // Associate the encoder event to the screen
+    // Associer l'événement de l'encodeur au screen
     lv_obj_add_event_cb(screen, encoder_event_cb, LV_EVENT_KEY, NULL);
 
     // Associate the physical button event to the screen
     lv_obj_add_event_cb(screen, button_event_cb, LV_EVENT_PRESSED, NULL);
-#pragma GCC diagnostic pop
+    #pragma GCC diagnostic pop
 }
 
-// Create the user interface
+// Créer l'interface utilisateur
 void create_application(void)
 {
     esp3d_log("Creating LVGL application UI");
@@ -405,7 +424,7 @@ void create_application(void)
         return;
     }
 
-    // Set black background
+    // Définir le fond noir
     lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
 
