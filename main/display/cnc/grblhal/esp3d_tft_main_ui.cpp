@@ -634,7 +634,7 @@ static circular_menu_conf_t main_menu_conf = {
     .sections = main_menu_sections,
     .bottom_buttons = {
         {MENU_ITEM_SYMBOL, {.icon = LV_SYMBOL_OK}, bottom_button_press_cb}, // Button 0 visible
-        {MENU_ITEM_SYMBOL, {.icon = LV_SYMBOL_CLOSE}, NULL},                // Button 1 hidden
+        {MENU_ITEM_SYMBOL, {.icon = LV_SYMBOL_CLOSE}, bottom_button_press_cb}, // Button 1 hidden
         {MENU_ITEM_IMAGE, {.img_path = "L:/poo.png"}, bottom_button_press_cb} // Button 2 visible
     }
 };
