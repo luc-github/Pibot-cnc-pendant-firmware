@@ -211,7 +211,6 @@ static void button_event_cb(lv_event_t *e)
 // Callback pour l'encodeur
 static void encoder_event_cb(lv_event_t *e)
 {
-    static int32_t menuId = 0;
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_KEY)
     {
@@ -219,12 +218,22 @@ static void encoder_event_cb(lv_event_t *e)
         if (event && event->family_id == CONTROL_FAMILY_ENCODER)
         {
             int32_t steps = event->steps;
-            menuId += steps;
+            esp3d_log_d("Encoder steps received: %ld", steps);
+            // Normalize steps to prevent large jumps
+            if (steps > 1) steps = 1;
+            if (steps < -1) steps = -1;
 
-            menu_data.current_section = (menu_data.current_section + steps) % menu_data.conf.num_sections;
+            int32_t prev_section = menu_data.current_section;
+            // Update current_section with explicit wrapping
+            menu_data.current_section += steps;
             if (menu_data.current_section < 0) {
-                menu_data.current_section += menu_data.conf.num_sections;
+                menu_data.current_section = menu_data.conf.num_sections - 1; // Go to last section
+            } else if (menu_data.current_section >= menu_data.conf.num_sections) {
+                menu_data.current_section = 0; // Go to first section
             }
+
+            esp3d_log_d("Encoder: steps=%ld, prev_section=%ld, new_section=%ld",
+                        steps, prev_section, menu_data.current_section);
 
             int32_t start_angle = menu_data.current_section * (360 / menu_data.conf.num_sections);
             int32_t end_angle = start_angle + (360 / menu_data.conf.num_sections);
@@ -233,8 +242,6 @@ static void encoder_event_cb(lv_event_t *e)
 
             update_icon_styles();
             update_center_text();
-
-            esp3d_log_d("Encoder: steps=%ld, menuId=%ld, section=%ld", steps, menuId, menu_data.current_section);
         }
     }
 }
@@ -249,7 +256,7 @@ static void click_zone_event_cb(lv_event_t *e)
     {
         lv_obj_set_style_text_color(menu_data.icons[section], lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN);
         menu_data.current_section = section;
-
+        trigger_button_beep();
         int32_t start_angle = menu_data.current_section * (360 / menu_data.conf.num_sections);
         int32_t end_angle = start_angle + (360 / menu_data.conf.num_sections);
         lv_arc_set_angles(menu_data.arc, start_angle, end_angle);
@@ -400,8 +407,7 @@ lv_obj_t *create_circular_menu(lv_obj_t *parent, int32_t initial_section_id, cir
     // Créer le label pour le texte central
     menu_data.center_label = lv_label_create(inner_circle);
     lv_obj_set_style_text_color(menu_data.center_label, lv_color_hex(ICON_COLOR), LV_PART_MAIN);
-    lv_obj_set_style_text_align(menu_data.center_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-    lv_obj_set_size(menu_data.center_label, INNER_CIRCLE_DIAMETER - 10, INNER_CIRCLE_DIAMETER - 10);
+    lv_obj_center(menu_data.center_label);
     lv_obj_set_scrollbar_mode(menu_data.center_label, LV_SCROLLBAR_MODE_OFF);
     update_center_text();
 
