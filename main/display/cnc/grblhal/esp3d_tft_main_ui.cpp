@@ -131,8 +131,22 @@ static void simulate_click_on_active_section(void)
 {
     lv_obj_set_style_text_color(menu_data.icons[menu_data.current_section], lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN);
     esp3d_log_d("Click zone pressed: active_section_id=%ld", menu_data.current_section);
-    if (menu_data.conf.sections[menu_data.current_section].on_press) {
+    esp3d_log_d("Sections pointer: %p, on_press: %p", 
+                (void*)menu_data.conf.sections,
+                menu_data.conf.sections ? (void*)menu_data.conf.sections[menu_data.current_section].on_press : nullptr);
+    if (menu_data.conf.sections && 
+        menu_data.current_section >= 0 && 
+        menu_data.current_section < menu_data.conf.num_sections && 
+        menu_data.conf.sections[menu_data.current_section].on_press) {
+        esp3d_log_d("Calling on_press callback for section %ld", menu_data.current_section);
         menu_data.conf.sections[menu_data.current_section].on_press(menu_data.current_section);
+    } else {
+        esp3d_log_e("Failed to call on_press callback for section %ld: sections=%p, current_section=%ld, num_sections=%lu, on_press=%p",
+                    menu_data.current_section,
+                    (void*)menu_data.conf.sections,
+                    menu_data.current_section,
+                    menu_data.conf.num_sections,
+                    menu_data.conf.sections ? (void*)menu_data.conf.sections[menu_data.current_section].on_press : nullptr);
     }
 }
 
@@ -140,7 +154,7 @@ static void simulate_click_on_active_section(void)
 static void obj_delete_cb(lv_event_t *e)
 {
     lv_obj_t *obj = (lv_obj_t *)lv_event_get_target(e);
-    esp3d_log("Object deleted: %p", obj);
+    esp3d_log_d("Object deleted: %p", obj);
     if (obj == menu_data.screen) {
         if (menu_data.click_zones) {
             free(menu_data.click_zones);
@@ -151,12 +165,12 @@ static void obj_delete_cb(lv_event_t *e)
             menu_data.icons = nullptr;
         }
         memset(&menu_data, 0, sizeof(circular_menu_data_t));
-        esp3d_log("Circular menu screen cleared");
+        esp3d_log_d("Circular menu screen cleared");
     } else {
         for (int i = 0; i < 3; i++) {
             if (menu_data.bottom_button_labels[i] == obj) {
                 menu_data.bottom_button_labels[i] = nullptr;
-                esp3d_log("Bottom button label %d cleared", i);
+                esp3d_log_d("Bottom button label %d cleared", i);
             }
         }
     }
@@ -242,8 +256,11 @@ static void click_zone_event_cb(lv_event_t *e)
         lv_arc_set_angles(menu_data.inner_arc, start_angle, end_angle);
 
         esp3d_log_d("Click zone pressed: section=%ld", menu_data.current_section);
-        if (menu_data.conf.sections[section].on_press) {
+        if (menu_data.conf.sections && menu_data.conf.sections[section].on_press) {
+            esp3d_log_d("Calling on_press callback for section %ld", section);
             menu_data.conf.sections[section].on_press(section);
+        } else {
+            esp3d_log_e("No valid on_press callback for section %ld", section);
         }
         update_center_text();
     }
@@ -272,6 +289,7 @@ static void bottom_button_event_cb(lv_event_t *e)
         if (button_idx == 0) {
             simulate_click_on_active_section();
         } else if (menu_data.conf.bottom_buttons[button_idx].on_press) {
+            esp3d_log_d("Calling on_press callback for bottom button %ld", button_idx);
             menu_data.conf.bottom_buttons[button_idx].on_press(button_idx);
         }
     }
@@ -302,6 +320,15 @@ lv_obj_t *create_circular_menu(lv_obj_t *parent, int32_t initial_section_id, cir
     if (!menu_conf.sections || menu_conf.num_sections == 0 || menu_conf.num_sections > MAX_SECTIONS) {
         esp3d_log_e("Invalid menu configuration: num_sections=%lu", menu_conf.num_sections);
         return nullptr;
+    }
+
+    // Debug configuration
+    for (uint32_t i = 0; i < menu_conf.num_sections; i++) {
+        esp3d_log_d("Section %lu: symbol=%s, center_text=%s, on_press=%p", 
+                    i, 
+                    menu_conf.sections[i].symbol ? menu_conf.sections[i].symbol : "null",
+                    menu_conf.sections[i].center_text ? menu_conf.sections[i].center_text : "null",
+                    (void*)menu_conf.sections[i].on_press);
     }
 
     // Create screen if parent is NULL
@@ -347,17 +374,6 @@ lv_obj_t *create_circular_menu(lv_obj_t *parent, int32_t initial_section_id, cir
     lv_obj_set_style_pad_all(menu_data.menu, 0, LV_PART_MAIN);
     lv_obj_set_style_border_width(menu_data.menu, 0, LV_PART_MAIN | LV_STATE_ANY);
     lv_obj_set_style_border_opa(menu_data.menu, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_ANY);
-
-/*
-    lv_obj_set_style_bg_color(menu_data.menu, lv_color_hex(BACKGROUND_COLOR), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(menu_data.menu, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_size(menu_data.menu, CIRCLE_DIAMETER, CIRCLE_DIAMETER);
-    lv_obj_set_style_border_width(menu_data.menu, 0, LV_PART_MAIN | LV_STATE_DEFAULT | LV_STATE_PRESSED);
-    lv_obj_set_style_border_opa(menu_data.menu, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT | LV_STATE_PRESSED);
-    lv_obj_align(menu_data.menu, LV_ALIGN_TOP_MID, 0, 0);
-    lv_obj_set_scrollbar_mode(menu_data.menu, LV_SCROLLBAR_MODE_OFF);
-    lv_obj_set_style_pad_all(menu_data.menu, 0, LV_PART_MAIN);*/
-
     lv_obj_add_event_cb(menu_data.menu, obj_delete_cb, LV_EVENT_DELETE, NULL);
 
     // Créer le cercle de base (bordure gris foncé)
@@ -384,9 +400,8 @@ lv_obj_t *create_circular_menu(lv_obj_t *parent, int32_t initial_section_id, cir
     // Créer le label pour le texte central
     menu_data.center_label = lv_label_create(inner_circle);
     lv_obj_set_style_text_color(menu_data.center_label, lv_color_hex(ICON_COLOR), LV_PART_MAIN);
-    //lv_obj_set_style_text_align(menu_data.center_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-    // lv_obj_set_size(menu_data.center_label, INNER_CIRCLE_DIAMETER - 10, INNER_CIRCLE_DIAMETER - 10);
-    lv_obj_center( menu_data.center_label);
+    lv_obj_set_style_text_align(menu_data.center_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_obj_set_size(menu_data.center_label, INNER_CIRCLE_DIAMETER - 10, INNER_CIRCLE_DIAMETER - 10);
     lv_obj_set_scrollbar_mode(menu_data.center_label, LV_SCROLLBAR_MODE_OFF);
     update_center_text();
 
@@ -538,12 +553,12 @@ lv_obj_t *create_circular_menu(lv_obj_t *parent, int32_t initial_section_id, cir
 // Example configuration and callbacks
 static void section_press_cb(int32_t section_id)
 {
-    esp3d_log("Menu section %ld pressed", section_id);
+    esp3d_log_d("Menu section %ld pressed", section_id);
 }
 
 static void bottom_button_press_cb(int32_t button_idx)
 {
-    esp3d_log("Bottom button %ld pressed", button_idx);
+    esp3d_log_d("Bottom button %ld pressed", button_idx);
 }
 
 static menu_section_conf_t main_menu_sections[] = {
@@ -569,7 +584,7 @@ static circular_menu_conf_t main_menu_conf = {
 // Créer l'interface utilisateur
 void create_application(void)
 {
-    esp3d_log("Creating LVGL application UI");
+    esp3d_log_d("Creating LVGL application UI");
 
     lv_display_t *display = get_lvgl_display();
     if (!display)
@@ -581,9 +596,9 @@ void create_application(void)
     lv_obj_t *screen = create_circular_menu(NULL, 0, main_menu_conf);
     if (screen) {
         lv_screen_load(screen);
-        esp3d_log("Circular menu screen loaded");
+        esp3d_log_d("Circular menu screen loaded");
     }
 
-    esp3d_log("LVGL application UI created");
+    esp3d_log_d("LVGL application UI created");
     screen_on_delay_timer = lv_timer_create(screen_on_delay_timer_cb, 50, NULL);
 }
