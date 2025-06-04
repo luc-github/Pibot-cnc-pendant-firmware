@@ -45,14 +45,27 @@ void screen_on_delay_timer_cb(lv_timer_t *timer)
 #define ICON_COLOR 0xFFFFFF       // Blanc pour les icônes
 
 // Configuration structures
+typedef enum {
+    MENU_ITEM_SYMBOL,
+    MENU_ITEM_IMAGE
+} menu_item_type_t;
+
 typedef struct {
-    const char *symbol;      // Symbole de la section (e.g., LV_SYMBOL_SETTINGS)
+    menu_item_type_t type;   // Type: symbol or image
+    union {
+        const char *symbol;  // Symbol string (e.g., LV_SYMBOL_SETTINGS)
+        const char *img_path; // Image path (e.g., "L:/hometp.png")
+    };
     const char *center_text; // Texte à afficher au centre
     void (*on_press)(int32_t section_id); // Callback pour l'appui
 } menu_section_conf_t;
 
 typedef struct {
-    const char *icon;        // Icône du bouton (e.g., LV_SYMBOL_OK)
+    menu_item_type_t type;   // Type: symbol or image
+    union {
+        const char *icon;    // Symbol string (e.g., LV_SYMBOL_OK)
+        const char *img_path; // Image path (e.g., "L:/hometp.png")
+    };
     void (*on_press)(int32_t button_idx); // Callback pour l'appui
 } bottom_button_conf_t;
 
@@ -86,7 +99,7 @@ static circular_menu_data_t menu_data = {
     .click_zones = nullptr,
     .icons = nullptr,
     .bottom_button_labels = {nullptr, nullptr, nullptr},
-    .conf = {0, nullptr, {{nullptr, nullptr}, {nullptr, nullptr}, {nullptr, nullptr}}},
+    .conf = {0, nullptr, {{MENU_ITEM_SYMBOL, {nullptr}, nullptr}, {MENU_ITEM_SYMBOL, {nullptr}, nullptr}, {MENU_ITEM_SYMBOL, {nullptr}, nullptr}}},
     .current_section = 0,
     .allocated_sections = 0
 };
@@ -103,9 +116,18 @@ static void update_icon_styles(void)
 {
     for (int i = 0; i < menu_data.conf.num_sections; i++) {
         if (i == menu_data.current_section) {
-            lv_obj_set_style_text_color(menu_data.icons[i], lv_color_hex(ICON_COLOR), LV_PART_MAIN);
+            if (menu_data.conf.sections[i].type == MENU_ITEM_SYMBOL) {
+                lv_obj_set_style_text_color(menu_data.icons[i], lv_color_hex(ICON_COLOR), LV_PART_MAIN);
+            } else {
+                lv_obj_set_style_img_recolor(menu_data.icons[i], lv_color_hex(ICON_COLOR), LV_PART_MAIN);
+                lv_obj_set_style_img_recolor_opa(menu_data.icons[i], LV_OPA_COVER, LV_PART_MAIN);
+            }
         } else {
-            lv_obj_set_style_text_color(menu_data.icons[i], lv_color_hex(ICON_COLOR), LV_PART_MAIN);
+            if (menu_data.conf.sections[i].type == MENU_ITEM_SYMBOL) {
+                lv_obj_set_style_text_color(menu_data.icons[i], lv_color_hex(ICON_COLOR), LV_PART_MAIN);
+            } else {
+                lv_obj_set_style_img_recolor_opa(menu_data.icons[i], LV_OPA_TRANSP, LV_PART_MAIN);
+            }
         }
     }
 }
@@ -129,24 +151,18 @@ int32_t get_active_section_id(void)
 // Helper function to simulate a click on the active section
 static void simulate_click_on_active_section(void)
 {
-    lv_obj_set_style_text_color(menu_data.icons[menu_data.current_section], lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN);
+    if (menu_data.conf.sections[menu_data.current_section].type == MENU_ITEM_SYMBOL) {
+        lv_obj_set_style_text_color(menu_data.icons[menu_data.current_section], lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN);
+    } else {
+        lv_obj_set_style_img_recolor(menu_data.icons[menu_data.current_section], lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN);
+        lv_obj_set_style_img_recolor_opa(menu_data.icons[menu_data.current_section], LV_OPA_COVER, LV_PART_MAIN);
+    }
     esp3d_log_d("Click zone pressed: active_section_id=%ld", menu_data.current_section);
-    esp3d_log_d("Sections pointer: %p, on_press: %p", 
-                (void*)menu_data.conf.sections,
-                menu_data.conf.sections ? (void*)menu_data.conf.sections[menu_data.current_section].on_press : nullptr);
-    if (menu_data.conf.sections && 
-        menu_data.current_section >= 0 && 
-        menu_data.current_section < menu_data.conf.num_sections && 
-        menu_data.conf.sections[menu_data.current_section].on_press) {
+    if (menu_data.conf.sections && menu_data.conf.sections[menu_data.current_section].on_press) {
         esp3d_log_d("Calling on_press callback for section %ld", menu_data.current_section);
         menu_data.conf.sections[menu_data.current_section].on_press(menu_data.current_section);
     } else {
-        esp3d_log_e("Failed to call on_press callback for section %ld: sections=%p, current_section=%ld, num_sections=%lu, on_press=%p",
-                    menu_data.current_section,
-                    (void*)menu_data.conf.sections,
-                    menu_data.current_section,
-                    menu_data.conf.num_sections,
-                    menu_data.conf.sections ? (void*)menu_data.conf.sections[menu_data.current_section].on_press : nullptr);
+        esp3d_log_e("No valid on_press callback for section %ld", menu_data.current_section);
     }
 }
 
@@ -154,7 +170,7 @@ static void simulate_click_on_active_section(void)
 static void obj_delete_cb(lv_event_t *e)
 {
     lv_obj_t *obj = (lv_obj_t *)lv_event_get_target(e);
-    esp3d_log_d("Object deleted: %p", obj);
+    esp3d_log("Object deleted: %p", obj);
     if (obj == menu_data.screen) {
         if (menu_data.click_zones) {
             free(menu_data.click_zones);
@@ -165,12 +181,12 @@ static void obj_delete_cb(lv_event_t *e)
             menu_data.icons = nullptr;
         }
         memset(&menu_data, 0, sizeof(circular_menu_data_t));
-        esp3d_log_d("Circular menu screen cleared");
+        esp3d_log("Circular menu screen cleared");
     } else {
         for (int i = 0; i < 3; i++) {
             if (menu_data.bottom_button_labels[i] == obj) {
                 menu_data.bottom_button_labels[i] = nullptr;
-                esp3d_log_d("Bottom button label %d cleared", i);
+                esp3d_log("Bottom button label %d cleared", i);
             }
         }
     }
@@ -254,9 +270,15 @@ static void click_zone_event_cb(lv_event_t *e)
 
     if (code == LV_EVENT_PRESSED)
     {
-        lv_obj_set_style_text_color(menu_data.icons[section], lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN);
-        menu_data.current_section = section;
         trigger_button_beep();
+        if (menu_data.conf.sections[section].type == MENU_ITEM_SYMBOL) {
+            lv_obj_set_style_text_color(menu_data.icons[section], lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN);
+        } else {
+            lv_obj_set_style_img_recolor(menu_data.icons[section], lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN);
+            lv_obj_set_style_img_recolor_opa(menu_data.icons[section], LV_OPA_COVER, LV_PART_MAIN);
+        }
+        menu_data.current_section = section;
+
         int32_t start_angle = menu_data.current_section * (360 / menu_data.conf.num_sections);
         int32_t end_angle = start_angle + (360 / menu_data.conf.num_sections);
         lv_arc_set_angles(menu_data.arc, start_angle, end_angle);
@@ -290,7 +312,12 @@ static void bottom_button_event_cb(lv_event_t *e)
         press_start_time[button_idx] = esp_timer_get_time() / 1000;
         trigger_button_beep();
         if (menu_data.bottom_button_labels[button_idx]) {
-            lv_obj_set_style_text_color(menu_data.bottom_button_labels[button_idx], lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN);
+            if (menu_data.conf.bottom_buttons[button_idx].type == MENU_ITEM_SYMBOL) {
+                lv_obj_set_style_text_color(menu_data.bottom_button_labels[button_idx], lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN);
+            } else {
+                lv_obj_set_style_img_recolor(menu_data.bottom_button_labels[button_idx], lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN);
+                lv_obj_set_style_img_recolor_opa(menu_data.bottom_button_labels[button_idx], LV_OPA_COVER, LV_PART_MAIN);
+            }
             esp3d_log_d("Bottom button %ld label set to blue", button_idx);
         }
         if (button_idx == 0) {
@@ -304,7 +331,11 @@ static void bottom_button_event_cb(lv_event_t *e)
     {
         uint32_t duration = (esp_timer_get_time() / 1000) - press_start_time[button_idx];
         if (menu_data.bottom_button_labels[button_idx]) {
-            lv_obj_set_style_text_color(menu_data.bottom_button_labels[button_idx], lv_color_hex(ICON_COLOR), LV_PART_MAIN);
+            if (menu_data.conf.bottom_buttons[button_idx].type == MENU_ITEM_SYMBOL) {
+                lv_obj_set_style_text_color(menu_data.bottom_button_labels[button_idx], lv_color_hex(ICON_COLOR), LV_PART_MAIN);
+            } else {
+                lv_obj_set_style_img_recolor_opa(menu_data.bottom_button_labels[button_idx], LV_OPA_TRANSP, LV_PART_MAIN);
+            }
             esp3d_log_d("Bottom button %ld label reset to white", button_idx);
         }
         if (button_idx == 0) {
@@ -331,11 +362,19 @@ lv_obj_t *create_circular_menu(lv_obj_t *parent, int32_t initial_section_id, cir
 
     // Debug configuration
     for (uint32_t i = 0; i < menu_conf.num_sections; i++) {
-        esp3d_log_d("Section %lu: symbol=%s, center_text=%s, on_press=%p", 
-                    i, 
-                    menu_conf.sections[i].symbol ? menu_conf.sections[i].symbol : "null",
-                    menu_conf.sections[i].center_text ? menu_conf.sections[i].center_text : "null",
-                    (void*)menu_conf.sections[i].on_press);
+        if (menu_conf.sections[i].type == MENU_ITEM_SYMBOL) {
+            esp3d_log_d("Section %lu: symbol=%s, center_text=%s, on_press=%p", 
+                        i, 
+                        menu_conf.sections[i].symbol ? menu_conf.sections[i].symbol : "null",
+                        menu_conf.sections[i].center_text ? menu_conf.sections[i].center_text : "null",
+                        (void*)menu_conf.sections[i].on_press);
+        } else {
+            esp3d_log_d("Section %lu: img_path=%s, center_text=%s, on_press=%p", 
+                        i, 
+                        menu_conf.sections[i].img_path ? menu_conf.sections[i].img_path : "null",
+                        menu_conf.sections[i].center_text ? menu_conf.sections[i].center_text : "null",
+                        (void*)menu_conf.sections[i].on_press);
+        }
     }
 
     // Create screen if parent is NULL
@@ -407,7 +446,6 @@ lv_obj_t *create_circular_menu(lv_obj_t *parent, int32_t initial_section_id, cir
     // Créer le label pour le texte central
     menu_data.center_label = lv_label_create(inner_circle);
     lv_obj_set_style_text_color(menu_data.center_label, lv_color_hex(ICON_COLOR), LV_PART_MAIN);
-    lv_obj_center(menu_data.center_label);
     lv_obj_set_scrollbar_mode(menu_data.center_label, LV_SCROLLBAR_MODE_OFF);
     update_center_text();
 
@@ -444,7 +482,7 @@ lv_obj_t *create_circular_menu(lv_obj_t *parent, int32_t initial_section_id, cir
     lv_obj_set_style_radius(menu_data.arc, 0, LV_PART_KNOB);
     lv_obj_set_scrollbar_mode(menu_data.arc, LV_SCROLLBAR_MODE_OFF);
 
-    // Créer les zones cliquables avec icônes
+    // Créer les zones cliquables avec icônes ou images
     for (int i = 0; i < menu_conf.num_sections; i++) {
         lv_obj_t *click_zone = lv_obj_create(menu_data.menu);
         menu_data.click_zones[i] = click_zone;
@@ -476,11 +514,18 @@ lv_obj_t *create_circular_menu(lv_obj_t *parent, int32_t initial_section_id, cir
 
         lv_obj_add_flag(click_zone, LV_OBJ_FLAG_CLICKABLE);
 
-        lv_obj_t *icon = lv_label_create(click_zone);
+        lv_obj_t *icon;
+        if (menu_conf.sections[i].type == MENU_ITEM_SYMBOL) {
+            icon = lv_label_create(click_zone);
+            lv_label_set_text(icon, menu_conf.sections[i].symbol ? menu_conf.sections[i].symbol : "");
+            lv_obj_set_style_text_color(icon, lv_color_hex(ICON_COLOR), LV_PART_MAIN);
+        } else {
+            icon = lv_img_create(click_zone);
+            lv_img_set_src(icon, menu_conf.sections[i].img_path ? menu_conf.sections[i].img_path : "L:/default.png");
+            lv_obj_set_style_img_recolor_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN);
+        }
         menu_data.icons[i] = icon;
-        lv_label_set_text(icon, menu_conf.sections[i].symbol ? menu_conf.sections[i].symbol : "");
         lv_obj_center(icon);
-        lv_obj_set_style_text_color(icon, lv_color_hex(ICON_COLOR), LV_PART_MAIN);
         lv_obj_set_style_bg_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT | LV_STATE_PRESSED);
         lv_obj_set_style_border_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT | LV_STATE_PRESSED);
         lv_obj_set_style_shadow_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT | LV_STATE_PRESSED);
@@ -523,11 +568,19 @@ lv_obj_t *create_circular_menu(lv_obj_t *parent, int32_t initial_section_id, cir
         int32_t offset_x = (i - 1) * (BOTTOM_BUTTON_SIZE + BOTTOM_BUTTON_SPACING);
         lv_obj_align(button, LV_ALIGN_BOTTOM_MID, offset_x, -10);
 
-        lv_obj_t *icon = lv_label_create(button);
-        lv_label_set_text(icon, menu_conf.bottom_buttons[i].icon ? menu_conf.bottom_buttons[i].icon : "");
+        lv_obj_t *icon;
+        if (menu_conf.bottom_buttons[i].type == MENU_ITEM_SYMBOL) {
+            icon = lv_label_create(button);
+            lv_label_set_text(icon, menu_conf.bottom_buttons[i].icon ? menu_conf.bottom_buttons[i].icon : "");
+            lv_obj_set_style_text_color(icon, lv_color_hex(ICON_COLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_text_color(icon, lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN | LV_STATE_PRESSED);
+        } else {
+            icon = lv_img_create(button);
+            lv_img_set_src(icon, menu_conf.bottom_buttons[i].img_path ? menu_conf.bottom_buttons[i].img_path : "L:/default.png");
+            lv_obj_set_style_img_recolor_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN);
+        }
+        menu_data.bottom_button_labels[i] = icon;
         lv_obj_center(icon);
-        lv_obj_set_style_text_color(icon, lv_color_hex(ICON_COLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_text_color(icon, lv_color_hex(SELECTOR_COLOR), LV_PART_MAIN | LV_STATE_PRESSED);
         lv_obj_set_style_text_opa(icon, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT | LV_STATE_PRESSED);
         lv_obj_set_style_bg_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN);
         lv_obj_set_style_border_opa(icon, LV_OPA_TRANSP, LV_PART_MAIN);
@@ -537,7 +590,6 @@ lv_obj_t *create_circular_menu(lv_obj_t *parent, int32_t initial_section_id, cir
         lv_obj_set_style_pad_all(icon, 0, LV_PART_MAIN);
         lv_obj_set_scrollbar_mode(icon, LV_SCROLLBAR_MODE_OFF);
 
-        menu_data.bottom_button_labels[i] = icon;
         lv_obj_add_event_cb(button, bottom_button_event_cb, LV_EVENT_PRESSED, (void *)(intptr_t)i);
         lv_obj_add_event_cb(button, bottom_button_event_cb, LV_EVENT_RELEASED, (void *)(intptr_t)i);
         lv_obj_add_event_cb(button, bottom_button_event_cb, LV_EVENT_PRESS_LOST, (void *)(intptr_t)i);
@@ -568,22 +620,22 @@ static void bottom_button_press_cb(int32_t button_idx)
 }
 
 static menu_section_conf_t main_menu_sections[] = {
-    {LV_SYMBOL_SETTINGS, "Settings", section_press_cb},
-    {LV_SYMBOL_LIST, "List", section_press_cb},
-    {LV_SYMBOL_HOME, "Home", section_press_cb},
-    {LV_SYMBOL_EJECT, "Eject", section_press_cb},
-    {LV_SYMBOL_PLAY, "Play", section_press_cb},
-    {LV_SYMBOL_FILE, "File", section_press_cb},
-    {LV_SYMBOL_BLUETOOTH, "Bluetooth", section_press_cb},
+    {MENU_ITEM_SYMBOL, {.symbol = LV_SYMBOL_SETTINGS}, "Settings", section_press_cb},
+    {MENU_ITEM_SYMBOL, {.symbol = LV_SYMBOL_LIST}, "List", section_press_cb},
+    {MENU_ITEM_SYMBOL, {.symbol = LV_SYMBOL_HOME}, "Home", section_press_cb},
+    {MENU_ITEM_SYMBOL, {.symbol = LV_SYMBOL_EJECT}, "Eject", section_press_cb},
+    {MENU_ITEM_SYMBOL, {.symbol = LV_SYMBOL_PLAY}, "Play", section_press_cb},
+    {MENU_ITEM_SYMBOL, {.symbol = LV_SYMBOL_FILE}, "File", section_press_cb},
+    {MENU_ITEM_IMAGE, {.img_path = "L:/poo.png"}, "Poo", section_press_cb},
 };
 
 static circular_menu_conf_t main_menu_conf = {
     .num_sections = 7,
     .sections = main_menu_sections,
     .bottom_buttons = {
-        {LV_SYMBOL_OK, bottom_button_press_cb}, // Button 0 visible
-        {LV_SYMBOL_CLOSE, NULL},                // Button 1 hidden
-        {LV_SYMBOL_REFRESH, bottom_button_press_cb} // Button 2 visible
+        {MENU_ITEM_SYMBOL, {.icon = LV_SYMBOL_OK}, bottom_button_press_cb}, // Button 0 visible
+        {MENU_ITEM_SYMBOL, {.icon = LV_SYMBOL_CLOSE}, NULL},                // Button 1 hidden
+        {MENU_ITEM_IMAGE, {.img_path = "L:/poo.png"}, bottom_button_press_cb} // Button 2 visible
     }
 };
 
