@@ -224,7 +224,8 @@ static void button_event_cb(lv_event_t *e)
     }
 }
 
-// Callback pour l'encodeur
+
+// Callback for encoder events
 static void encoder_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -251,7 +252,7 @@ static void encoder_event_cb(lv_event_t *e)
             esp3d_log_d("Encoder: steps=%ld, prev_section=%ld, new_section=%ld",
                         steps, prev_section, menu_data.current_section);
 
-            int32_t start_angle = menu_data.current_section * (360 / menu_data.conf.num_sections);
+            int32_t start_angle = menu_data.current_section * (360 / menu_data.conf.num_sections) + 90;
             int32_t end_angle = start_angle + (360 / menu_data.conf.num_sections);
             lv_arc_set_angles(menu_data.arc, start_angle, end_angle);
             lv_arc_set_angles(menu_data.inner_arc, start_angle, end_angle);
@@ -279,7 +280,7 @@ static void click_zone_event_cb(lv_event_t *e)
         }
         menu_data.current_section = section;
 
-        int32_t start_angle = menu_data.current_section * (360 / menu_data.conf.num_sections);
+        int32_t start_angle = menu_data.current_section * (360 / menu_data.conf.num_sections) + 90;
         int32_t end_angle = start_angle + (360 / menu_data.conf.num_sections);
         lv_arc_set_angles(menu_data.arc, start_angle, end_angle);
         lv_arc_set_angles(menu_data.inner_arc, start_angle, end_angle);
@@ -453,7 +454,9 @@ lv_obj_t *create_circular_menu(lv_obj_t *parent, int32_t initial_section_id, cir
     menu_data.inner_arc = lv_arc_create(menu_data.menu);
     lv_obj_set_size(menu_data.inner_arc, CIRCLE_DIAMETER - (2 * BORDER_WIDTH), CIRCLE_DIAMETER - (2 * BORDER_WIDTH));
     lv_obj_center(menu_data.inner_arc);
-    lv_arc_set_angles(menu_data.inner_arc, menu_data.current_section * (360 / menu_data.conf.num_sections), menu_data.current_section * (360 / menu_data.conf.num_sections) + (360 / menu_data.conf.num_sections));
+    int32_t start_angle = menu_data.current_section * (360 / menu_data.conf.num_sections) + 90;
+    int32_t end_angle = start_angle + (360 / menu_data.conf.num_sections);
+    lv_arc_set_angles(menu_data.inner_arc, start_angle, end_angle);
     lv_obj_set_style_arc_width(menu_data.inner_arc, INNER_ARC_WIDTH, LV_PART_INDICATOR);
     lv_obj_set_style_arc_color(menu_data.inner_arc, lv_color_hex(INNER_COLOR), LV_PART_INDICATOR);
     lv_obj_set_style_arc_opa(menu_data.inner_arc, LV_OPA_COVER, LV_PART_INDICATOR);
@@ -470,7 +473,7 @@ lv_obj_t *create_circular_menu(lv_obj_t *parent, int32_t initial_section_id, cir
     menu_data.arc = lv_arc_create(menu_data.menu);
     lv_obj_set_size(menu_data.arc, CIRCLE_DIAMETER, CIRCLE_DIAMETER);
     lv_obj_center(menu_data.arc);
-    lv_arc_set_angles(menu_data.arc, menu_data.current_section * (360 / menu_data.conf.num_sections), menu_data.current_section * (360 / menu_data.conf.num_sections) + (360 / menu_data.conf.num_sections));
+    lv_arc_set_angles(menu_data.arc, start_angle, end_angle);
     lv_obj_set_style_arc_width(menu_data.arc, BORDER_WIDTH, LV_PART_INDICATOR);
     lv_obj_set_style_arc_color(menu_data.arc, lv_color_hex(SELECTOR_COLOR), LV_PART_INDICATOR);
     lv_obj_set_style_arc_opa(menu_data.arc, LV_OPA_COVER, LV_PART_INDICATOR);
@@ -489,7 +492,7 @@ lv_obj_t *create_circular_menu(lv_obj_t *parent, int32_t initial_section_id, cir
         lv_obj_set_size(click_zone, ICON_ZONE_DIAMETER, ICON_ZONE_DIAMETER);
         lv_obj_set_style_radius(click_zone, LV_RADIUS_CIRCLE, LV_PART_MAIN);
 
-        float mid_angle_rad = (i * (360.0 / menu_conf.num_sections) + (360.0 / menu_conf.num_sections) / 2) * (M_PI / 180.0);
+        float mid_angle_rad = (i * (360.0 / menu_conf.num_sections) + (360.0 / menu_conf.num_sections) / 2 + 90.0) * (M_PI / 180.0);
         int32_t radius = (CIRCLE_DIAMETER - INNER_CIRCLE_DIAMETER) / 4 + INNER_CIRCLE_DIAMETER / 2;
         int32_t offset_x = (int32_t)(cos(mid_angle_rad) * radius);
         int32_t offset_y = (int32_t)(sin(mid_angle_rad) * radius);
@@ -651,7 +654,7 @@ void create_application(void)
         return;
     }
 
-    lv_obj_t *screen = create_circular_menu(NULL, 0, main_menu_conf);
+    lv_obj_t *screen = create_circular_menu(NULL, 3, main_menu_conf);
     if (screen) {
         lv_screen_load(screen);
         esp3d_log_d("Circular menu screen loaded");
