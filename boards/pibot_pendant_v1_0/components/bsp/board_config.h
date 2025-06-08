@@ -43,7 +43,7 @@ extern "C" {
 #define DISPLAY_INVERT_FLAG      1
 
 // Display buffer configuration
-#define DISPLAY_USE_DOUBLE_BUFFER_FLAG   0
+#define DISPLAY_USE_DOUBLE_BUFFER_FLAG   0 // 0: Single buffer, 1: Double buffer
 #define DISPLAY_BUFFER_LINES_NB          6  // 12 lines buffer
 
 /* Touch Controller Configuration */

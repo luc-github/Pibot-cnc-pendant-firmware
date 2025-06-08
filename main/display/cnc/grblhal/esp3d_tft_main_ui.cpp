@@ -622,23 +622,28 @@ static void bottom_button_press_cb(int32_t button_idx)
     esp3d_log_d("Bottom button %ld pressed", button_idx);
 }
 
+
 static menu_section_conf_t main_menu_sections[] = {
-    {MENU_ITEM_SYMBOL, {.symbol = LV_SYMBOL_SETTINGS}, "Settings", section_press_cb},
-    {MENU_ITEM_SYMBOL, {.symbol = LV_SYMBOL_LIST}, "List", section_press_cb},
-    {MENU_ITEM_SYMBOL, {.symbol = LV_SYMBOL_HOME}, "Home", section_press_cb},
-    {MENU_ITEM_SYMBOL, {.symbol = LV_SYMBOL_EJECT}, "Eject", section_press_cb},
-    {MENU_ITEM_SYMBOL, {.symbol = LV_SYMBOL_PLAY}, "Play", section_press_cb},
-    {MENU_ITEM_SYMBOL, {.symbol = LV_SYMBOL_FILE}, "File", section_press_cb},
-    {MENU_ITEM_IMAGE, {.img_path = "L:/poo.png"}, "Poo", section_press_cb},
+    {MENU_ITEM_IMAGE, {.img_path = "L:/settings_m.png"}, "Settings", section_press_cb},
+    {MENU_ITEM_IMAGE, {.img_path = "L:/information_m.png"}, "Information", section_press_cb},
+    {MENU_ITEM_IMAGE, {.img_path = "L:/reset_m.png"}, "Reset", section_press_cb},
+    {MENU_ITEM_IMAGE, {.img_path = "L:/positions_m.png"}, "Positions", section_press_cb},
+    {MENU_ITEM_IMAGE, {.img_path = "L:/jog_m.png"}, "jog", section_press_cb},
+    {MENU_ITEM_IMAGE, {.img_path = "L:/files_m.png"}, "Files", section_press_cb},
+    {MENU_ITEM_IMAGE, {.img_path = "L:/macros_m.png"}, "Macro", section_press_cb},
+    {MENU_ITEM_IMAGE, {.img_path = "L:/probe_m.png"}, "Probe", section_press_cb},
+    {MENU_ITEM_IMAGE, {.img_path = "L:/workspaces_m.png"}, "Workspaces", section_press_cb},
+    {MENU_ITEM_IMAGE, {.img_path = "L:/changetool_m.png"}, "Change tool", section_press_cb},
 };
 
+
 static circular_menu_conf_t main_menu_conf = {
-    .num_sections = 7,
+    .num_sections = 10,
     .sections = main_menu_sections,
     .bottom_buttons = {
-        {MENU_ITEM_SYMBOL, {.icon = LV_SYMBOL_OK}, bottom_button_press_cb}, // Button 0 visible
-        {MENU_ITEM_SYMBOL, {.icon = LV_SYMBOL_CLOSE}, bottom_button_press_cb}, // Button 1 hidden
-        {MENU_ITEM_IMAGE, {.img_path = "L:/poo.png"}, bottom_button_press_cb} // Button 2 visible
+        {MENU_ITEM_IMAGE, {.img_path = "L:/ok_b.png"}, bottom_button_press_cb}, // Button 0 visible
+        {MENU_ITEM_IMAGE, {.img_path = "L:/back_b.png"}, bottom_button_press_cb}, // Button 1 visible
+        {MENU_ITEM_IMAGE, {.img_path = "L:/close_b.png"}, bottom_button_press_cb} // Button 2 visible
     }
 };
 
