@@ -192,15 +192,25 @@ bool ESP3DCommands::dispatchSetting(bool json, const char* filter,
       value = "Not supported";
       break;
     default:  // String
-      if (index == ESP3DSettingIndex::esp3d_sta_password ||
+      if (
+#if ESP3D_WIFI_FEATURE
+          index == ESP3DSettingIndex::esp3d_sta_password ||
           index == ESP3DSettingIndex::esp3d_ap_password ||
+#endif  // ESP3D_WIFI_FEATURE
+#if ESP3D_BT_FEATURE
+          index == ESP3DSettingIndex::esp3d_btserial_pin ||
+          index == ESP3DSettingIndex::esp3d_btble_passkey ||
+#endif  // ESP3D_BT_FEATURE
 #if ESP3D_NOTIFICATIONS_FEATURE
           index == ESP3DSettingIndex::esp3d_notification_token_1 ||
           index == ESP3DSettingIndex::esp3d_notification_token_2 ||
 #endif  // ESP3D_NOTIFICATIONS_FEATURE
-
+#if ESP3D_AUTHENTICATION_FEATURE
           index == ESP3DSettingIndex::esp3d_admin_password ||
-          index == ESP3DSettingIndex::esp3d_user_password) {  // hide passwords
+          index == ESP3DSettingIndex::esp3d_user_password  ||
+#endif  // ESP3D_AUTHENTICATION_FEATURE
+        false //to handle the || 
+        ) {  // hide passwords
                                                               // using  ********
         value = HIDDEN_SETTING_VALUE;
       } else {
@@ -1066,6 +1076,11 @@ void ESP3DCommands::execute_internal_command(int cmd, int cmd_params_pos,
     case 900:
       ESP900(cmd_params_pos, msg);
       break;
+#if ESP3D_BUZZER_FEATURE
+case 910:
+      ESP910(cmd_params_pos, msg);
+      break;
+#endif  // ESP3D_BUZZER_FEATURE
     case 800:
       ESP800(cmd_params_pos, msg);
       break;
@@ -1073,7 +1088,6 @@ void ESP3DCommands::execute_internal_command(int cmd, int cmd_params_pos,
       ESP901(cmd_params_pos, msg);
       break;
 #if ESP3D_USB_SERIAL_FEATURE
-
     case 902:
       ESP902(cmd_params_pos, msg);
       break;

@@ -13,6 +13,10 @@ set(SOURCES .
     modules/gcode_host
 )
 
+if (BUZZER_SERVICE)
+    list(APPEND SOURCES "modules/buzzer")
+endif()
+
 if(TIME_SERVICE)
     list(APPEND SOURCES "modules/time")
 endif()

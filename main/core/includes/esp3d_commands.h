@@ -165,6 +165,9 @@ class ESP3DCommands {
   void ESP902(int cmd_params_pos, ESP3DMessage* msg);
   void ESP950(int cmd_params_pos, ESP3DMessage* msg);
 #endif  // #if ESP3D_USB_SERIAL_FEATURE
+#if ESP3D_BUZZER_FEATURE
+  void ESP910(int cmd_params_pos, ESP3DMessage* msg);
+#endif  // ESP3D_BUZZER_FEATURE
   const char* get_param(ESP3DMessage* msg, uint start, const char* label,
                         bool* found = nullptr);
   const char* get_param(const char* data, uint size, uint start,

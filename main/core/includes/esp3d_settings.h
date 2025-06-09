@@ -61,6 +61,7 @@ enum class ESP3DSettingIndex : uint16_t {
   esp3d_radio_boot_mode,
   esp3d_radio_mode,
   esp3d_fallback_mode,
+  #if ESP3D_WIFI_FEATURE
   esp3d_sta_ssid,
   esp3d_sta_password,
   esp3d_sta_ip_mode,
@@ -72,25 +73,42 @@ enum class ESP3DSettingIndex : uint16_t {
   esp3d_ap_password,
   esp3d_ap_ip_static,
   esp3d_ap_channel,
+  #endif  // ESP3D_WIFI_FEATURE
   esp3d_hostname,
+  #if ESP3D_WIFI_FEATURE
   esp3d_http_port,
   esp3d_http_on,
+  #endif  // ESP3D_WIFI_FEATURE
   esp3d_setup,
   esp3d_target_firmware,
+  #if ESP3D_SD_CARD_FEATURE
   esp3d_check_update_on_sd,
+  #endif  // ESP3D_SD_CARD_FEATURE
+  #if ESP3D_NOTIFICATIONS_FEATURE
   esp3d_notification_type,
   esp3d_auto_notification,
   esp3d_notification_token_1,
   esp3d_notification_token_2,
   esp3d_notification_token_setting,
+  #endif  // ESP3D_NOTIFICATIONS_FEATURE
+  #if ESP3D_WIFI_FEATURE
+  #if ESP3D_TELNET_FEATURE
   esp3d_socket_port,
   esp3d_socket_on,
+  #endif  // ESP3D_TELNET_FEATURE
+  #if ESP3D_WEBSOCKET_FEATURE
   esp3d_ws_on,
+  #endif  // ESP3D_WEBSOCKET_FEATURE
+  #endif // ESP3D_WIFI_FEATURE
+  #if ESP3D_USB_SERIAL_FEATURE
   esp3d_usb_serial_baud_rate,
+  #endif  // #if ESP3D_USB_SERIAL_FEATURE
   esp3d_output_client,
+  #if ESP3D_AUTHENTICATION_FEATURE
   esp3d_admin_password,
   esp3d_user_password,
   esp3d_session_timeout,
+  #endif  // ESP3D_AUTHENTICATION_FEATURE
   esp3d_ui_language,
   esp3d_jog_type,
   esp3d_polling_on,
@@ -102,16 +120,29 @@ enum class ESP3DSettingIndex : uint16_t {
   esp3d_pause_script,
   esp3d_stop_script,
   esp3d_resume_script,
+#if ESP3D_TIMESTAMP_FEATURE
   esp3d_use_internet_time,
   esp3d_time_server1,
   esp3d_time_server2,
   esp3d_time_server3,
   esp3d_timezone,
+  #endif  // ESP3D_TIMESTAMP_FEATURE
+  #if ESP3D_WEBDAV_SERVICES_FEATURE
   esp3d_webdav_on,
+  #endif  // ESP3D_WEBDAV_SERVICES_FEATURE
+
+#if ESP3D_BT_FEATURE
   esp3d_btserial_id,
   esp3d_btserial_pin,
   esp3d_btble_id,
   esp3d_btble_passkey,
+#endif  // ESP3D_BT_FEATURE
+#if ESP3D_BUZZER_FEATURE
+  esp3d_buzzer_on,
+#endif  // ESP3D_BUZZER_FEATURE
+#if ESP3D_DISPLAY_FEATURE
+  esp3d_brightness_level,
+#endif
   #include "esp3d_target_settings_list.inc" 
   unknown_index
 };

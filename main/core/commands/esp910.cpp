@@ -16,18 +16,19 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-
+#if defined(ESP3D_BUZZER_FEATURE) && ESP3D_BUZZER_FEATURE == 1
 #include "authentication/esp3d_authentication.h"
+#include "buzzer/esp3d_buzzer.h"
 #include "esp3d_client.h"
 #include "esp3d_commands.h"
+#include "esp3d_settings.h"
 #include "esp3d_string.h"
-#include "serial/esp3d_serial_client.h"
 
-#define COMMAND_ID 900
+#define COMMAND_ID 910
 
-// Get state / Set Enable / Disable Serial Communication
-//[ESP900]<ENABLE/DISABLE> json=<no> pwd=<admin/user password>
-void ESP3DCommands::ESP900(int cmd_params_pos, ESP3DMessage *msg)
+// Get state / Set Enable / Disable buzzer
+//[ESP910]<ENABLE/DISABLE> json=<no> pwd=<admin/user password>
+void ESP3DCommands::ESP910(int cmd_params_pos, ESP3DMessage *msg)
 {
     ESP3DClientType target = msg->origin;
     ESP3DRequest requestId = msg->request_id;
@@ -41,28 +42,45 @@ void ESP3DCommands::ESP900(int cmd_params_pos, ESP3DMessage *msg)
     bool setEnable        = hasTag(msg, cmd_params_pos, "ENABLE");
     bool setDisable       = hasTag(msg, cmd_params_pos, "DISABLE");
     std::string tmpstr;
-#if ESP3D_AUTHENTICATION_FEATURE
-    if (msg->authentication_level == ESP3DAuthenticationLevel::guest)
+    tmpstr = get_clean_param(msg, cmd_params_pos);
+
+    if (tmpstr.length() == 0)
     {
-        dispatchAuthenticationError(msg, COMMAND_ID, json);
-        return;
-    }
-#endif  // ESP3D_AUTHENTICATION_FEATURE
-    if (!(setEnable || setDisable) && !has_param(msg, cmd_params_pos))
-    {  // get
-        hasError = true;
+        uint8_t b = esp3dTftsettings.readByte(ESP3DSettingIndex::esp3d_buzzer_on);
+        if (b == (uint8_t)ESP3DState::on)
+        {
+            ok_msg = "ENABLED";
+        }
+        else
+        {
+            ok_msg = "DISABLED";
+        }
     }
     else
     {
-        if (setEnable)
-        {  // set
-            if (!serialClient.started())
+#if ESP3D_AUTHENTICATION_FEATURE
+        if (msg->authentication_level == ESP3DAuthenticationLevel::guest)
+        {
+            dispatchAuthenticationError(msg, COMMAND_ID, json);
+            return;
+        }
+#endif  // ESP3D_AUTHENTICATION_FEATURE
+        if (!(setEnable || setDisable) && !has_param(msg, cmd_params_pos))
+        {  // get
+            hasError = true;
+        }
+        else
+        {
+            if (!esp3dTftsettings.writeByte(ESP3DSettingIndex::esp3d_buzzer_on,
+                                            setEnable ? (uint8_t)ESP3DState::on
+                                                      : (uint8_t)ESP3DState::off))
             {
-                if (!serialClient.begin())
-                {
-                    hasError  = true;
-                    error_msg = "error processing command";
-                }
+                hasError  = true;
+                error_msg = "Failed to set buzzer state";
+            }
+            else
+            {
+                esp3d_buzzer.begin();
             }
         }
     }
@@ -75,11 +93,5 @@ void ESP3DCommands::ESP900(int cmd_params_pos, ESP3DMessage *msg)
         esp3d_log_e("Error sending response to clients");
         return;
     }
-    if (setDisable)
-    {
-        if (serialClient.started())
-        {
-            serialClient.end();
-        }
-    }
 }
+#endif  // ESP3D_BUZZER_FEATURE

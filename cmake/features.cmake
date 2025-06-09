@@ -146,6 +146,13 @@ else()
 endif()
 
 # ===========================================
+# Additional Services
+# ===========================================
+if(BUZZER_SERVICE)
+    add_compile_options(-DESP3D_BUZZER_FEATURE=1)
+endif()
+
+# ===========================================
 # Customizations
 # ===========================================
 add_compile_options("-I${CMAKE_SOURCE_DIR}/customizations")
@@ -230,6 +237,7 @@ message(STATUS "${Cyan}SSDP Service:  ${White}${SSDP_SERVICE} ${ColourReset}")
 message(STATUS "${Cyan}MDNS Service:  ${White}${MDNS_SERVICE} ${ColourReset}")
 message(STATUS "${Cyan}Web Services:  ${White}${WEB_SERVICES} ${ColourReset}")
 message(STATUS "${Cyan}Camera Service:  ${White}${CAMERA_SERVICE} ${ColourReset}")
+message(STATUS "${Cyan}Buzzer Service:  ${White}${BUZZER_SERVICE} ${ColourReset}")
 message(STATUS "${Cyan}WebDav Services:  ${White}${WEBDAV_SERVICES} ${ColourReset}")
 message(STATUS "${Cyan}Telnet Service:  ${White}${TELNET_SERVICE} ${ColourReset}")
 message(STATUS "${Cyan}WebSocket Service:  ${White}${WS_SERVICE} ${ColourReset}")

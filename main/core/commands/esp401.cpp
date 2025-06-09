@@ -39,6 +39,9 @@
 #if ESP3D_WEBDAV_SERVICES_FEATURE
 #include "http/esp3d_http_service.h"
 #endif  // ESP3D_WEBDAV_SERVICES_FEATURE
+#if ESP3D_BUZZER_FEATURE
+#include "buzzer/esp3d_buzzer.h"  
+#endif  // ESP3D_BUZZER_FEATURE
 
 #define COMMAND_ID 401
 
@@ -204,6 +207,11 @@ void ESP3DCommands::ESP401(int cmd_params_pos, ESP3DMessage* msg) {
         case ESP3DSettingIndex::esp3d_ui_language:
           esp3dTranslationService.begin();
           break;
+#if ESP3D_BUZZER_FEATURE
+        case ESP3DSettingIndex::esp3d_buzzer_on:
+          esp3d_buzzer.begin();
+          break;
+#endif  // ESP3D_BUZZER_FEATURE
 #if ESP3D_WEBDAV_SERVICES_FEATURE
         case ESP3DSettingIndex::esp3d_webdav_on:
           esp3dHttpService.webdavActive(true);

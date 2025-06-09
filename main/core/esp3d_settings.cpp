@@ -187,6 +187,7 @@ const ESP3DSettingDescription ESP3DSettingsData[] = {
      "100.00"},
     {ESP3DSettingIndex::esp3d_workspace_depth, ESP3DSettingType::float_t, 3,
      "100.00"},
+    {ESP3DSettingIndex::esp3d_brightness_level, ESP3DSettingType::byte_t, 1, "100"},
 #endif  // ESP3D_DISPLAY_FEATURE
     {ESP3DSettingIndex::esp3d_stop_script, ESP3DSettingType::string_t,
      SIZE_OF_SCRIPT, ""},
@@ -206,6 +207,9 @@ const ESP3DSettingDescription ESP3DSettingsData[] = {
     {ESP3DSettingIndex::esp3d_timezone, ESP3DSettingType::string_t,
      SIZE_OF_TIMEZONE, "+00:00"},
 #endif  // ESP3D_TIMESTAMP_FEATURE
+#if ESP3D_BUZZER_FEATURE
+    {ESP3DSettingIndex::esp3d_buzzer_on, ESP3DSettingType::byte_t, 1, "1"},
+#endif  // ESP3D_BUZZER_FEATURE
 };
 
 // Is Valid String Setting ?
@@ -426,6 +430,9 @@ bool ESP3DSettings::isValidByteSetting(uint8_t value,
 #if ESP3D_TIMESTAMP_FEATURE
     case ESP3DSettingIndex::esp3d_use_internet_time:
 #endif  // ESP3D_TIMESTAMP_FEATURE
+#if ESP3D_BUZZER_FEATURE
+    case ESP3DSettingIndex::esp3d_buzzer_on:
+#endif  // ESP3D_BUZZER_FEATURE
       if (value == (uint8_t)ESP3DState::off ||
           value == (uint8_t)ESP3DState::on) {
         return true;
@@ -480,6 +487,7 @@ bool ESP3DSettings::isValidByteSetting(uint8_t value,
         return true;
       }
       break;
+#if ESP3D_WIFI_FEATURE
     case ESP3DSettingIndex::esp3d_ap_channel:
       for (uint8_t i = 0; i < SupportedApChannelsSize; i++) {
         if (SupportedApChannels[i] == value) {
@@ -487,6 +495,7 @@ bool ESP3DSettings::isValidByteSetting(uint8_t value,
         }
       }
       break;
+#endif  // ESP3D_WIFI_FEATURE
 #if ESP3D_SD_CARD_FEATURE
 #if SD_INTERFACE_TYPE == 0
     case ESP3DSettingIndex::esp3d_spi_divider:

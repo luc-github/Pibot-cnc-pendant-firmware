@@ -18,18 +18,11 @@
 
 #include <esp_err.h>
 #include "buzzer_config.h"
+#include "buzzer_tone.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/**
- * @brief Tone structure for buzzer playback
- */
-typedef struct {
-    uint16_t freq_hz;    // Frequency in Hz
-    uint32_t duration_ms; // Duration in milliseconds
-} buzzer_tone_t;
 
 /**
  * @brief Configures the buzzer instance

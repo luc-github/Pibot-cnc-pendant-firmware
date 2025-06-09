@@ -202,7 +202,7 @@ void ESP3DCommands::ESP400(int cmd_params_pos, ESP3DMessage* msg) {
                        true, target, requestId)) {
     esp3d_log_e("Error sending response to clients");
   }
-
+#if ESP3D_WIFI_FEATURE
   // STA SSID
   if (!dispatchSetting(json, "network/sta", ESP3DSettingIndex::esp3d_sta_ssid,
                        "SSID", nullptr, nullptr, SIZE_OF_SETTING_SSID_ID, 1, 1,
@@ -291,6 +291,7 @@ void ESP3DCommands::ESP400(int cmd_params_pos, ESP3DMessage* msg) {
                        nullptr, true, target, requestId)) {
     esp3d_log_e("Error sending response to clients");
   }
+#endif  // ESP3D_WIFI_FEATURE
 #if ESP3D_AUTHENTICATION_FEATURE
   // Session timeout
   if (!dispatchSetting(json, "security/security",
@@ -362,12 +363,14 @@ void ESP3DCommands::ESP400(int cmd_params_pos, ESP3DMessage* msg) {
 #endif  // ESP3D_TELNET_FEATURE
 
   // WebSocket
+  #if ESP3D_WEBSOCKET_FEATURE
   if (!dispatchSetting(json, "service/websocketp",
                        ESP3DSettingIndex::esp3d_ws_on, "enable", YesNoValues,
                        YesNoLabels, sizeof(YesNoValues) / sizeof(char*), -1, -1,
                        -1, nullptr, true, target, requestId)) {
     esp3d_log_e("Error sending response to clients");
   }
+#endif // ESP3D_WEBSOCKET_FEATURE
 #if ESP3D_NOTIFICATIONS_FEATURE
   // Notifications type
   if (!dispatchSetting(json, "service/notification",
@@ -452,6 +455,12 @@ void ESP3DCommands::ESP400(int cmd_params_pos, ESP3DMessage* msg) {
   }
 #endif  // ESP3D_UPDATE_FEATURE
 #endif  // ESP3D_SD_CARD_FEATURE
+#ifdef ESP3D_BUZZER_FEATURE
+  // Buzzer state
+  dispatchSetting(json, "device/device", ESP3DSettingIndex::esp3d_buzzer_on, "buzzer", YesNoValues,
+                  YesNoLabels, sizeof(YesNoValues) / sizeof(char*), -1, -1, -1,
+                  nullptr, true, target, requestId);
+#endif  // ESP3D_BUZZER_FEATURE
 #if ESP3D_TIMESTAMP_FEATURE
   // Use internet time
   if (!dispatchSetting(json, "service/time",

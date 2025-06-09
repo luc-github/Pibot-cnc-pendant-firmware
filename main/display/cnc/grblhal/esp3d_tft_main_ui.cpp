@@ -14,7 +14,7 @@
 #include "lvgl.h"
 #include "phy_potentiometer.h"
 #include "phy_switch.h"
-#include "buzzer.h"
+#include "buzzer/esp3d_buzzer.h"
 #include <esp_timer.h>
 #include <math.h>
 #include <stdlib.h>
@@ -107,8 +107,8 @@ static circular_menu_data_t menu_data = {
 // Helper function to trigger a short beep
 static void trigger_button_beep(void)
 {
-    buzzer_set_loud(false);
-    buzzer_bip(1000, 100); // Beep de 100 ms
+    esp3d_buzzer.set_loud(false);
+    esp3d_buzzer.bip(1000, 100); // Beep de 100 ms
 }
 
 // Fonction pour mettre à jour les styles des icônes

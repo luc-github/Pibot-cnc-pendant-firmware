@@ -141,6 +141,11 @@ const char* help[] = {
     "[ESP901](baud rate) - display/set serial baud rate",
 #if ESP3D_USB_SERIAL_FEATURE
     "[ESP902](baud rate) - display/set usb-serial baud rate",
+#endif  // #if ESP3D_USB_SERIAL_FEATURE
+#if ESP3D_BUZZER_FEATURE
+    "[ESP910](state) - display/set buzzer state (ON/OFF)",
+#endif  // ESP3D_BUZZER_FEATURE
+#if ESP3D_USB_SERIAL_FEATURE
     "[ESP950]<SERIAL/USB>  - display/set usb-serial client output",
 #endif  // #if ESP3D_USB_SERIAL_FEATURE
 };
@@ -218,7 +223,13 @@ const uint cmdlist[] = {
 
     780, 790, 800, 900, 901,
 #if ESP3D_USB_SERIAL_FEATURE
-    902, 950,
+    902,
+#endif // #if ESP3D_USB_SERIAL_FEATURE
+#if ESP3D_BUZZER_FEATURE
+    910,
+#endif  // ESP3D_BUZZER_FEATURE
+#if ESP3D_USB_SERIAL_FEATURE
+    950,
 #endif  // #if ESP3D_USB_SERIAL_FEATURE
 };
 // ESP3D Help
