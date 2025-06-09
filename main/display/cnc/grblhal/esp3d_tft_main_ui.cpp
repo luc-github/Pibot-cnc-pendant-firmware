@@ -35,7 +35,7 @@ void screen_on_delay_timer_cb(lv_timer_t *timer)
 #define ICON_ZONE_DIAMETER 40 // Diamètre des zones cliquables
 #define BOTTOM_BUTTON_SIZE 50 // Taille des boutons du bas
 #define BOTTOM_BUTTON_SPACING 25 // Espacement entre boutons du bas
-#define LONG_PRESS_THRESHOLD_MS 800 // Seuil pour un appui long (ms)
+#define LONG_PRESS_THRESHOLD_MS 200 // Seuil pour un appui long (ms)
 
 // Définitions des couleurs
 #define BACKGROUND_COLOR 0x000000 // Noir pour le fond

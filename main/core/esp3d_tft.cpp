@@ -55,6 +55,10 @@
 #include "camera/camera.h"
 #endif  // ESP3D_CAMERA_FEATURE
 
+#if ESP3D_BUZZER_FEATURE
+#include "buzzer/esp3d_buzzer.h"
+#endif  // ESP3D_BUZZER_FEATURE
+
 /**********************
  *  STATIC PROTOTYPES
  **********************/
@@ -99,6 +103,13 @@ bool ESP3DTft::begin() {
       esp3d_log_e("Reset NVS failed");
     }
   }
+  #if ESP3D_BUZZER_FEATURE
+  if (esp3d_buzzer.begin()) {
+    esp3d_log("Buzzer started");
+  } else {
+    esp3d_log_e("Buzzer failed to start");
+  }
+  #endif  // ESP3D_BUZZER_FEATURE
 #if ESP3D_USB_SERIAL_FEATURE
   if (esp3dCommands.getOutputClient(true) == ESP3DClientType::usb_serial) {
     bsp_init_usb();
