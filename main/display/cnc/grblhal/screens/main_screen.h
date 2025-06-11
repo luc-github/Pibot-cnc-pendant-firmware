@@ -24,13 +24,13 @@
 
 namespace mainScreen {
 void create();
-bool job_status_value_cb(ESP3DValuesIndex index, const char *value,
-                         ESP3DValuesCbAction action);
-bool position_values(ESP3DValuesIndex index, const char *value,
-                     ESP3DValuesCbAction action);
-bool state_value_cb(ESP3DValuesIndex index, const char *value,
-                    ESP3DValuesCbAction action);
-bool state_comment_value_cb(ESP3DValuesIndex index, const char *value,
-                            ESP3DValuesCbAction action);
+//bool job_status_value_cb(ESP3DValuesIndex index, const char *value,
+//                         ESP3DValuesCbAction action);
+//bool position_values(ESP3DValuesIndex index, const char *value,
+//                     ESP3DValuesCbAction action);
+//bool state_value_cb(ESP3DValuesIndex index, const char *value,
+//                    ESP3DValuesCbAction action);
+//bool state_comment_value_cb(ESP3DValuesIndex index, const char *value,
+//                            ESP3DValuesCbAction action);
 
 }  // namespace mainScreen
