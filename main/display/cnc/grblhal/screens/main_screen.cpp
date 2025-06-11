@@ -55,12 +55,30 @@ extern const lv_image_dsc_t files_m;
 extern const lv_image_dsc_t macros_m;
 extern const lv_image_dsc_t probe_m;
 extern const lv_image_dsc_t changetool_m;
+extern const lv_image_dsc_t alarm_s;
+extern const lv_image_dsc_t run_s;
+extern const lv_image_dsc_t idle_s;
+extern const lv_image_dsc_t status_s;
 
 /**********************
  *  Namespace
  **********************/
 namespace mainScreen {
 bool is_locked = false;  // Global variable to track lock state
+ //Enum for firmware states
+// This enum defines the possible states of the firmware
+  typedef enum {
+    FIRMWARE_IDLE,
+    FIRMWARE_RUN,
+    FIRMWARE_ALARM,
+    FIRMWARE_OTHER
+  } firmware_state_t;
+
+  // Variables for firmware and connection status
+  static lv_obj_t *firmware_status_img = nullptr;  // Image for firmware status
+  static lv_obj_t *connection_status_img = nullptr;  // Image for connection status
+  static firmware_state_t current_firmware_state = FIRMWARE_IDLE;  // Current firmware state
+    static bool is_connection_ok = false;  // Status of the connection
 
 // Configuration structures
 
@@ -174,6 +192,55 @@ static circular_menu_conf_t menu_conf =
      }};
 
 // Helper functions
+
+// Function to update the firmware status image
+
+static void update_firmware_status_image(firmware_state_t state)
+  {
+      if (!firmware_status_img) {
+          esp3d_log_e("Firmware status image object is null");
+          return;
+      }
+
+      current_firmware_state = state;
+      const lv_image_dsc_t *img_src = nullptr;
+      switch (state) {
+          case FIRMWARE_IDLE:
+              img_src = &idle_s;
+              break;
+          case FIRMWARE_RUN:
+              img_src = &run_s;
+              break;
+          case FIRMWARE_ALARM:
+              img_src = &alarm_s;
+              break;
+          case FIRMWARE_OTHER:
+          default:
+              img_src = &status_s;
+              break;
+      }
+
+      lv_img_set_src(firmware_status_img, img_src);
+      lv_obj_invalidate(firmware_status_img); // Invalidate the object to force redraw
+      esp3d_log_d("Firmware status updated to %d", state);
+  }
+
+  // Function to update the connection status image
+  static void update_connection_status_image(bool connection_ok)
+  {
+      if (!connection_status_img) {
+          esp3d_log_e("Connection status image object is null");
+          return;
+      }
+
+      is_connection_ok = connection_ok;
+      lv_obj_set_style_img_recolor(connection_status_img,
+                                   connection_ok ? lv_color_hex(0x00FF00) : lv_color_hex(0xFF0000),
+                                   LV_PART_MAIN);
+      lv_obj_set_style_img_recolor_opa(connection_status_img, LV_OPA_COVER, LV_PART_MAIN);
+      lv_obj_invalidate(connection_status_img); // Invalidate the object to force redraw
+      esp3d_log_d("Connection status updated to %s", connection_ok ? "OK" : "Fail");
+  }
 
 // Helper function to trigger a short beep
 static void trigger_button_beep(void)
@@ -696,6 +763,24 @@ void create()
     lv_obj_set_style_border_opa(menu_data.menu, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_ANY);
     lv_obj_add_event_cb(menu_data.menu, obj_delete_cb, LV_EVENT_DELETE, NULL);
 
+
+    // Create image for the firmware status (top left)
+      // This image will display the current firmware state (Idle, Run, Alarm, etc.)
+      firmware_status_img = lv_img_create(menu_data.menu);
+      lv_img_set_src(firmware_status_img, &idle_s); // Initial state: Idle
+      lv_obj_align(firmware_status_img, LV_ALIGN_TOP_LEFT, 10, 10);
+      lv_obj_set_style_img_recolor_opa(firmware_status_img, LV_OPA_TRANSP, LV_PART_MAIN);
+      lv_obj_set_scrollbar_mode(firmware_status_img, LV_SCROLLBAR_MODE_OFF);
+
+      // Create image for the connection status (top right)
+      // This image will display the current connection status (OK or Fail)
+      connection_status_img = lv_img_create(menu_data.menu);
+      lv_img_set_src(connection_status_img, &status_s);
+      lv_obj_align(connection_status_img, LV_ALIGN_TOP_RIGHT, -10, 10);
+      lv_obj_set_style_img_recolor(connection_status_img, lv_color_hex(0xFF0000), LV_PART_MAIN); // Initial color: red (Fail)
+      lv_obj_set_style_img_recolor_opa(connection_status_img, LV_OPA_COVER, LV_PART_MAIN);
+      lv_obj_set_scrollbar_mode(connection_status_img, LV_SCROLLBAR_MODE_OFF);
+
     // Create the outer circle (border)
     lv_obj_t *circle = lv_obj_create(menu_data.menu);
     lv_obj_set_size(circle, ESP3D_MAIN_MENU_DIAMETER, ESP3D_MAIN_MENU_DIAMETER);
@@ -943,7 +1028,8 @@ void create()
 
         esp3d_log_d("Bottom button %d created with label reference", i);
     }
-
+    update_firmware_status_image(FIRMWARE_IDLE); // Initial state: Idle
+    update_connection_status_image(false); // Initial state: Not connected
     update_icon_styles();
     lv_obj_add_event_cb(menu_data.screen, encoder_event_cb, LV_EVENT_KEY, NULL);
     lv_obj_add_event_cb(menu_data.screen, button_event_cb, LV_EVENT_PRESSED, NULL);
