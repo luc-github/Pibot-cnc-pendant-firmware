@@ -22,14 +22,6 @@ extern "C" {
 #endif
 
 /**
- * @brief Waveform types for buzzer
- */
-typedef enum {
-    WAVEFORM_SQUARE,  // Square wave (default)
-    WAVEFORM_SINE     // Sine wave
-} buzzer_waveform_t;
-
-/**
  * @brief Configuration structure of buzzer controller
  *
  * Must be passed to buzzer_configure() for correct configuration
@@ -44,8 +36,6 @@ typedef struct {
     uint8_t resolution_bits;  // PWM resolution in bits
     uint8_t duty;             // Default duty cycle for normal mode (0-100%)
     uint8_t loud_duty;        // Duty cycle for loud mode (0-100%)
-    buzzer_waveform_t waveform; // Waveform type
-    uint32_t dac_sample_rate; // DAC sample rate for sine wave (Hz)
 } buzzer_config_t;
 
 #ifdef __cplusplus

@@ -245,7 +245,8 @@ static void update_firmware_status_image(firmware_state_t state)
 // Helper function to trigger a short beep
 static void trigger_button_beep(void)
 {
-       esp3d_buzzer.bip(1500, 50);
+    esp3d_buzzer.set_loud(false);
+    esp3d_buzzer.bip(1000, 100);  // Beep of 100 ms
 }
 
 // Function to update the icons styles based on the current section
