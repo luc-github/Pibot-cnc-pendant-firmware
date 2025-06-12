@@ -21,6 +21,7 @@
 #include <esp_err.h>
 #include "stdio.h"
 #include "buzzer_tone.h"
+#include "esp3d_notes.h"
 
 class Buzzer final {
  public:

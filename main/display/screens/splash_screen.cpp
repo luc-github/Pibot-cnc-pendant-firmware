@@ -72,11 +72,18 @@ void create()
     esp3dTftui.set_current_screen(ESP3DScreenType::splash);
     esp3d_log_d("Splash screen created");
     buzzer_tone_t startup_melody[] = {
-       {392, 150}, // G4
-       {523, 150}, // C5
-       {659, 300}  // E5
+     
+        {NOTE_E5, 150},   // ta
+        {NOTE_E5, 150},   // da
+        {0, 75},         // pause
+        {NOTE_E5, 150},   // da
+        {0, 75},         // pause
+        {NOTE_C5, 150},   // da
+        {NOTE_E5, 300},   // da (longer)
+        {NOTE_G5, 300},   // daaa
+
     };
-    esp3d_buzzer.play(startup_melody, 4);
+    esp3d_buzzer.play(startup_melody, 8);
     // set a timer to switch to the circular menu after 2 seconds
     lv_timer_create(
         [](lv_timer_t *timer) {
