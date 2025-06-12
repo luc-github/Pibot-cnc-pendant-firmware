@@ -18,6 +18,8 @@ extern "C" {
 #define BOARD_NAME_STR      "PiBot CNC Pendant"
 #define BOARD_VERSION_STR   "v1.0"
 
+#include "hal/ledc_types.h"
+
 /* Display Configuration */
 // TFT Screen pin definitions
 #define DISPLAY_CS_PIN          GPIO_NUM_15
@@ -143,12 +145,14 @@ extern "C" {
 #define BUZZER_PIN                  GPIO_NUM_26
 #define BUZZER_PWM_ENABLED_FLAG     1       // 0: GPIO control, 1: PWM control
 #define BUZZER_ACTIVE_HIGH_FLAG     1       // GPIO level for buzzer on (1: active high, 0: active low)
-#define BUZZER_DEFAULT_DUTY_PCT     100      // Default duty cycle for quiet mode (0-100)
-#define BUZZER_LOUD_DUTY_PCT        50       // Duty cycle for loud mode (0-100)
-#define BUZZER_PWM_FREQ_HZ          2000    // Default buzzer frequency in Hz
-#define BUZZER_PWM_RESOLUTION_BITS  8       // Duty resolution
-#define BUZZER_PWM_TIMER_IDX        1       // Timer to use
-#define BUZZER_PWM_CHANNEL_IDX      1       // Channel to use
+#define BUZZER_DEFAULT_DUTY_PCT     10      // Default duty cycle for quiet mode (0-100)
+#define BUZZER_LOUD_DUTY_PCT        100       // Duty cycle for loud mode (0-100)
+#define BUZZER_PWM_FREQ_HZ          1000    // Default buzzer frequency in Hz
+#define BUZZER_PWM_RESOLUTION_BITS  10       // Duty resolution
+#define BUZZER_PWM_TIMER_IDX        LEDC_TIMER_0       // Timer to use
+#define BUZZER_PWM_CHANNEL_IDX      LEDC_CHANNEL_0       // Channel to use
+#define BUZZER_WAVEFORM             WAVEFORM_SINE  // Default waveform type
+#define BUZZER_DAC_SAMPLE_RATE      44100  // DAC sample rate for sine wave (Hz)
 
 /* UART Configuration */
 #define UART_TX_PIN         GPIO_NUM_1
