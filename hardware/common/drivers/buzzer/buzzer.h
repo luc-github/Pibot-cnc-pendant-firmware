@@ -33,14 +33,6 @@ extern "C" {
 esp_err_t buzzer_configure(const buzzer_config_t *config);
 
 /**
- * @brief Sets the loudness mode for the buzzer
- *
- * @param loud True for loud mode (50% duty, louder), false for normal mode (100% duty, quieter)
- * @return ESP_OK on success, or an error code on failure
- */
-esp_err_t buzzer_set_loud(bool loud);
-
-/**
  * @brief Plays a single tone on the buzzer (blocking)
  *
  * @param freq_hz Frequency of the tone in Hz

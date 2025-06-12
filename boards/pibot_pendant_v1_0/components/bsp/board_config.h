@@ -66,13 +66,13 @@ extern "C" {
 /* Backlight Configuration */
 #define BACKLIGHT_PIN               GPIO_NUM_21
 #define BACKLIGHT_ACTIVE_HIGH_FLAG  1       // GPIO level for backlight on
-#define BACKLIGHT_DEFAULT_LEVEL_PCT 100     // Default brightness level (0-100)
+#define BACKLIGHT_DEFAULT_LEVEL_PCT 0     // Default brightness level (0-100)
 #define BACKLIGHT_PWM_ENABLED_FLAG  1       // 0: GPIO control, 1: PWM control
 
 // PWM specific settings (only used if BACKLIGHT_PWM_ENABLED is 1)
 #define BACKLIGHT_PWM_FREQ_HZ       5000    // PWM frequency in Hz
 #define BACKLIGHT_PWM_RESOLUTION_BITS 8     // Duty resolution
-#define BACKLIGHT_PWM_TIMER_IDX     1       // Timer to use
+#define BACKLIGHT_PWM_TIMER_IDX     0       // Timer to use
 #define BACKLIGHT_PWM_CHANNEL_IDX   0       // Channel to use
 
 /* SD Card Configuration */
@@ -140,13 +140,11 @@ extern "C" {
 #define ANALOG_FILTER_SAMPLES_NB 5  // Number of samples for filtering
 
 /* Buzzer Configuration */
+/* SC8002B Module Configuration */
 #define BUZZER_PIN                  GPIO_NUM_26
-#define BUZZER_PWM_ENABLED_FLAG     1       // 0: GPIO control, 1: PWM control
 #define BUZZER_ACTIVE_HIGH_FLAG     1       // GPIO level for buzzer on (1: active high, 0: active low)
-#define BUZZER_DEFAULT_DUTY_PCT     100      // Default duty cycle for quiet mode (0-100)
-#define BUZZER_LOUD_DUTY_PCT        50       // Duty cycle for loud mode (0-100)
-#define BUZZER_PWM_FREQ_HZ          2000    // Default buzzer frequency in Hz
-#define BUZZER_PWM_RESOLUTION_BITS  8       // Duty resolution
+#define BUZZER_PWM_FREQ_HZ          1000    // Default buzzer frequency in Hz
+#define BUZZER_PWM_RESOLUTION_BITS  10       // Duty resolution
 #define BUZZER_PWM_TIMER_IDX        1       // Timer to use
 #define BUZZER_PWM_CHANNEL_IDX      1       // Channel to use
 

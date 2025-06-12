@@ -26,6 +26,7 @@
 #include "esp3d_styles.h"
 #include "esp3d_tft_ui.h"
 #include "screens/main_screen.h"
+#include "buzzer/esp3d_buzzer.h"
 
 // Images are stored in the flash memory
 extern const lv_image_dsc_t logo;
@@ -70,7 +71,12 @@ void create()
 
     esp3dTftui.set_current_screen(ESP3DScreenType::splash);
     esp3d_log_d("Splash screen created");
-
+    buzzer_tone_t startup_melody[] = {
+       {392, 150}, // G4
+       {523, 150}, // C5
+       {659, 300}  // E5
+    };
+    esp3d_buzzer.play(startup_melody, 4);
     // set a timer to switch to the circular menu after 2 seconds
     lv_timer_create(
         [](lv_timer_t *timer) {
@@ -79,6 +85,7 @@ void create()
         },
         2000,
         screen);
+
 }
 
 }  // namespace splashScreen

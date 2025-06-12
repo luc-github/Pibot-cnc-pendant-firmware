@@ -23,15 +23,12 @@ extern "C" {
 #endif
 
 buzzer_config_t buzzer_cfg = {
-    .pwm_control = BUZZER_PWM_ENABLED_FLAG,
     .output_invert = !BUZZER_ACTIVE_HIGH_FLAG, // Invert if not active-high
     .gpio_num = BUZZER_PIN,
     .timer_idx = BUZZER_PWM_TIMER_IDX,
     .channel_idx = BUZZER_PWM_CHANNEL_IDX,
     .freq_hz = BUZZER_PWM_FREQ_HZ,
     .resolution_bits = BUZZER_PWM_RESOLUTION_BITS,
-    .duty = BUZZER_DEFAULT_DUTY_PCT,
-    .loud_duty = BUZZER_LOUD_DUTY_PCT
 };
 
 #ifdef __cplusplus

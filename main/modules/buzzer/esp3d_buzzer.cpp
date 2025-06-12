@@ -65,21 +65,6 @@ void Buzzer::end()
     esp3d_log_d("Buzzer ended successfully");
 }
 
-esp_err_t Buzzer::set_loud(bool loud)
-{
-    if (!_enabled)
-    {
-        esp3d_log_d("Buzzer is disabled, cannot set loudness");
-        return ESP_ERR_INVALID_STATE;
-    }
-    esp_err_t result = buzzer_set_loud(loud);
-    if (result != ESP_OK)
-    {
-        esp3d_log_e("Failed to set buzzer loudness: %s", esp_err_to_name(result));
-    }
-    return result;
-}
-
 esp_err_t Buzzer::bip(uint16_t freq_hz, uint32_t duration_ms)
 {
     if (!_enabled)

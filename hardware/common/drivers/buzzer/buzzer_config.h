@@ -27,15 +27,12 @@ extern "C" {
  * Must be passed to buzzer_configure() for correct configuration
  */
 typedef struct {
-    bool pwm_control;         // true: LEDC is used, false: GPIO is used
     bool output_invert;       // true: GPIO is inverted, false: GPIO is not inverted
     gpio_num_t gpio_num;      // GPIO pin for buzzer
     int timer_idx;            // LEDC timer index
     int channel_idx;          // LEDC channel index
     uint16_t freq_hz;         // Default PWM frequency in Hz
     uint8_t resolution_bits;  // PWM resolution in bits
-    uint8_t duty;             // Default duty cycle for normal mode (0-100%)
-    uint8_t loud_duty;        // Duty cycle for loud mode (0-100%)
 } buzzer_config_t;
 
 #ifdef __cplusplus

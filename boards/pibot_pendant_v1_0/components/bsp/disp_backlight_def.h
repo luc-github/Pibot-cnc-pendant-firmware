@@ -28,7 +28,7 @@ extern "C" {
                                             .output_invert = !(BACKLIGHT_ACTIVE_HIGH_FLAG),
                                             .gpio_num = BACKLIGHT_PIN,
                                             .timer_idx = BACKLIGHT_PWM_TIMER_IDX,
-                                            .channel_idx = 0,
+                                            .channel_idx = BACKLIGHT_PWM_CHANNEL_IDX,
                                             .duty=BACKLIGHT_DEFAULT_LEVEL_PCT,
                                             .freq_hz = BACKLIGHT_PWM_FREQ_HZ,
                                             .resolution_bits = BACKLIGHT_PWM_RESOLUTION_BITS};

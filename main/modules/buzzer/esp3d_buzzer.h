@@ -29,7 +29,6 @@ class Buzzer final {
   bool begin();
   void end();
   bool enabled( bool fromSettings = false);
-  esp_err_t set_loud(bool loud);
   esp_err_t bip(uint16_t freq_hz, uint32_t duration_ms);
   esp_err_t play(const buzzer_tone_t *tones, uint32_t count);
  private:
