@@ -126,7 +126,6 @@ Below is a comprehensive table of all ESP32 physical pins and their functions in
   - TOUCH_SDA (GPIO32): I2C Data
   - TOUCH_SCL (GPIO25): I2C Clock
   - TOUCH_IRQ (GPIO36): Interrupt
-  - TOUCH_CS (GPIO33): Chip Select (unused)
 
 ### MicroSD Card Interface
 - SPI interface
