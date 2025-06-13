@@ -38,7 +38,7 @@ Below is a table listing all ESP32 GPIO pins from 0 to 39 and their functions in
 | GPIO23 | SD_MOSI | MicroSD Card | Master Out Slave In for microSD |
 | GPIO24 | Not Available | - | GPIO not exposed in ESP32 package |
 | GPIO25 | TOUCH_SCL | Touch Controller | I2C Clock for FT6336U |
-| GPIO26 | Buzzer |  | |
+| GPIO26 | Buzzer (with SC8002B, passive) |  | |
 | GPIO27 | Encoder B | Rotary Encoder | B signal (no pull-up resistors) |
 | GPIO28 | Not Available | - | GPIO not exposed in ESP32 package |
 | GPIO29 | Not Available | - | GPIO not exposed in ESP32 package |
@@ -68,7 +68,7 @@ Below is a comprehensive table of all ESP32 physical pins and their functions in
 | 7 | GPIO32 | TOUCH_SDA | Touch Controller | I2C Data for FT6336U |
 | 8 | GPIO33 | Analog Input | Potentiometer | Center tap of 10K potentiometer |
 | 9 | GPIO25 | TOUCH_SCL | Touch Controller | I2C Clock for FT6336U |
-| 10 | GPIO26 |Buzzer|||
+| 10 | GPIO26 |Buzzer (with SC8002B, passive) |||
 | 11 | GPIO27 | Encoder B | Rotary Encoder | B signal (no pull-up resistors) |
 | 12 | GPIO14 | TFT_CLK | TFT Screen | SPI Clock for display |
 | 13 | GPIO12 | TFT_MISO | TFT Screen | Master In Slave Out for display |
@@ -158,7 +158,10 @@ Below is a comprehensive table of all ESP32 physical pins and their functions in
   - Position 0 (None active - all pins high due to pull-up resistors)
 
 ### Analog Input
-- GPIO26 connected to center tap of 10K potentiometer (3.3V top, GND bottom)
+- GPIO33 connected to center tap of 10K potentiometer (3.3V top, GND bottom)
+
+### Buzzer
+- Passive buzzer connected to GPIO26 with SC8002B audio amplifier
 
 ## Usage Notes
 - The rotary encoder is configured without built-in pull-up resistors
