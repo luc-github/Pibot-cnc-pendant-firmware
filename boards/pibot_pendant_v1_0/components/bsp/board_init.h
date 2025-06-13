@@ -76,16 +76,23 @@ lv_display_t* get_lvgl_display(void);
  */
 _lock_t* get_lvgl_lock(void);
 
-
 // Access functions for indev
+#if (ESP3D_TOUCH_FEATURE)
 lv_indev_t *get_touch_indev(void);
-
-lv_indev_t *get_button_indev(void);
-
-lv_indev_t *get_encoder_indev(void);
-
-lv_indev_t *get_switch_indev(void);
+#endif // ESP3D_TOUCH_FEATURE
 #endif // ESP3D_DISPLAY_FEATURE
+#if (ESP3D_HARDWARE_BUTTONS_FEATURE)
+lv_indev_t *get_button_indev(void);
+#endif // ESP3D_HARDWARE_BUTTONS_FEATURE
+#if (ESP3D_HARDWARE_ENCODER_FEATURE)
+lv_indev_t *get_encoder_indev(void);
+#endif // ESP3D_HARDWARE_ENCODER_FEATURE
+#if (ESP3D_HARDWARE_POTENTIOMETER_FEATURE)
+lv_indev_t *get_switch_indev(void);
+#endif // ESP3D_HARDWARE_SWITCH_FEATURE
+#if (ESP3D_HARDWARE_POTENTIOMETER_FEATURE)
+lv_indev_t *get_potentiometer_indev(void);
+#endif // ESP3D_HARDWARE_POTENTIOMETER_FEATURE
 
 #ifdef __cplusplus
 }

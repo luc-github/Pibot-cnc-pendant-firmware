@@ -74,7 +74,7 @@ static void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px
 
     esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, px_map);
 }
-
+#if (ESP3D_TOUCH_FEATURE)
 // LVGL touch input read callback
 static void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
@@ -92,7 +92,9 @@ static void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
         data->state = LV_INDEV_STATE_RELEASED;
     }
 }
+#endif // ESP3D_TOUCH_FEATURE
 
+#if (ESP3D_HARDWARE_BUTTONS_FEATURE)
 // LVGL button input read callback
 void button_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
@@ -139,6 +141,9 @@ void button_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
     data->state = LV_INDEV_STATE_RELEASED;
 }
 
+#endif // ESP3D_HARDWARE_BUTTONS_FEATURE
+
+#if (ESP3D_HARDWARE_ENCODER_FEATURE)
 // LVGL encoder input read callback
 void encoder_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
@@ -198,7 +203,9 @@ void encoder_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
         data->state = LV_INDEV_STATE_RELEASED;
     }
 }
+#endif // ESP3D_HARDWARE_ENCODER_FEATURE
 
+#if (ESP3D_HARDWARE_SWITCH_FEATURE) 
 // LVGL switch input read callback
 void switch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
@@ -242,7 +249,10 @@ void switch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
         data->state = LV_INDEV_STATE_RELEASED;
     }
 }
+#endif // ESP3D_HARDWARE_SWITCH_FEATURE
 
+
+#if (ESP3D_HARDWARE_POTENTIOMETER_FEATURE)
 // LVGL potentiometer input read callback
 void potentiometer_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
@@ -282,6 +292,7 @@ void potentiometer_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
         data->state = LV_INDEV_STATE_RELEASED;
     }
 }
+#endif // ESP3D_HARDWARE_POTENTIOMETER_FEATURE
 
 // LVGL tick timer callback function
 static void increase_lvgl_tick(void *arg)
@@ -289,9 +300,11 @@ static void increase_lvgl_tick(void *arg)
     lv_tick_inc(LVGL_TICK_PERIOD_MS);
 }
 
+#if (ESP3D_TOUCH_FEATURE)
 // Initialize touch controller
 static esp_err_t init_touch_controller(void)
 {
+
     esp3d_log("Initializing touch controller");
 
     esp_err_t ret = touch_ft6336u_configure(&touch_ft6336u_default_config);
@@ -303,6 +316,7 @@ static esp_err_t init_touch_controller(void)
     esp3d_log("Touch controller initialized successfully");
     return ESP_OK;
 }
+#endif  // ESP3D_TOUCH_FEATURE
 
 // Initialize LVGL
 static esp_err_t init_lvgl(void)
@@ -393,36 +407,40 @@ static esp_err_t init_lvgl(void)
         esp3d_log_e("Register IO callbacks failed");
         return ret;
     }
-
+#if (ESP3D_TOUCH_FEATURE)
     touch_indev = lv_indev_create();
     lv_indev_set_type(touch_indev, LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(touch_indev, touch_read_cb);
     lv_indev_set_display(touch_indev, lvgl_display);
-
+#endif  // ESP3D_TOUCH_FEATURE
+#if (ESP3D_HARDWARE_BUTTONS_FEATURE)
     button_indev = lv_indev_create();
     lv_indev_set_type(button_indev, LV_INDEV_TYPE_BUTTON);
     lv_indev_set_read_cb(button_indev, button_read_cb);
     lv_indev_set_display(button_indev, lvgl_display);
     static lv_point_t button_points[3] = {{0, 0}, {0, 0}, {0, 0}};
     lv_indev_set_button_points(button_indev, button_points);
-
+#endif  // ESP3D_HARDWARE_BUTTONS_FEATURE
+#if (ESP3D_HARDWARE_ENCODER_FEATURE)
     encoder_indev = lv_indev_create();
     lv_indev_set_type(encoder_indev, LV_INDEV_TYPE_ENCODER);
     lv_indev_set_read_cb(encoder_indev, encoder_read_cb);
     lv_indev_set_display(encoder_indev, lvgl_display);
-
+#endif  // ESP3D_HARDWARE_ENCODER_FEATURE
+#if (ESP3D_HARDWARE_SWITCH_FEATURE)
     switch_indev = lv_indev_create();
     lv_indev_set_type(switch_indev, LV_INDEV_TYPE_BUTTON);
     lv_indev_set_read_cb(switch_indev, switch_read_cb);
     lv_indev_set_display(switch_indev, lvgl_display);
     static lv_point_t switch_points[4] = {{0, 0}, {0, 0}, {0, 0}, {0, 0}};
     lv_indev_set_button_points(switch_indev, switch_points);
-
+#endif  // ESP3D_HARDWARE_SWITCH_FEATURE
+#if (ESP3D_HARDWARE_POTENTIOMETER_FEATURE)
     potentiometer_indev = lv_indev_create();
     lv_indev_set_type(potentiometer_indev, LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(potentiometer_indev, potentiometer_read_cb);
     lv_indev_set_display(potentiometer_indev, lvgl_display);
-
+#endif  // ESP3D_HARDWARE_POTENTIOMETER_FEATURE
     esp3d_log("LVGL initialized successfully");
     return ESP_OK;
 }
@@ -447,51 +465,41 @@ _lock_t *get_lvgl_lock(void)
 #endif
 }
 
+#if (ESP3D_TOUCH_FEATURE)
 // Access functions for indev
 lv_indev_t *get_touch_indev(void)
 {
-#if ESP3D_DISPLAY_FEATURE
     return touch_indev;
-#else
-    return NULL;
-#endif
 }
+#endif // ESP3D_TOUCH_FEATURE
 
+#if (ESP3D_HARDWARE_BUTTONS_FEATURE)
 lv_indev_t *get_button_indev(void)
 {
-#if ESP3D_DISPLAY_FEATURE
     return button_indev;
-#else
-    return NULL;
-#endif
 }
+#endif // ESP3D_HARDWARE_BUTTONS_FEATURE
 
+#if (ESP3D_HARDWARE_ENCODER_FEATURE)
 lv_indev_t *get_encoder_indev(void)
 {
-#if ESP3D_DISPLAY_FEATURE
     return encoder_indev;
-#else
-    return NULL;
-#endif
 }
+#endif // ESP3D_HARDWARE_ENCODER_FEATURE
 
+#if (ESP3D_HARDWARE_SWITCH_FEATURE)
 lv_indev_t *get_switch_indev(void)
 {
-#if ESP3D_DISPLAY_FEATURE
     return switch_indev;
-#else
-    return NULL;
-#endif
 }
+#endif // ESP3D_HARDWARE_SWITCH_FEATURE
 
+#if (ESP3D_HARDWARE_POTENTIOMETER_FEATURE)
 lv_indev_t *get_potentiometer_indev(void)
 {
-#if ESP3D_DISPLAY_FEATURE
     return potentiometer_indev;
-#else
-    return NULL;
-#endif
 }
+#endif // ESP3D_HARDWARE_POTENTIOMETER_FEATURE
 
 // Initialize board hardware and subsystems
 esp_err_t board_init(void)
@@ -501,55 +509,63 @@ esp_err_t board_init(void)
     esp3d_log("Initializing %s %s", BOARD_NAME_STR, BOARD_VERSION_STR);
 
 #if ESP3D_DISPLAY_FEATURE
+#if(ESP3D_BRIGHTNESS_CONTROL_FEATURE)
     ret = backlight_configure(&backlight_cfg);
     if (ret != ESP_OK) {
         esp3d_log_e("Backlight initialization failed");
         return ret;
     }
     backlight_set(0);
+#endif  // ESP3D_BRIGHTNESS_CONTROL_FEATURE
 
     ret = ili9341_spi_configure(&ili9341_default_config);
     if (ret != ESP_OK) {
         esp3d_log_e("ILI9341 display initialization failed");
         return ret;
     }
-
+#if (ESP3D_TOUCH_FEATURE)
     ret = init_touch_controller();
     if (ret != ESP_OK) {
         esp3d_log_e("Touch controller initialization failed");
         return ret;
     }
+#endif // ESP3D_TOUCH_FEATURE
 
+#if (ESP3D_HARDWARE_BUTTONS_FEATURE)
     ret = phy_buttons_configure(&phy_buttons_cfg);
     if (ret != ESP_OK) {
         esp3d_log_e("Physical buttons initialization failed");
         return ret;
     }
-
+#endif  // ESP3D_HARDWARE_BUTTONS_FEATURE
+#if (ESP3D_HARDWARE_ENCODER_FEATURE)
     ret = phy_encoder_configure(&phy_encoder_cfg);
     if (ret != ESP_OK) {
         esp3d_log_e("Rotary encoder initialization failed");
         return ret;
     }
-
+#endif  // ESP3D_HARDWARE_ENCODER_FEATURE
+#if( ESP3D_HARDWARE_SWITCH_FEATURE)
     ret = phy_switch_configure(&phy_switch_cfg);
     if (ret != ESP_OK) {
         esp3d_log_e("4-position switch initialization failed");
         return ret;
     }
-
+#endif  // ESP3D_HARDWARE_SWITCH_FEATURE
+#if (ESP3D_HARDWARE_POTENTIOMETER_FEATURE)
     ret = phy_potentiometer_configure(&phy_potentiometer_cfg);
     if (ret != ESP_OK) {
         esp3d_log_e("Potentiometer initialization failed");
         return ret;
     }
-
+#endif // ESP3D_HARDWARE_POTENTIOMETER_FEATURE
+#if(ESP3D_BUZZER_FEATURE)
     ret = buzzer_configure(&buzzer_cfg);
     if (ret != ESP_OK) {
         esp3d_log_e("Buzzer initialization failed");
         return ret;
     }
-
+#endif  // ESP3D_BUZZER_FEATURE
     ret = init_lvgl();
     if (ret != ESP_OK) {
         esp3d_log_e("LVGL initialization failed");

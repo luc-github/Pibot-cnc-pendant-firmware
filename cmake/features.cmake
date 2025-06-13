@@ -125,6 +125,9 @@ if(TFT_UI_SERVICE)
     if(TFT_TOUCH_SERVICE)
         add_compile_options(-DESP3D_TOUCH_FEATURE=1)
     endif()
+    if (TFT_BRIGHTNESS_CONTROL)
+        add_compile_options(-DESP3D_BRIGHTNESS_CONTROL_FEATURE=1)
+    endif()
     # For lvgl_conf to use simple path
     add_compile_options(-DLV_CONF_INCLUDE_SIMPLE=1)
     add_compile_options(-DLV_LVGL_H_INCLUDE_SIMPLE=1)
@@ -132,6 +135,20 @@ if(TFT_UI_SERVICE)
 else()
     add_compile_options(-DLV_CONF_SUPPRESS_DEFINE_CHECK=1)
 endif()
+
+if (HARDWARE_BUTTONS)
+    add_compile_options(-DESP3D_HARDWARE_BUTTONS_FEATURE=1)
+    endif()
+if (HARDWARE_ENCODER)
+    add_compile_options(-DESP3D_HARDWARE_ENCODER_FEATURE=1)
+endif()
+if (HARDWARE_SWITCH)
+    add_compile_options(-DESP3D_HARDWARE_SWITCH_FEATURE=1)
+endif()
+if (HARDWARE_POTENTIOMETER)
+    add_compile_options(-DESP3D_HARDWARE_POTENTIOMETER_FEATURE=1)   
+endif()
+
 
 # ===========================================
 # Storage and Updates
@@ -228,6 +245,7 @@ message(STATUS "${Cyan}WiFi:  ${White}${WIFI_SERVICE} ${ColourReset}")
 message(STATUS "${Cyan}Bluetooth:  ${White}${BT_SERVICE} ${ColourReset}")
 message(STATUS "${Cyan}TFT UI:  ${White}${TFT_UI_SERVICE} ${ColourReset}")
 message(STATUS "${Cyan}TFT Touch:  ${White}${TFT_TOUCH_SERVICE} ${ColourReset}")
+message(STATUS "${Cyan}TFT Brightness Control:  ${White}${TFT_BRIGHTNESS_CONTROL} ${ColourReset}")
 message(STATUS "${Cyan}SD Card:  ${White}${SD_CARD_SERVICE} ${ColourReset}")
 message(STATUS "${Cyan}Update Service:  ${White}${UPDATE_SERVICE} ${ColourReset}")
 message(STATUS "${Cyan}Use FAT instead of LittleFS: ${White}${USE_FAT_INSTEAD_OF_LITTLEFS} ${ColourReset}")
@@ -238,6 +256,39 @@ message(STATUS "${Cyan}MDNS Service:  ${White}${MDNS_SERVICE} ${ColourReset}")
 message(STATUS "${Cyan}Web Services:  ${White}${WEB_SERVICES} ${ColourReset}")
 message(STATUS "${Cyan}Camera Service:  ${White}${CAMERA_SERVICE} ${ColourReset}")
 message(STATUS "${Cyan}Buzzer Service:  ${White}${BUZZER_SERVICE} ${ColourReset}")
+message(STATUS "${Cyan}Rotary encoder Service:  ${White}${HARDWARE_ENCODER} ${ColourReset}")
+message(STATUS "${Cyan}Hardware Buttons:  ${White}${HARDWARE_BUTTONS} ${ColourReset}")
+message(STATUS "${Cyan}Hardware Switch:  ${White}${HARDWARE_SWITCH} ${ColourReset}")
+message(STATUS "${Cyan}Hardware Potentiometer:  ${White}${HARDWARE_POTENTIOMETER} ${ColourReset}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 message(STATUS "${Cyan}WebDav Services:  ${White}${WEBDAV_SERVICES} ${ColourReset}")
 message(STATUS "${Cyan}Telnet Service:  ${White}${TELNET_SERVICE} ${ColourReset}")
 message(STATUS "${Cyan}WebSocket Service:  ${White}${WS_SERVICE} ${ColourReset}")
