@@ -152,8 +152,8 @@ const char* help[] = {
 #if ESP3D_BRIGHTNESS_FEATURE
     "[ESP920](brightness) - display/set brightness level (0-100)",
 #endif  // ESP3D_BRIGHTNESS_FEATURE
-#if ESP3D_USB_SERIAL_FEATURE
-    "[ESP950]<SERIAL/USB>  - display/set usb-serial client output",
+#if ESP3D_USB_SERIAL_FEATURE || ESP3D_BT_FEATURE
+    "[ESP950]<SERIAL/USB/BTSERIAL/BTBLE>  - display/set default client output",
 #endif  // #if ESP3D_USB_SERIAL_FEATURE
 };
 
@@ -241,7 +241,7 @@ const uint cmdlist[] = {
 #if ESP3D_BRIGHTNESS_FEATURE
     920,
 #endif  // ESP3D_BRIGHTNESS_FEATURE 
-#if ESP3D_USB_SERIAL_FEATURE
+#if ESP3D_USB_SERIAL_FEATURE || ESP3D_BT_FEATURE
     950,
 #endif  // #if ESP3D_USB_SERIAL_FEATURE
 };

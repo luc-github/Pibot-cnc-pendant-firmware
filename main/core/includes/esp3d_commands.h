@@ -167,8 +167,10 @@ void ESP290(int cmd_params_pos, ESP3DMessage* msg);
   void ESP901(int cmd_params_pos, ESP3DMessage* msg);
 #if ESP3D_USB_SERIAL_FEATURE
   void ESP902(int cmd_params_pos, ESP3DMessage* msg);
+#endif  // ESP3D_USB_SERIAL_FEATURE
+#if ESP3D_USB_SERIAL_FEATURE || ESP3D_BT_FEATURE
   void ESP950(int cmd_params_pos, ESP3DMessage* msg);
-#endif  // #if ESP3D_USB_SERIAL_FEATURE
+#endif  //  ESP3D_USB_SERIAL_FEATURE || ESP3D_BT_FEATURE
 #if ESP3D_BUZZER_FEATURE
   void ESP910(int cmd_params_pos, ESP3DMessage* msg);
 #endif  // ESP3D_BUZZER_FEATURE
