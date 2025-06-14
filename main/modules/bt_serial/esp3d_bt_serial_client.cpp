@@ -3,11 +3,13 @@
 
   Copyright (c) 2025 Luc Lebosse. All rights reserved.
 */
-#if ESP3D_BT_FEATURE2
+#if ESP3D_BT_FEATURE
 
 #include "esp3d_bt_serial_client.h"
 #include "esp_bt.h"
 #include "esp_bt_main.h"
+#include "esp_gap_bt_api.h"
+#include "esp_bt_device.h"
 #include "esp_spp_api.h"
 #include "esp3d_commands.h"
 #include "esp3d_hal.h"
@@ -15,6 +17,7 @@
 #include "esp3d_settings.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "bt_ble_def.h"
 #include <string>
 
 ESP3DBTSerialClient btSerialClient;

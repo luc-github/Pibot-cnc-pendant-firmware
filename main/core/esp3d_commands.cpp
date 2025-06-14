@@ -26,13 +26,16 @@
 #include "websocket/esp3d_webui_service.h"
 #include "websocket/esp3d_ws_service.h"
 
-
 #if ESP3D_TELNET_FEATURE
 #include "socket_server/esp3d_socket_server.h"
 #endif  // ESP3D_TELNET_FEATURE
 #if ESP3D_USB_SERIAL_FEATURE
 #include "usb_serial/esp3d_usb_serial_client.h"
 #endif  // #if ESP3D_USB_SERIAL_FEATURE
+#if ESP3D_BT_FEATURE
+#include "bt_ble/esp3d_bt_ble_client.h"
+#include "bt_serial/esp3d_bt_serial_client.h"
+#endif  // ESP3D_BT_FEATURE
 
 #if ESP3D_DISPLAY_FEATURE
 #include "rendering/esp3d_rendering_client.h"
@@ -680,6 +683,32 @@ bool ESP3DCommands::dispatch(ESP3DMessage *msg)
             }
             break;
 #endif  // #if ESP3D_USB_SERIAL_FEATURE
+#if ESP3D_BT_FEATURE
+        case ESP3DClientType::bt_serial:
+            esp3d_log("Bluetooth Serial client got message");
+            if (btSerialClient.started())
+            {
+                btSerialClient.process(msg);
+            }
+            else
+            {
+                sendOk = false;
+                esp3d_log_e("btSerialClient not started for message size  %d", msg->size);
+            }
+            break;
+        case ESP3DClientType::bt_ble:
+            esp3d_log("Bluetooth BLE client got message");
+            if (btBleClient.started())
+            {
+                btBleClient.process(msg);
+            }
+            else
+            {
+                sendOk = false;
+                esp3d_log_e("btBleClient not started for message size  %d", msg->size);
+            }
+            break;
+#endif  // ESP3D_BT_FEATURE
 
         case ESP3DClientType::all_clients:
             // msg need to be duplicate for each target
@@ -1303,7 +1332,7 @@ void ESP3DCommands::execute_internal_command(int cmd, int cmd_params_pos, ESP3DM
         case 950:
             ESP950(cmd_params_pos, msg);
             break;
-#endif  //  ESP3D_BT_FEATURE || ESP3D_USB_SERIAL_FEATURE
+#endif  // ESP3D_BT_FEATURE || ESP3D_USB_SERIAL_FEATURE
 #if ESP3D_BRIGHTNESS_CONTROL_FEATURE
         case 920:
             ESP920(cmd_params_pos, msg);

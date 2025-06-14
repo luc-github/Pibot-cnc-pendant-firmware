@@ -3,7 +3,7 @@
 
   Copyright (c) 2025 Luc Lebosse. All rights reserved.
 */
-#if ESP3D_BT_FEATURE1
+#if ESP3D_BT_FEATURE
 
 #include "esp3d_bt_ble_client.h"
 #include "esp_bt.h"
@@ -17,6 +17,8 @@
 #include "esp3d_settings.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "bt_serial_def.h"
+#include <string>
 
 ESP3DBTBleClient btBleClient;
 
@@ -32,11 +34,11 @@ bool ESP3DBTBleClient::configure(esp3d_bt_ble_config_t* config) {
 
 static std::vector<BLEDevice> discovered_ble_devices;
 
-static void esp_ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param) {
-  btBleClient.esp_ble_gap_cb(event, param);
-}
+//static void esp_ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param) {
+ // btBleClient.esp_ble_gap_cb(event, param);
+//}
 
-void ESP3DBTBleClient::esp_ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param)
+/*void ESP3DBTBleClient::esp_ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param)
   switch (event) {
     case ESP_GAP_BLE_SCAN_RESULT_EVT:
       if (param->scan_rst.search_evt == ESP_GAP_SEARCH_INQ_RES_EVT) {
@@ -64,8 +66,9 @@ void ESP3DBTBleClient::esp_ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_
     default:
       break;
   }
-}
-
+}*/
+// Need to use class function inside static function
+/*
 static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
                                         esp_gatt_if_t gatts_if,
                                         esp_ble_gatts_cb_param_t* param) {
@@ -102,9 +105,9 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
     default:
       break;
   }
-}
+}*/
 
-static void gattc_profile_event_handler(esp_gattc_cb_event_t event,
+/*static void gattc_profile_event_handler(esp_gattc_cb_event_t event,
                                         esp_gatt_if_t gattc_if,
                                         esp_ble_gattc_cb_param_t* param) {
   switch (event) {
@@ -131,7 +134,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event,
     default:
       break;
   }
-}
+}*/
 
 ESP3DBTBleClient::ESP3DBTBleClient() {
   _started = false;
@@ -249,25 +252,25 @@ bool ESP3DBTBleClient::begin() {
     return false;
   }
 
-  ret = esp_ble_gatts_register_callback(gatts_profile_event_handler);
+  //ret = esp_ble_gatts_register_callback(gatts_profile_event_handler);
   if (ret != ESP_OK) {
     esp3d_log_e("Failed to register GATT server callback");
     return false;
   }
 
-  ret = esp_ble_gattc_register_callback(gattc_profile_event_handler);
+  //ret = esp_ble_gattc_register_callback(gattc_profile_event_handler);
   if (ret != ESP_OK) {
     esp3d_log_e("Failed to register GATT client callback");
     return false;
   }
 
-  ret = esp_ble_gatts_app_register(0);
+  //ret = esp_ble_gatts_app_register(0);
   if (ret != ESP_OK) {
     esp3d_log_e("Failed to register GATT server app");
     return false;
   }
 
-  ret = esp_ble_gattc_app_register(0);
+  //ret = esp_ble_gattc_app_register(0);
   if (ret != ESP_OK) {
     esp3d_log_e("Failed to register GATT client app");
     return false;
@@ -277,8 +280,8 @@ bool ESP3DBTBleClient::begin() {
   esp3dTftsettings.readString(ESP3DSettingIndex::esp3d_hostname, hostname, sizeof(hostname));
   strncpy(_config->device_name, hostname, sizeof(_config->device_name) - 1);
   _config->device_name[sizeof(_config->device_name) - 1] = '\0';
-  esp_ble_gap_set_device_name(_config->device_name);
-  esp_ble_gap_config_adv_data_raw(NULL, 0); // À configurer selon vos besoins
+ // esp_ble_gap_set_device_name(_config->device_name);
+ // esp_ble_gap_config_adv_data_raw(NULL, 0); // À configurer selon vos besoins
 
   _started = true;
   flush();
@@ -319,7 +322,7 @@ void ESP3DBTBleClient::handle() {
     if (getTxMsgsCount() > 0) {
       ESP3DMessage* msg = popTx();
       if (msg) {
-        esp_ble_gatts_send_response(0, 0, _gatt_handle, msg->size, msg->data, false);
+      //  esp_ble_gatts_send_response(0, 0, _gatt_handle, msg->size, msg->data, false);
         deleteMsg(msg);
       }
     }
@@ -348,12 +351,12 @@ void ESP3DBTBleClient::end() {
     if (pthread_mutex_destroy(&_rx_mutex) != 0) {
       esp3d_log_w("Mutex destruction for rx failed");
     }
-    esp_ble_gatts_app_unregister(0);
+    /*esp_ble_gatts_app_unregister(0);
     esp_ble_gattc_app_unregister(0);
     esp_bluedroid_disable();
     esp_bluedroid_deinit();
     esp_bt_controller_disable();
-    esp_bt_controller_deinit();
+    esp_bt_controller_deinit();*/
   }
   if (_rxBuffer) {
     free(_rxBuffer);
@@ -367,16 +370,17 @@ bool ESP3DBTBleClient::scan(std::vector<BLEDevice>& devices) {
     esp3d_log_e("BT BLE not started");
     return false;
   }
-
+  esp_err_t ret = ESP_OK;
+  //Fixme: why ret is not used?
   discovered_ble_devices.clear();
   _last_scan_results.clear();
-  esp_err_t ret = esp_ble_gap_register_callback(esp_ble_gap_cb);
+  //esp_err_t ret = esp_ble_gap_register_callback(esp_ble_gap_cb);
   if (ret != ESP_OK) {
     esp3d_log_e("Failed to register GAP callback");
     return false;
   }
 
-  esp_ble_scan_params_t scan_params = {
+  /*esp_ble_scan_params_t scan_params = {
       .scan_type = BLE_SCAN_TYPE_ACTIVE,
       .own_addr_type = BLE_ADDR_TYPE_PUBLIC,
       .scan_filter_policy = BLE_SCAN_FILTER_ALLOW_ALL,
@@ -384,13 +388,13 @@ bool ESP3DBTBleClient::scan(std::vector<BLEDevice>& devices) {
       .scan_window = 0x30,
       .scan_duplicate = BLE_SCAN_DUPLICATE_ENABLE
   };
-  ret = esp_ble_gap_set_scan_params(&scan_params);
+  ret = esp_ble_gap_set_scan_params(&scan_params);*/
   if (ret != ESP_OK) {
     esp3d_log_e("Failed to set scan params");
     return false;
   }
 
-  ret = esp_ble_gap_start_scanning(_config->scan_duration);
+  //ret = esp_ble_gap_start_scanning(_config->scan_duration);
   if (ret != ESP_OK) {
     esp3d_log_e("Failed to start scanning");
     return false;

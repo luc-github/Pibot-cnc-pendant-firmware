@@ -5,13 +5,15 @@
 */
 #pragma once
 
-#if ESP3D_BT_FEATURE1
+#if ESP3D_BT_FEATURE
 
 #include <pthread.h>
 #include <vector>
 #include "esp3d_client.h"
 #include "esp_bt.h"
 #include "esp3d_bt_ble_config.h"
+#include <string>
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,7 +41,7 @@ class ESP3DBTBleClient : public ESP3DClient {
   bool getDeviceAddress(const std::string& name, esp_bd_addr_t& addr);
   bool connect(esp_bd_addr_t addr);
   bool isConnected() { return _gatt_handle != 0; }
-  void esp_ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param);
+  //void esp_ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param);
 
  private:
   esp3d_bt_ble_config_t* _config;
