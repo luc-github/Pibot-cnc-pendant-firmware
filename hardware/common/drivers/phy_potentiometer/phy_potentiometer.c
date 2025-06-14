@@ -117,7 +117,7 @@ esp_err_t phy_potentiometer_read(uint32_t *value)
         esp3d_log_e("Failed to convert ADC raw to voltage: %d", ret);
         return ret;
     }
-    //esp3d_log_d("Potentiometer: raw=%ld, voltage=%d mV", *value, voltage);
+    //esp3d_log("Potentiometer: raw=%ld, voltage=%d mV", *value, voltage);
 
     return ESP_OK;
 }

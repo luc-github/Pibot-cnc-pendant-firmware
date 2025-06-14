@@ -125,7 +125,7 @@ void button_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
             press_start_time[i] = current_time;
             button_events[i].press_duration = 0;
             lv_obj_send_event(active_screen, LV_EVENT_PRESSED, &button_events[i]);
-            esp3d_log_d("Button %d pressed (btn_id: %d)", i + 1, i);
+            esp3d_log("Button %d pressed (btn_id: %d)", i + 1, i);
             last_states[i] = states[i];
             return;
         } else if (!states[i] && last_states[i]) {
@@ -133,7 +133,7 @@ void button_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
             data->state = LV_INDEV_STATE_RELEASED;
             button_events[i].press_duration = current_time - press_start_time[i];
             lv_obj_send_event(active_screen, LV_EVENT_RELEASED, &button_events[i]);
-            esp3d_log_d("Button %d released (btn_id: %d, duration: %ld ms)", i + 1, i, button_events[i].press_duration);
+            esp3d_log("Button %d released (btn_id: %d, duration: %ld ms)", i + 1, i, button_events[i].press_duration);
             last_states[i] = states[i];
             return;
         }
@@ -190,7 +190,7 @@ void encoder_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
             int32_t abs_clicks = abs(adjusted_clicks);
             for (int32_t i = 0; i < abs_clicks; i++) {
                 lv_obj_send_event(active_screen, LV_EVENT_KEY, &encoder_event);
-                esp3d_log_d("LVGL encoder: key=%ld (clicks: %ld, adjusted_clicks: %ld, interval: %lu)",
+                esp3d_log("LVGL encoder: key=%ld (clicks: %ld, adjusted_clicks: %ld, interval: %lu)",
                            data->key, clicks, adjusted_clicks, time_since_last);
             }
             last_output_time = current_time;
@@ -232,13 +232,13 @@ void switch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
             if (states[i] && !last_states[i]) {
                 data->state = LV_INDEV_STATE_PRESSED;
                 lv_obj_send_event(active_screen, LV_EVENT_PRESSED, &switch_events[i]);
-                esp3d_log_d("Switch button %d pressed (btn_id: %d)", i, i);
+                esp3d_log("Switch button %d pressed (btn_id: %d)", i, i);
                 last_states[i] = states[i];
                 return;
             } else if (!states[i] && last_states[i]) {
                 data->state = LV_INDEV_STATE_RELEASED;
                 lv_obj_send_event(active_screen, LV_EVENT_RELEASED, &switch_events[i]);
-                esp3d_log_d("Switch button %d released (btn_id: %d)", i, i);
+                esp3d_log("Switch button %d released (btn_id: %d)", i, i);
                 last_states[i] = states[i];
                 return;
             }
@@ -281,7 +281,7 @@ void potentiometer_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
             potentiometer_event.steps = mapped_value;
             data->state = LV_INDEV_STATE_PRESSED;
             lv_obj_send_event(active_screen, LV_EVENT_VALUE_CHANGED, &potentiometer_event);
-            esp3d_log_d("Potentiometer: adc_value=%ld, mapped_value=%ld, delta=%ld", 
+            esp3d_log("Potentiometer: adc_value=%ld, mapped_value=%ld, delta=%ld", 
                        adc_value, mapped_value, delta);
             last_value = mapped_value;
         } else {

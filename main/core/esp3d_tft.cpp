@@ -156,6 +156,9 @@ bool ESP3DTft::begin() {
     success = esp3dTftnetwork.begin();
   }
 #endif  // ESP3D_WIFI_FEATURE
+   esp3d_log("Freeheap %u, %u", (unsigned int)esp_get_free_heap_size(),
+            (unsigned int)heap_caps_get_free_size(MALLOC_CAP_8BIT |
+                                                  MALLOC_CAP_INTERNAL));
   return success && successFs && successSd;
 }
 

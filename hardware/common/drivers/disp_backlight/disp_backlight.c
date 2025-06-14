@@ -47,13 +47,13 @@ esp_err_t backlight_configure(const backlight_config_t *config) {
         return ESP_ERR_INVALID_ARG;
     }
 
-    esp3d_log_d("Configuring backlight: PWM=%d, GPIO=%d, Invert=%d, Freq=%d Hz, Res=%d bits, Timer=%d, Channel=%d",
+    esp3d_log("Configuring backlight: PWM=%d, GPIO=%d, Invert=%d, Freq=%d Hz, Res=%d bits, Timer=%d, Channel=%d",
               backlight_config.pwm_control, backlight_config.gpio_num, backlight_config.output_invert,
               backlight_config.freq_hz, backlight_config.resolution_bits, backlight_config.timer_idx, backlight_config.channel_idx);
 
     if (backlight_config.pwm_control) {
         // Configure LED (Backlight) pin as PWM for Brightness control.
-        esp3d_log_d("Configuring backlight with PWM control");
+        esp3d_log("Configuring backlight with PWM control");
         const ledc_channel_config_t LCD_backlight_channel = {
             .gpio_num = backlight_config.gpio_num,
             .speed_mode = LEDC_LOW_SPEED_MODE,
@@ -84,7 +84,7 @@ esp_err_t backlight_configure(const backlight_config_t *config) {
         }
     } else {
         // Configure GPIO for output
-        esp3d_log_d("Configuring backlight with GPIO control");
+        esp3d_log("Configuring backlight with GPIO control");
         esp_rom_gpio_pad_select_gpio(backlight_config.gpio_num);
         if (gpio_set_direction(backlight_config.gpio_num, GPIO_MODE_OUTPUT) != ESP_OK) {
             esp3d_log_e("Failed to set GPIO direction");
@@ -98,7 +98,7 @@ esp_err_t backlight_configure(const backlight_config_t *config) {
         }
     }
 
-    esp3d_log_d("Backlight configured successfully");
+    esp3d_log("Backlight configured successfully");
     _is_initialized = true;
     return ESP_OK;
 }
@@ -132,13 +132,13 @@ esp_err_t backlight_set(int brightness_percent) {
 
     backlight_config.duty = brightness;
 
-    esp3d_log_d("Setting LCD backlight: %d%%", backlight_config.duty);
+    esp3d_log("Setting LCD backlight: %d%%", backlight_config.duty);
 
     if (backlight_config.pwm_control) {
         uint32_t max_duty = (1 << backlight_config.resolution_bits) - 1; // 2^resolution_bits - 1
         uint32_t duty_cycle = (max_duty * backlight_config.duty) / 100;
 
-        esp3d_log_d("PWM: Max duty=%lu, Duty cycle=%lu", max_duty, duty_cycle);
+        esp3d_log("PWM: Max duty=%lu, Duty cycle=%lu", max_duty, duty_cycle);
 
         esp_err_t ret = ledc_set_duty(LEDC_LOW_SPEED_MODE, backlight_config.channel_idx, duty_cycle);
         if (ret != ESP_OK) {
@@ -158,7 +158,7 @@ esp_err_t backlight_set(int brightness_percent) {
         }
     }
 
-    esp3d_log_d("LCD backlight set successfully");
+    esp3d_log("LCD backlight set successfully");
     return ESP_OK;
 }
 

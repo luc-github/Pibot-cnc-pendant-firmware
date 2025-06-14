@@ -20,8 +20,8 @@ extern "C" {
     .discoverable = true,
     .connectable = true,
     .scan_duration = 10,
-    .rx_buffer_size = 1024,
-    .tx_buffer_size = 1024
+    .rx_buffer_size = 512,
+    .tx_buffer_size = 512
 };
 #ifdef __cplusplus
 } /* extern "C" */

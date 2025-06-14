@@ -103,7 +103,7 @@ esp_err_t phy_switch_read(bool *states)
     // Loguer les niveaux bruts des pins
     #if TFT_LOG_LEVEL >= ESP_LOG_DEBUG
     if (changed) {
-        esp3d_log_d("Switch pins (34,39,35): %d%d%d", 
+        esp3d_log("Switch pins (34,39,35): %d%d%d", 
                     prevstate[0], 
                     prevstate[1], 
                     prevstate[2]);
@@ -127,7 +127,7 @@ esp_err_t phy_switch_read(bool *states)
         if ((current_time - last_change_time) >= required_duration) {
             last_key_code = new_key_code;
             last_change_time = current_time;
-            esp3d_log_d("Switch state changed to key code %ld", new_key_code);
+            esp3d_log("Switch state changed to key code %ld", new_key_code);
         }
     }
 

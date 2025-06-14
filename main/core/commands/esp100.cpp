@@ -184,7 +184,7 @@ void ESP3DCommands::ESP100(int cmd_params_pos, ESP3DMessage *msg)
         }
 #    endif  // ESP3D_AUTHENTICATION_FEATURE
 #    if ESP3D_WIFI_FEATURE
-        esp3d_log_d("Save ssid");
+        esp3d_log("Save ssid");
         if (esp3dTftsettings.isValidStringSetting(wifi_id.c_str(),
                                                   ESP3DSettingIndex::esp3d_sta_ssid))
         {
@@ -203,7 +203,7 @@ void ESP3DCommands::ESP100(int cmd_params_pos, ESP3DMessage *msg)
 #    endif  // ESP3D_WIFI_FEATURE
 
 #    if ESP3D_BT_FEATURE
-        esp3d_log_d("Save btserial");
+        esp3d_log("Save btserial");
         if (esp3dTftsettings.isValidStringSetting(btserial_id.c_str(),
                                                   ESP3DSettingIndex::esp3d_btserial_id))
         {
@@ -220,7 +220,7 @@ void ESP3DCommands::ESP100(int cmd_params_pos, ESP3DMessage *msg)
             hasError  = true;
             error_msg = "Invalid parameter";
         }
-        esp3d_log_d("Save btble");
+        esp3d_log("Save btble");
         if (esp3dTftsettings.isValidStringSetting(btble_id.c_str(),
                                                   ESP3DSettingIndex::esp3d_btble_id))
         {

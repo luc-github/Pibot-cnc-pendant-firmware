@@ -876,61 +876,74 @@ bool ESP3DCommands::hasTag(ESP3DMessage *msg, uint start, const char *label)
         return false;
     }
     std::string lbl = label;
-    // esp3d_log("checking message for tag %s", label);
+    esp3d_log("checking message for tag %s", label);
     uint lenLabel = strlen(label);
     lbl += "=";
     lbl = get_param(msg, start, lbl.c_str());
     if (lbl.length() != 0)
     {
-        // esp3d_log("Label is used with parameter %s", lbl.c_str());
+        esp3d_log("Label is used with parameter %s", lbl.c_str());
         // make result uppercase
         esp3d_string::str_toUpperCase(&lbl);
         return (lbl == "YES" || lbl == "1" || lbl == "TRUE");
     }
+    
     bool prevCharIsEscaped = false;
     bool prevCharIsspace   = true;
-    // esp3d_log("Checking  label as tag");
+    esp3d_log("Checking label as tag");
+    
     for (uint i = start; i < msg->size; i++)
     {
         char c = char(msg->data[i]);
-        // esp3d_log("%c", c);
+        esp3d_log("%c", c);
+        
         if (c == label[0] && prevCharIsspace)
         {
             uint p = 0;
-            while (i < msg->size && p < lenLabel && c == label[p])
+            uint startPos = i; // Save the starting position of the match
+            
+            // Check if the label matches
+            while (i < msg->size && p < lenLabel && char(msg->data[i]) == label[p])
             {
                 i++;
                 p++;
-                if (i < msg->size)
-                {
-                    c = char(msg->data[i]);
-                    // esp3d_log("%c vs %c", c, char(msg->data[i]));
-                }
+                esp3d_log("Matching %c vs %c", (p < lenLabel) ? label[p-1] : '?', 
+                           (i <= msg->size) ? char(msg->data[i-1]) : '?');
             }
+            
             if (p == lenLabel)
             {
-                // end of params
-                if (i == msg->size || std::isspace(c))
+                // Verify if the next character is a space or end of message
+                if (i == msg->size || std::isspace(char(msg->data[i])))
                 {
-                    // esp3d_log("label %s found", label);
+                    esp3d_log("label %s found", label);
                     return true;
                 }
             }
-            if (std::isspace(c) && !prevCharIsEscaped)
-            {
-                prevCharIsspace = true;
-            }
-            if (c == '\\')
-            {
-                prevCharIsEscaped = true;
-            }
-            else
-            {
-                prevCharIsEscaped = false;
-            }
+            
+            // Failure case: reset i to the start position
+            i = startPos;
+        }
+        
+        // Update the previous character state
+        if (std::isspace(c) && !prevCharIsEscaped)
+        {
+            prevCharIsspace = true;
+        } else {
+            prevCharIsspace = false;
+        }
+        
+        if (c == '\\')
+        {
+            prevCharIsEscaped = true;
+        }
+        else
+        {
+            prevCharIsEscaped = false;
         }
     }
-    // esp3d_log("label %s not found", label);
+    
+    esp3d_log("label %s not found", label);
     return false;
 }
 
@@ -1033,7 +1046,7 @@ const char *ESP3DCommands::get_clean_param(ESP3DMessage *msg, uint start)
         }
         if (std::isspace(c) && !prevCharIsEscaped)
         {
-            // esp3d_log("testing *%s*", value.c_str());
+            esp3d_log("testing *%s*", value.c_str());
             if (value == "json" || esp3d_string::startsWith(value.c_str(), "json=")
                 || esp3d_string::startsWith(value.c_str(), "pwd="))
             {

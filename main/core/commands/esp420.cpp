@@ -234,6 +234,19 @@ void ESP3DCommands::ESP420(int cmd_params_pos, ESP3DMessage *msg) {
       return;
     }
   }
+#if ESP3D_BT_FEATURE
+  else if (esp3dCommands.getOutputClient() == ESP3DClientType::bt_serial) {
+    if (!dispatchIdValue(json, "output", "bluetooth serial", target,
+                         requestId)) {
+      return;
+    }
+  }
+  else if (esp3dCommands.getOutputClient() == ESP3DClientType::bt_ble) {
+    if (!dispatchIdValue(json, "output", "bluetooth ble", target, requestId)) {
+      return;
+    }
+  }
+  #endif  // ESP3D_BT_FEATURE
 #if ESP3D_USB_SERIAL_FEATURE
   else if (esp3dCommands.getOutputClient() == ESP3DClientType::usb_serial) {
     if (!dispatchIdValue(json, "output", "usb port", target, requestId)) {

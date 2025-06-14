@@ -18,7 +18,7 @@
 // This function initializes the LVGL UI and creates the application UI
 void create_application(void)
 {
-    esp3d_log_d("Creating LVGL application UI");
+    esp3d_log("Creating LVGL application UI");
 
     lv_display_t *display = get_lvgl_display();
     if (!display)
@@ -30,7 +30,7 @@ void create_application(void)
     // Display the splash screen
     splashScreen::create();
 
-    esp3d_log_d("LVGL application UI created");
+    esp3d_log("LVGL application UI created");
     // Set up a timer to turn on the screen after a delay
     lv_timer_t *screen_on_delay_timer = lv_timer_create(
         [](lv_timer_t *timer) {

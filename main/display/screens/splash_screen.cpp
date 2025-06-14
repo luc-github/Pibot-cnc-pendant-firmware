@@ -37,10 +37,10 @@ namespace splashScreen {
 void create()
 {
     esp3dTftui.set_current_screen(ESP3DScreenType::none);
-    esp3d_log_d("Create splash screen");
+    esp3d_log("Create splash screen");
     if (ESP3D_SPLASH_DELAY == 0)
     {
-        esp3d_log_d("Splash screen disabled, switching to main screen immediately");
+        esp3d_log("Splash screen disabled, switching to main screen immediately");
         mainScreen::create();
         return;
     }
@@ -56,7 +56,7 @@ void create()
     // delete the previous screen if it exists
     if (lv_obj_is_valid(current_screen))
     {
-        esp3d_log_d("already a screen, deleting it");
+        esp3d_log("already a screen, deleting it");
         lv_obj_del(current_screen);
     }
     // create image on screen
@@ -70,7 +70,7 @@ void create()
     lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
 
     esp3dTftui.set_current_screen(ESP3DScreenType::splash);
-    esp3d_log_d("Splash screen created");
+    esp3d_log("Splash screen created");
     buzzer_tone_t startup_melody[] = {
      
         {NOTE_E5, 150},   // ta

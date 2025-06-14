@@ -53,23 +53,23 @@ bool Buzzer::begin()
     enabled(true);
     if (!_enabled)
     {
-        esp3d_log_d("Buzzer is disabled in settings");
+        esp3d_log("Buzzer is disabled in settings");
     }
-    esp3d_log_d("Buzzer started successfully");
+    esp3d_log("Buzzer started successfully");
     return true;
 }
 
 void Buzzer::end()
 {
     _enabled = false;
-    esp3d_log_d("Buzzer ended successfully");
+    esp3d_log("Buzzer ended successfully");
 }
 
 esp_err_t Buzzer::bip(uint16_t freq_hz, uint32_t duration_ms)
 {
     if (!_enabled)
     {
-        esp3d_log_d("Buzzer is disabled, cannot play bip");
+        esp3d_log("Buzzer is disabled, cannot play bip");
         return ESP_ERR_INVALID_STATE;
     }
     esp_err_t result = buzzer_bip(freq_hz, duration_ms);
@@ -84,7 +84,7 @@ esp_err_t Buzzer::play(const buzzer_tone_t *tones, uint32_t count)
 {
     if (!_enabled)
     {
-        esp3d_log_d("Buzzer is disabled, cannot play tones");
+        esp3d_log("Buzzer is disabled, cannot play tones");
         return ESP_ERR_INVALID_STATE;
     }
     esp_err_t result = buzzer_play(tones, count);

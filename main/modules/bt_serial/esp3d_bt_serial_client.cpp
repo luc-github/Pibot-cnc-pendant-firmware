@@ -32,16 +32,64 @@ bool ESP3DBTSerialClient::configure(esp3d_bt_serial_config_t* config) {
   return false;
 }
 
+// For the scan results
 static std::vector<BTDevice> discovered_devices;
+// Helper function to get the device address as a string
+char *ESP3DBTSerialClient::bda2str(uint8_t * bda, char *str, size_t size)
+{
+    if (bda == NULL || str == NULL || size < 18) {
+        return NULL;
+    }
 
+    uint8_t *p = bda;
+    sprintf(str, "%02x:%02x:%02x:%02x:%02x:%02x",
+            p[0], p[1], p[2], p[3], p[4], p[5]);
+    return str;
+}
+// Helper to get the device name from EIR data
+bool ESP3DBTSerialClient::get_name_from_eir(uint8_t *eir, char *bdname, uint8_t *bdname_len)
+{
+    uint8_t *rmt_bdname = NULL;
+    uint8_t rmt_bdname_len = 0;
+
+    if (!eir) {
+        return false;
+    }
+
+    rmt_bdname = esp_bt_gap_resolve_eir_data(eir, ESP_BT_EIR_TYPE_CMPL_LOCAL_NAME, &rmt_bdname_len);
+    if (!rmt_bdname) {
+        rmt_bdname = esp_bt_gap_resolve_eir_data(eir, ESP_BT_EIR_TYPE_SHORT_LOCAL_NAME, &rmt_bdname_len);
+    }
+
+    if (rmt_bdname) {
+        if (rmt_bdname_len > ESP_BT_GAP_MAX_BDNAME_LEN) {
+            rmt_bdname_len = ESP_BT_GAP_MAX_BDNAME_LEN;
+        }
+
+        if (bdname) {
+            memcpy(bdname, rmt_bdname, rmt_bdname_len);
+            bdname[rmt_bdname_len] = '\0';
+        }
+        if (bdname_len) {
+            *bdname_len = rmt_bdname_len;
+        }
+        return true;
+    }
+
+    return false;
+}
+
+// Callback function for Bluetooth GAP events
 static void esp_bt_gap_callback(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t* param) {
   btSerialClient.esp_bt_gap_cb(event, param);
 }
 
+// Callback function for Bluetooth SPP events
 static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t* param) {
   btSerialClient.sppCallback(event, param);
 }
 
+// Handle Bluetooth SPP events
 void ESP3DBTSerialClient::sppCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t* param) {
   switch (event) {
     case ESP_SPP_SRV_OPEN_EVT:
@@ -74,29 +122,7 @@ void ESP3DBTSerialClient::sppCallback(esp_spp_cb_event_t event, esp_spp_cb_param
   }
 }
 
-// Helper function to parse EIR data and extract device name
-static bool get_name_from_eir(uint8_t* eir, char* name, uint8_t len) {
-  if (!eir || len == 0) return false;
-
-  uint8_t* ptr = eir;
-  while (ptr < eir + len) {
-    uint8_t field_len = ptr[0];
-    if (field_len == 0) break; // End of EIR data
-    uint8_t field_type = ptr[1];
-
-    if (field_type == ESP_BT_EIR_TYPE_CMPL_LOCAL_NAME || 
-        field_type == ESP_BT_EIR_TYPE_SHORT_LOCAL_NAME) {
-      uint8_t name_len = field_len - 1; // Subtract type byte
-      if (name_len > 31) name_len = 31; // Truncate to fit buffer
-      memcpy(name, ptr + 2, name_len);
-      name[name_len] = '\0';
-      return true;
-    }
-    ptr += field_len + 1;
-  }
-  return false;
-}
-
+// Handle Bluetooth GAP events
 void ESP3DBTSerialClient::esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t* param) {
   switch (event) {
     case ESP_BT_GAP_DISC_RES_EVT: {
@@ -108,7 +134,7 @@ void ESP3DBTSerialClient::esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_
           uint8_t* eir = (uint8_t*)param->disc_res.prop[i].val;
           uint8_t len = param->disc_res.prop[i].len;
           char name[32] = {0};
-          if (get_name_from_eir(eir, name, len)) {
+          if (get_name_from_eir(eir, name, &len)) {
             device.name = name;
           }
         }
@@ -131,6 +157,7 @@ void ESP3DBTSerialClient::esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_
   }
 }
 
+// Constructor
 ESP3DBTSerialClient::ESP3DBTSerialClient() {
   _started = false;
   _data = NULL;
@@ -140,10 +167,12 @@ ESP3DBTSerialClient::ESP3DBTSerialClient() {
   _rxBufferPos = 0;
 }
 
+// Destructor
 ESP3DBTSerialClient::~ESP3DBTSerialClient() {
   end();
 }
 
+// Process incoming messages
 void ESP3DBTSerialClient::process(ESP3DMessage* msg) {
   esp3d_log("Processing message for BT Serial");
   if (!msg) {
@@ -166,10 +195,13 @@ void ESP3DBTSerialClient::process(ESP3DMessage* msg) {
   }
 }
 
+//Function to check if a character is the end character
+// Note: do we need to change this to Macro?
 bool ESP3DBTSerialClient::isEndChar(uint8_t ch) {
   return ((char)ch == '\n');
 }
 
+// Begin the Bluetooth Serial Client
 bool ESP3DBTSerialClient::begin() {
   end();
   configure(&esp3dBTSerialConfig);
@@ -254,7 +286,7 @@ bool ESP3DBTSerialClient::begin() {
   esp_spp_cfg_t spp_config = {
       .mode = ESP_SPP_MODE_CB,
       .enable_l2cap_ertm = false,
-      .tx_buffer_size = 0,
+      .tx_buffer_size =  (uint16_t)_config->tx_buffer_size,
   };
   ret = esp_spp_enhanced_init(&spp_config);
   if (ret != ESP_OK) {

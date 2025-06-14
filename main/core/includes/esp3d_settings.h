@@ -26,200 +26,202 @@ extern "C" {
 #endif
 #include "nvs.h"
 
-const uint32_t SupportedBaudList[] = {9600,   19200,  38400,  57600,  74880,
-                                      115200, 230400, 250000, 500000, 921600};
+const uint32_t SupportedBaudList[] =
+    {9600, 19200, 38400, 57600, 74880, 115200, 230400, 250000, 500000, 921600};
 #if ESP3D_TIMESTAMP_FEATURE
 extern const uint8_t SupportedTimeZonesSize;
-extern const char* SupportedTimeZones[];
+extern const char *SupportedTimeZones[];
 #define SIZE_OF_SERVER_URL 128
-#define SIZE_OF_TIMEZONE 7
+#define SIZE_OF_TIMEZONE   7
 #endif  // ESP3D_TIMESTAMP_FEATURE
 
-#define SIZE_OF_BT_SERIAL_ID 32
-#define SIZE_OF_BT_SERIAL_PIN 4
-#define SIZE_OF_BT_BLE_ID 32
-#define SIZE_OF_BT_BLE_PASSKEY 16
-#define SIZE_OF_SCRIPT 255
-#define SIZE_OF_SETTING_VERSION 25
-#define SIZE_OF_SETTING_SSID_ID 32
+#define SIZE_OF_BT_SERIAL_ID     32
+#define SIZE_OF_BT_SERIAL_PIN    4
+#define SIZE_OF_BT_BLE_ID        32
+#define SIZE_OF_BT_BLE_PASSKEY   16
+#define SIZE_OF_SCRIPT           255
+#define SIZE_OF_SETTING_VERSION  25
+#define SIZE_OF_SETTING_SSID_ID  32
 #define SIZE_OF_SETTING_SSID_PWD 64
 #define SIZE_OF_SETTING_HOSTNAME 32
-#define SIZE_OF_UI_LANGUAGE 30
+#define SIZE_OF_UI_LANGUAGE      30
 #if ESP3D_NOTIFICATIONS_FEATURE
 #define SIZE_OF_SETTING_NOFIFICATION_T1 64
 #define SIZE_OF_SETTING_NOFIFICATION_T2 64
 #define SIZE_OF_SETTING_NOFIFICATION_TS 128
 #endif  // ESP3D_NOTIFICATIONS_FEATURE
 #define SIZE_OF_LOCAL_PASSWORD 20
-#define HIDDEN_SETTING_VALUE "********"
+#define HIDDEN_SETTING_VALUE   "********"
 // do not change the order of the enum
 // using #if to keep consistency if user update feature
-enum class ESP3DSettingIndex : uint16_t {
-  esp3d_version,
-  esp3d_baud_rate,
-  esp3d_spi_divider,
-  esp3d_radio_boot_mode,
-  esp3d_radio_mode,
-  esp3d_fallback_mode,
-  #if ESP3D_WIFI_FEATURE
-  esp3d_sta_ssid,
-  esp3d_sta_password,
-  esp3d_sta_ip_mode,
-  esp3d_sta_ip_static,
-  esp3d_sta_mask_static,
-  esp3d_sta_gw_static,
-  esp3d_sta_dns_static,
-  esp3d_ap_ssid,
-  esp3d_ap_password,
-  esp3d_ap_ip_static,
-  esp3d_ap_channel,
-  #endif  // ESP3D_WIFI_FEATURE
-  esp3d_hostname,
-  #if ESP3D_WIFI_FEATURE
-  esp3d_http_port,
-  esp3d_http_on,
-  #endif  // ESP3D_WIFI_FEATURE
-  esp3d_setup,
-  esp3d_target_firmware,
-  #if ESP3D_SD_CARD_FEATURE
-  esp3d_check_update_on_sd,
-  #endif  // ESP3D_SD_CARD_FEATURE
-  #if ESP3D_NOTIFICATIONS_FEATURE
-  esp3d_notification_type,
-  esp3d_auto_notification,
-  esp3d_notification_token_1,
-  esp3d_notification_token_2,
-  esp3d_notification_token_setting,
-  #endif  // ESP3D_NOTIFICATIONS_FEATURE
-  #if ESP3D_WIFI_FEATURE
-  #if ESP3D_TELNET_FEATURE
-  esp3d_socket_port,
-  esp3d_socket_on,
-  #endif  // ESP3D_TELNET_FEATURE
-  #if ESP3D_WEBSOCKET_FEATURE
-  esp3d_ws_on,
-  #endif  // ESP3D_WEBSOCKET_FEATURE
-  #endif // ESP3D_WIFI_FEATURE
-  #if ESP3D_USB_SERIAL_FEATURE
-  esp3d_usb_serial_baud_rate,
-  #endif  // #if ESP3D_USB_SERIAL_FEATURE
-  esp3d_output_client,
-  #if ESP3D_AUTHENTICATION_FEATURE
-  esp3d_admin_password,
-  esp3d_user_password,
-  esp3d_session_timeout,
-  #endif  // ESP3D_AUTHENTICATION_FEATURE
-  esp3d_ui_language,
-  esp3d_jog_type,
-  esp3d_polling_on,
-  esp3d_inverved_x,
-  esp3d_inverved_y,
-  esp3d_workspace_width,
-  esp3d_workspace_depth,
-  esp3d_extensions,         // json setting, in preferences.json
-  esp3d_pause_script,
-  esp3d_stop_script,
-  esp3d_resume_script,
+enum class ESP3DSettingIndex : uint16_t
+{
+    esp3d_version,
+    esp3d_baud_rate,
+    esp3d_spi_divider,
+    esp3d_radio_boot_mode,
+    esp3d_radio_mode,
+    esp3d_fallback_mode,
+#if ESP3D_WIFI_FEATURE
+    esp3d_sta_ssid,
+    esp3d_sta_password,
+    esp3d_sta_ip_mode,
+    esp3d_sta_ip_static,
+    esp3d_sta_mask_static,
+    esp3d_sta_gw_static,
+    esp3d_sta_dns_static,
+    esp3d_ap_ssid,
+    esp3d_ap_password,
+    esp3d_ap_ip_static,
+    esp3d_ap_channel,
+#endif  // ESP3D_WIFI_FEATURE
+    esp3d_hostname,
+#if ESP3D_WIFI_FEATURE
+    esp3d_http_port,
+    esp3d_http_on,
+#endif  // ESP3D_WIFI_FEATURE
+    esp3d_setup,
+    esp3d_target_firmware,
+#if ESP3D_SD_CARD_FEATURE
+    esp3d_check_update_on_sd,
+#endif  // ESP3D_SD_CARD_FEATURE
+#if ESP3D_NOTIFICATIONS_FEATURE
+    esp3d_notification_type,
+    esp3d_auto_notification,
+    esp3d_notification_token_1,
+    esp3d_notification_token_2,
+    esp3d_notification_token_setting,
+#endif  // ESP3D_NOTIFICATIONS_FEATURE
+#if ESP3D_WIFI_FEATURE
+#if ESP3D_TELNET_FEATURE
+    esp3d_socket_port,
+    esp3d_socket_on,
+#endif  // ESP3D_TELNET_FEATURE
+#if ESP3D_WEBSOCKET_FEATURE
+    esp3d_ws_on,
+#endif  // ESP3D_WEBSOCKET_FEATURE
+#endif  // ESP3D_WIFI_FEATURE
+#if ESP3D_USB_SERIAL_FEATURE
+    esp3d_usb_serial_baud_rate,
+#endif  // #if ESP3D_USB_SERIAL_FEATURE
+    esp3d_output_client,
+#if ESP3D_AUTHENTICATION_FEATURE
+    esp3d_admin_password,
+    esp3d_user_password,
+    esp3d_session_timeout,
+#endif  // ESP3D_AUTHENTICATION_FEATURE
+    esp3d_ui_language,
+    esp3d_jog_type,
+    esp3d_polling_on,
+    esp3d_inverved_x,
+    esp3d_inverved_y,
+    esp3d_workspace_width,
+    esp3d_workspace_depth,
+    esp3d_extensions,  // json setting, in preferences.json
+    esp3d_pause_script,
+    esp3d_stop_script,
+    esp3d_resume_script,
 #if ESP3D_TIMESTAMP_FEATURE
-  esp3d_use_internet_time,
-  esp3d_time_server1,
-  esp3d_time_server2,
-  esp3d_time_server3,
-  esp3d_timezone,
-  #endif  // ESP3D_TIMESTAMP_FEATURE
-  #if ESP3D_WEBDAV_SERVICES_FEATURE
-  esp3d_webdav_on,
-  #endif  // ESP3D_WEBDAV_SERVICES_FEATURE
+    esp3d_use_internet_time,
+    esp3d_time_server1,
+    esp3d_time_server2,
+    esp3d_time_server3,
+    esp3d_timezone,
+#endif  // ESP3D_TIMESTAMP_FEATURE
+#if ESP3D_WEBDAV_SERVICES_FEATURE
+    esp3d_webdav_on,
+#endif  // ESP3D_WEBDAV_SERVICES_FEATURE
 
 #if ESP3D_BT_FEATURE
-  esp3d_btserial_id,
-  esp3d_btserial_pin,
-  esp3d_btble_id,
-  esp3d_btble_passkey,
+    esp3d_btserial_id,
+    esp3d_btserial_pin,
+    esp3d_btble_id,
+    esp3d_btble_passkey,
 #endif  // ESP3D_BT_FEATURE
 #if ESP3D_BUZZER_FEATURE
-  esp3d_buzzer_on,
+    esp3d_buzzer_on,
 #endif  // ESP3D_BUZZER_FEATURE
-#if ESP3D_DISPLAY_FEATURE
-  esp3d_brightness_level,
-#endif
-  #include "esp3d_target_settings_list.inc" 
-  unknown_index
+#if ESP3D_BRIGHTNESS_CONTROL_FEATURE
+    esp3d_brightness_level,
+#endif //ESP3D_BRIGHTNESS_CONTROL_FEATURE
+
+#include "esp3d_target_settings_list.inc"
+    unknown_index
 };
 
-enum class ESP3DTargetFirmware : uint8_t {
-  unknown = 0,
-  grbl = 10,
-  marlin = 20,
-  marlin_emworkspaceded = 30,
-  smoothieware = 40,
-  repetier = 50,
-  reprap = 70,
-  grblhal = 80,
-  hp_gl = 90,
+enum class ESP3DTargetFirmware : uint8_t
+{
+    unknown               = 0,
+    grbl                  = 10,
+    marlin                = 20,
+    marlin_emworkspaceded = 30,
+    smoothieware          = 40,
+    repetier              = 50,
+    reprap                = 70,
+    grblhal               = 80,
+    hp_gl                 = 90,
 };
 
-enum class ESP3DState : uint8_t {
-  off = 0,
-  on = 1,
+enum class ESP3DState : uint8_t
+{
+    off = 0,
+    on  = 1,
 };
 
-enum class ESP3DSettingType : uint8_t {
-  byte_t,     // byte
-  integer_t,  // 4 bytes
-  string_t,   // string
-  ip_t,       // 4 bytes
-  float_t,    // 4 bytes
-  mask,       // x bytes
-  bitsfield,  // x bytes
-  unknown_t
+enum class ESP3DSettingType : uint8_t
+{
+    byte_t,     // byte
+    integer_t,  // 4 bytes
+    string_t,   // string
+    ip_t,       // 4 bytes
+    float_t,    // 4 bytes
+    mask,       // x bytes
+    bitsfield,  // x bytes
+    unknown_t
 };
 
-struct ESP3DSettingDescription {
-  ESP3DSettingIndex index;
-  ESP3DSettingType type;
-  uint16_t size;
-  const char* default_val;
+struct ESP3DSettingDescription
+{
+    ESP3DSettingIndex index;
+    ESP3DSettingType type;
+    uint16_t size;
+    const char *default_val;
 };
 
-class ESP3DSettings final {
- public:
-  ESP3DSettings();
-  ~ESP3DSettings();
-  bool isValidSettingsNvs();
-  bool access_nvs(nvs_open_mode_t mode);
-  void release_nvs(nvs_open_mode_t mode);
-  uint8_t readByte(ESP3DSettingIndex index, bool* haserror = NULL);
-  uint32_t readUint32(ESP3DSettingIndex index, bool* haserror = NULL);
-  const char* readIPString(ESP3DSettingIndex index, bool* haserror = NULL);
-  const char* readString(ESP3DSettingIndex index, char* out_str, size_t len,
-                         bool* haserror = NULL);
-  bool writeByte(ESP3DSettingIndex index, const uint8_t value);
-  bool writeUint32(ESP3DSettingIndex index, const uint32_t value);
-  bool writeIPString(ESP3DSettingIndex index, const char* byte_buffer);
-  bool writeString(ESP3DSettingIndex index, const char* byte_buffer);
-  bool reset();
-  bool isValidIPStringSetting(const char* value,
-                              ESP3DSettingIndex settingElement);
-  bool isValidStringSetting(const char* value,
-                            ESP3DSettingIndex settingElement);
-   bool isValidStringTargetSetting(const char* value,
-                            ESP3DSettingIndex settingElement);
-  bool isValidIntegerSetting(uint32_t value, ESP3DSettingIndex settingElement);
-  bool isValidIntegerTargetSetting(uint32_t value,
-                                   ESP3DSettingIndex settingElement);
-  bool isValidByteSetting(uint8_t value, ESP3DSettingIndex settingElement);
-  bool isValidByteTargetSetting(uint8_t value,
-                                ESP3DSettingIndex settingElement);
-  uint32_t getDefaultIntegerSetting(ESP3DSettingIndex settingElement);
-  const char* getDefaultStringSetting(ESP3DSettingIndex settingElement);
-  uint8_t getDefaultByteSetting(ESP3DSettingIndex settingElement);
-  const ESP3DSettingDescription* getSettingPtr(const ESP3DSettingIndex index);
-  const char* GetFirmwareTargetShortName(ESP3DTargetFirmware index);
+class ESP3DSettings final
+{
+public:
+    ESP3DSettings();
+    ~ESP3DSettings();
+    bool isValidSettingsNvs();
+    bool access_nvs(nvs_open_mode_t mode);
+    void release_nvs(nvs_open_mode_t mode);
+    uint8_t readByte(ESP3DSettingIndex index, bool *haserror = NULL);
+    uint32_t readUint32(ESP3DSettingIndex index, bool *haserror = NULL);
+    const char *readIPString(ESP3DSettingIndex index, bool *haserror = NULL);
+    const char *
+    readString(ESP3DSettingIndex index, char *out_str, size_t len, bool *haserror = NULL);
+    bool writeByte(ESP3DSettingIndex index, const uint8_t value);
+    bool writeUint32(ESP3DSettingIndex index, const uint32_t value);
+    bool writeIPString(ESP3DSettingIndex index, const char *byte_buffer);
+    bool writeString(ESP3DSettingIndex index, const char *byte_buffer);
+    bool reset();
+    bool isValidIPStringSetting(const char *value, ESP3DSettingIndex settingElement);
+    bool isValidStringSetting(const char *value, ESP3DSettingIndex settingElement);
+    bool isValidStringTargetSetting(const char *value, ESP3DSettingIndex settingElement);
+    bool isValidIntegerSetting(uint32_t value, ESP3DSettingIndex settingElement);
+    bool isValidIntegerTargetSetting(uint32_t value, ESP3DSettingIndex settingElement);
+    bool isValidByteSetting(uint8_t value, ESP3DSettingIndex settingElement);
+    bool isValidByteTargetSetting(uint8_t value, ESP3DSettingIndex settingElement);
+    uint32_t getDefaultIntegerSetting(ESP3DSettingIndex settingElement);
+    const char *getDefaultStringSetting(ESP3DSettingIndex settingElement);
+    uint8_t getDefaultByteSetting(ESP3DSettingIndex settingElement);
+    const ESP3DSettingDescription *getSettingPtr(const ESP3DSettingIndex index);
+    const char *GetFirmwareTargetShortName(ESP3DTargetFirmware index);
 
- private:
-  const char* IPUInt32toString(uint32_t ip_int);
-  uint32_t StringtoIPUInt32(const char* s);
+private:
+    const char *IPUInt32toString(uint32_t ip_int);
+    uint32_t StringtoIPUInt32(const char *s);
 };
 
 extern ESP3DSettings esp3dTftsettings;

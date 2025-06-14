@@ -91,6 +91,20 @@ void ESP3DCommands::ESP950(int cmd_params_pos, ESP3DMessage *msg)
             return;
         }
 #endif  // ESP3D_AUTHENTICATION_FEATURE
+#if ESP3D_TFT_LOG
+        if (serialclient)
+        {
+            esp3d_log_d("Setting output client to Serial");
+        }
+        if (btserialclient)
+        {
+            esp3d_log_d("Setting output client to Bluetooth Serial");
+        }
+        if (btbleclient)
+        {
+            esp3d_log_d("Setting output client to Bluetooth BLE");
+        }
+#endif  // ESP3D_TFT_LOG
         int count = serialclient
 #if ESP3D_USB_SERIAL_FEATURE
                     + usbclient
@@ -106,22 +120,27 @@ void ESP3DCommands::ESP950(int cmd_params_pos, ESP3DMessage *msg)
         else
         {
             ESP3DClientType newoutput = ESP3DClientType::serial;
+
 #if ESP3D_USB_SERIAL_FEATURE
             if (usbclient)
             {
                 newoutput = ESP3DClientType::usb_serial;
+                esp3d_log_d("Setting output client to Usb Serial");
             }
 #endif  // ESP3D_USB_SERIAL_FEATURE
 #if ESP3D_BT_FEATURE
             if (btserialclient)
             {
                 newoutput = ESP3DClientType::bt_serial;
+                esp3d_log_d("Setting output client to Bluetooth Serial");
             }
             else if (btbleclient)
             {
                 newoutput = ESP3DClientType::bt_ble;
+                esp3d_log_d("Setting output client to Bluetooth BLE");
             }
 #endif  // ESP3D_BT_FEATURE
+
             if (!esp3dTftsettings.writeByte(ESP3DSettingIndex::esp3d_output_client,
                                             static_cast<uint8_t>(newoutput)))
             {

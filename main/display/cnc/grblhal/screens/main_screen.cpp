@@ -222,7 +222,7 @@ static void update_firmware_status_image(firmware_state_t state)
 
       lv_img_set_src(firmware_status_img, img_src);
       lv_obj_invalidate(firmware_status_img); // Invalidate the object to force redraw
-      esp3d_log_d("Firmware status updated to %d", state);
+      esp3d_log("Firmware status updated to %d", state);
   }
 
   // Function to update the connection status image
@@ -239,7 +239,7 @@ static void update_firmware_status_image(firmware_state_t state)
                                    LV_PART_MAIN);
       lv_obj_set_style_img_recolor_opa(connection_status_img, LV_OPA_COVER, LV_PART_MAIN);
       lv_obj_invalidate(connection_status_img); // Invalidate the object to force redraw
-      esp3d_log_d("Connection status updated to %s", connection_ok ? "OK" : "Fail");
+      esp3d_log("Connection status updated to %s", connection_ok ? "OK" : "Fail");
   }
 
 // Helper function to trigger a short beep
@@ -300,7 +300,7 @@ static void simulate_click_on_button(uint32_t btn_id)
 {
     if (btn_id >= 3 || !menu_data.conf.bottom_buttons[btn_id].on_press)
     {
-        esp3d_log_d("Invalid button ID %ld or no callback", btn_id);
+        esp3d_log("Invalid button ID %ld or no callback", btn_id);
         return;
     }
 
@@ -326,7 +326,7 @@ static void simulate_click_on_button(uint32_t btn_id)
     }
 
     // Appeler le callback du bouton virtuel
-    esp3d_log_d("Simulating click on bottom button %ld", btn_id);
+    esp3d_log("Simulating click on bottom button %ld", btn_id);
     menu_data.conf.bottom_buttons[btn_id].on_press(btn_id);
 }
 
@@ -348,10 +348,10 @@ static void simulate_click_on_active_section(void)
                                          LV_OPA_COVER,
                                          LV_PART_MAIN);
     }
-    esp3d_log_d("Click zone pressed: active_section_id=%ld", menu_data.current_section);
+    esp3d_log("Click zone pressed: active_section_id=%ld", menu_data.current_section);
     if (menu_data.conf.sections && menu_data.conf.sections[menu_data.current_section].on_press)
     {
-        esp3d_log_d("Calling on_press callback for section %ld", menu_data.current_section);
+        esp3d_log("Calling on_press callback for section %ld", menu_data.current_section);
         menu_data.conf.sections[menu_data.current_section].on_press(menu_data.current_section);
     }
     else
@@ -405,12 +405,12 @@ static void button_event_cb(lv_event_t *e)
     }
     uint32_t btn_id = event->btn_id;
     if (btn_id!=1 && is_locked){
-        esp3d_log_d("Button %ld ignored, system is locked", btn_id + 1);
+        esp3d_log("Button %ld ignored, system is locked", btn_id + 1);
         return;  // Ignore button presses when locked
     }
     if (code == LV_EVENT_PRESSED)
     {
-        esp3d_log_d("Button %ld pressed", btn_id + 1);
+        esp3d_log("Button %ld pressed", btn_id + 1);
         trigger_button_beep();
         simulate_click_on_button(btn_id);
         if (btn_id == 0)
@@ -446,11 +446,11 @@ static void button_event_cb(lv_event_t *e)
 
         if (duration < ESP3D_LONG_PRESS_THRESHOLD_MS)
         {
-            esp3d_log_d("Button %ld short press released (duration: %ld ms)", btn_id + 1, duration);
+            esp3d_log("Button %ld short press released (duration: %ld ms)", btn_id + 1, duration);
         }
         else
         {
-            esp3d_log_d("Button %ld long press released (duration: %ld ms)", btn_id + 1, duration);
+            esp3d_log("Button %ld long press released (duration: %ld ms)", btn_id + 1, duration);
         }
     }
 }
@@ -460,7 +460,7 @@ static void encoder_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
     if (is_locked){
-        esp3d_log_d("Event is ignored, system is locked");
+        esp3d_log("Event is ignored, system is locked");
         return;  // Ignore event when locked
     }
     if (code == LV_EVENT_KEY)
@@ -469,7 +469,7 @@ static void encoder_event_cb(lv_event_t *e)
         if (event && event->family_id == CONTROL_FAMILY_ENCODER)
         {
             int32_t steps = event->steps;
-            esp3d_log_d("Encoder steps received: %ld", steps);
+            esp3d_log("Encoder steps received: %ld", steps);
             // Normalize steps to prevent large jumps
             if (steps > 1)
                 steps = 1;
@@ -489,7 +489,7 @@ static void encoder_event_cb(lv_event_t *e)
                 menu_data.current_section = 0;  // Go to first section
             }
 
-            esp3d_log_d("Encoder: steps=%ld, prev_section=%ld, new_section=%ld",
+            esp3d_log("Encoder: steps=%ld, prev_section=%ld, new_section=%ld",
                         steps,
                         prev_section,
                         menu_data.current_section);
@@ -512,7 +512,7 @@ static void click_zone_event_cb(lv_event_t *e)
     lv_event_code_t code = lv_event_get_code(e);
     int32_t section      = (int32_t)(intptr_t)lv_event_get_user_data(e);
     if ( is_locked){
-        esp3d_log_d("Button %ld ignored, system is locked", section);
+        esp3d_log("Button %ld ignored, system is locked", section);
         return;  // Ignore button presses when locked
     }
     if (code == LV_EVENT_PRESSED)
@@ -538,10 +538,10 @@ static void click_zone_event_cb(lv_event_t *e)
         lv_arc_set_angles(menu_data.arc, start_angle, end_angle);
         lv_arc_set_angles(menu_data.inner_arc, start_angle, end_angle);
 
-        esp3d_log_d("Click zone pressed: section=%ld", menu_data.current_section);
+        esp3d_log("Click zone pressed: section=%ld", menu_data.current_section);
         if (menu_data.conf.sections && menu_data.conf.sections[section].on_press)
         {
-            esp3d_log_d("Calling on_press callback for section %ld", section);
+            esp3d_log("Calling on_press callback for section %ld", section);
             menu_data.conf.sections[section].on_press(section);
         }
         else
@@ -563,12 +563,12 @@ static void bottom_button_event_cb(lv_event_t *e)
     int32_t button_idx                  = (int32_t)(intptr_t)lv_event_get_user_data(e);
     static uint32_t press_start_time[3] = {0, 0, 0};
      if (button_idx!=1 && is_locked){
-        esp3d_log_d("Button %ld ignored, system is locked", button_idx );
+        esp3d_log("Button %ld ignored, system is locked", button_idx );
         return;  // Ignore button presses when locked
     }
     if (code == LV_EVENT_PRESSED)
     {
-        esp3d_log_d("Bottom button pressed: index=%ld", button_idx);
+        esp3d_log("Bottom button pressed: index=%ld", button_idx);
         press_start_time[button_idx] = esp_timer_get_time() / 1000;
         trigger_button_beep();
         if (menu_data.bottom_button_labels[button_idx])
@@ -588,7 +588,7 @@ static void bottom_button_event_cb(lv_event_t *e)
                                                  LV_OPA_COVER,
                                                  LV_PART_MAIN);
             }
-            esp3d_log_d("Bottom button %ld label set to blue", button_idx);
+            esp3d_log("Bottom button %ld label set to blue", button_idx);
         }
         if (button_idx == 0)
         {
@@ -596,7 +596,7 @@ static void bottom_button_event_cb(lv_event_t *e)
         }
         else if (menu_data.conf.bottom_buttons[button_idx].on_press)
         {
-            esp3d_log_d("Calling on_press callback for bottom button %ld", button_idx);
+            esp3d_log("Calling on_press callback for bottom button %ld", button_idx);
             menu_data.conf.bottom_buttons[button_idx].on_press(button_idx);
         }
     }
@@ -617,7 +617,7 @@ static void bottom_button_event_cb(lv_event_t *e)
                                                  LV_OPA_TRANSP,
                                                  LV_PART_MAIN);
             }
-            esp3d_log_d("Bottom button %ld label reset to white", button_idx);
+            esp3d_log("Bottom button %ld label reset to white", button_idx);
         }
         if (button_idx == 0)
         {
@@ -625,13 +625,13 @@ static void bottom_button_event_cb(lv_event_t *e)
         }
         if (duration < ESP3D_LONG_PRESS_THRESHOLD_MS)
         {
-            esp3d_log_d("Bottom button %ld short press released (duration: %ld ms)",
+            esp3d_log("Bottom button %ld short press released (duration: %ld ms)",
                         button_idx,
                         duration);
         }
         else
         {
-            esp3d_log_d("Bottom button %ld long press released (duration: %ld ms)",
+            esp3d_log("Bottom button %ld long press released (duration: %ld ms)",
                         button_idx,
                         duration);
         }
@@ -640,16 +640,16 @@ static void bottom_button_event_cb(lv_event_t *e)
 
 static void section_press_cb(int32_t section_id)
 {
-    esp3d_log_d("Menu section %ld pressed", section_id);
+    esp3d_log("Menu section %ld pressed", section_id);
 }
 
 static void bottom_button_lock_press_cb(int32_t button_idx)
 {
-    esp3d_log_d("Bottom button %ld pressed", button_idx);
+    esp3d_log("Bottom button %ld pressed", button_idx);
     is_locked = !is_locked;  // Toggle lock state
     if (is_locked)
     {
-        esp3d_log_d("Lock button %ld pressed, lock UI", button_idx);
+        esp3d_log("Lock button %ld pressed, lock UI", button_idx);
         // Set lock image
         if (menu_data.bottom_button_labels[1])
         {
@@ -658,7 +658,7 @@ static void bottom_button_lock_press_cb(int32_t button_idx)
     }
     else
     {
-        esp3d_log_d("Lock button %ld pressed, unlock UI", button_idx);
+        esp3d_log("Lock button %ld pressed, unlock UI", button_idx);
         // Set unlock image
         if (menu_data.bottom_button_labels[1])
         {
@@ -670,7 +670,7 @@ static void bottom_button_lock_press_cb(int32_t button_idx)
 
 static void bottom_button_press_cb(int32_t button_idx)
 {
-    esp3d_log_d("Bottom button %ld pressed", button_idx);
+    esp3d_log("Bottom button %ld pressed", button_idx);
 }
 
 void create()
@@ -690,7 +690,7 @@ void create()
     // Delete the previous screen if it exists
     if (lv_obj_is_valid(current_screen))
     {
-        esp3d_log_d("Already a screen, deleting it");
+        esp3d_log("Already a screen, deleting it");
         lv_obj_del(current_screen);
     }
     // Apply styles to the screen
@@ -946,7 +946,7 @@ void create()
     {
         if (!menu_conf.bottom_buttons[i].on_press)
         {
-            esp3d_log_d("Bottom button %d hidden (no callback)", i);
+            esp3d_log("Bottom button %d hidden (no callback)", i);
             continue;
         }
 
@@ -1025,7 +1025,7 @@ void create()
         lv_obj_add_event_cb(button, obj_delete_cb, LV_EVENT_DELETE, NULL);
         lv_obj_add_event_cb(icon, obj_delete_cb, LV_EVENT_DELETE, NULL);
 
-        esp3d_log_d("Bottom button %d created with label reference", i);
+        esp3d_log("Bottom button %d created with label reference", i);
     }
     update_firmware_status_image(FIRMWARE_IDLE); // Initial state: Idle
     update_connection_status_image(false); // Initial state: Not connected

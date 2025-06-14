@@ -123,7 +123,7 @@ esp_err_t phy_encoder_configure(const phy_encoder_config_t *config)
     accumulated_pulses = 0;
 
     is_initialized = true;
-    esp3d_log_d("Rotary encoder configured successfully (pins A:%d, B:%d, steps_per_rev:%lu)",
+    esp3d_log("Rotary encoder configured successfully (pins A:%d, B:%d, steps_per_rev:%lu)",
               encoder_config.pin_a, encoder_config.pin_b, encoder_config.steps_per_rev);
     return ESP_OK;
 }
@@ -151,12 +151,12 @@ esp_err_t phy_encoder_read(int32_t *steps)
     // Get the current count from PCNT
     int pulse_count = 0;
     ESP_ERROR_CHECK(pcnt_unit_get_count(pcnt_unit, &pulse_count));
-    //esp3d_log_d("Raw pulse count: %d", pulse_count);
+    //esp3d_log("Raw pulse count: %d", pulse_count);
 
     // Check for watch events (limits reached)
     int event_count = 0;
     while (xQueueReceive(encoder_queue, &event_count, 0)) {
-        esp3d_log_d("Watch point event, count: %d", event_count);
+        esp3d_log("Watch point event, count: %d", event_count);
         // Reset the counter if a limit is reached
         if (event_count == encoder_config.pcnt_high_limit || event_count == encoder_config.pcnt_low_limit) {
             ESP_ERROR_CHECK(pcnt_unit_clear_count(pcnt_unit));
@@ -179,7 +179,7 @@ esp_err_t phy_encoder_read(int32_t *steps)
     ESP_ERROR_CHECK(pcnt_unit_clear_count(pcnt_unit));
 
     *steps = clicks;
-    //esp3d_log_d("Encoder clicks: %ld (total steps: %ld, accumulated pulses: %ld)", clicks, encoder_steps, accumulated_pulses);
+    //esp3d_log("Encoder clicks: %ld (total steps: %ld, accumulated pulses: %ld)", clicks, encoder_steps, accumulated_pulses);
 
     return ESP_OK;
 }
@@ -221,7 +221,7 @@ esp_err_t phy_encoder_reset_steps(void)
     encoder_steps = 0;
     accumulated_pulses = 0;
     ESP_ERROR_CHECK(pcnt_unit_clear_count(pcnt_unit));
-    esp3d_log_d("Encoder steps counter reset");
+    esp3d_log("Encoder steps counter reset");
     return ESP_OK;
 }
 
@@ -278,6 +278,6 @@ esp_err_t phy_encoder_deinit(void)
     accumulated_pulses = 0;
     is_initialized = false;
 
-    esp3d_log_d("Rotary encoder deinitialized");
+    esp3d_log("Rotary encoder deinitialized");
     return ESP_OK;
 }
