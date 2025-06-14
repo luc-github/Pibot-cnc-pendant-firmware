@@ -89,6 +89,10 @@ const char* help[] = {
     "[ESP216](SNAP) - Do Snapshot of current screen",
 #endif  // LV_USE_SNAPSHOT
 #endif  // ESP3D_DISPLAY_FEATURE
+#if ESP3D_BUZZER_FEATURE
+    "[ESP250]F=<frequency> D=<duration> - Generate Buzzer sound",
+#endif  // ESP3D_BUZZER_FEATURE
+    "[ESP290]<delay in ms> json=<no> pwd=<user password> - Delay/Pause command",
 #endif  // ESP3D_SD_CARD_FEATURE
     "[ESP400] - display ESP3D settings",
     "[ESP401]P=(position) T=(type) V=(value) - Set specific setting",
@@ -145,6 +149,9 @@ const char* help[] = {
 #if ESP3D_BUZZER_FEATURE
     "[ESP910](state) - display/set buzzer state (ON/OFF)",
 #endif  // ESP3D_BUZZER_FEATURE
+#if ESP3D_BRIGHTNESS_FEATURE
+    "[ESP920](brightness) - display/set brightness level (0-100)",
+#endif  // ESP3D_BRIGHTNESS_FEATURE
 #if ESP3D_USB_SERIAL_FEATURE
     "[ESP950]<SERIAL/USB>  - display/set usb-serial client output",
 #endif  // #if ESP3D_USB_SERIAL_FEATURE
@@ -195,7 +202,10 @@ const uint cmdlist[] = {
 #endif  // LV_USE_SNAPSHOT
 #endif  // ESP3D_DISPLAY_FEATURE
 #endif  // ESP3D_SD_CARD_FEATURE
-
+#if ESP3D_BUZZER_FEATURE
+    250,
+#endif  // ESP3D_BUZZER_FEATURE
+    290,  // delay command
     400, 401,
 #if ESP3D_SD_CARD_FEATURE
 #if ESP3D_UPDATE_FEATURE
@@ -228,6 +238,9 @@ const uint cmdlist[] = {
 #if ESP3D_BUZZER_FEATURE
     910,
 #endif  // ESP3D_BUZZER_FEATURE
+#if ESP3D_BRIGHTNESS_FEATURE
+    920,
+#endif  // ESP3D_BRIGHTNESS_FEATURE 
 #if ESP3D_USB_SERIAL_FEATURE
     950,
 #endif  // #if ESP3D_USB_SERIAL_FEATURE

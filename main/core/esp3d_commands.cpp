@@ -986,6 +986,14 @@ void ESP3DCommands::execute_internal_command(int cmd, int cmd_params_pos,
       ESP216(cmd_params_pos, msg);
       break;
 #endif  // LV_USE_SNAPSHOT
+ #if ESP3D_BUZZER_FEATURE   
+    case 250:
+      ESP250(cmd_params_pos, msg);
+      break;
+ #endif  // ESP3D_BUZZER_FEATURE
+    case 290:
+      ESP290(cmd_params_pos, msg);
+      break;
 #endif  // ESP3D_DISPLAY_FEATURE
     case 400:
       ESP400(cmd_params_pos, msg);
@@ -1095,6 +1103,11 @@ case 910:
       ESP950(cmd_params_pos, msg);
       break;
 #endif  // #if ESP3D_USB_SERIAL_FEATURE
+#if ESP3D_BRIGHTNESS_CONTROL_FEATURE
+    case 920:
+      ESP920(cmd_params_pos, msg);
+      break;
+#endif  // ESP3D_BRIGHTNESS_CONTROL_FEATURE
     default:
       msg->target = msg->origin;
       esp3d_log("Invalid Command: [ESP%d]", cmd);

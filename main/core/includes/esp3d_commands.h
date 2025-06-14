@@ -119,6 +119,10 @@ class ESP3DCommands {
 #if LV_USE_SNAPSHOT
   void ESP216(int cmd_params_pos, ESP3DMessage* msg);
 #endif  // LV_USE_SNAPSHOT
+#if ESP3D_BUZZER_FEATURE
+  void ESP250(int cmd_params_pos, ESP3DMessage* msg);
+#endif  // ESP3D_BUZZER_FEATURE 
+void ESP290(int cmd_params_pos, ESP3DMessage* msg);
 #endif  // ESP3D_DISPLAY_FEATURE
   void ESP400(int cmd_params_pos, ESP3DMessage* msg);
   void ESP401(int cmd_params_pos, ESP3DMessage* msg);
@@ -168,6 +172,9 @@ class ESP3DCommands {
 #if ESP3D_BUZZER_FEATURE
   void ESP910(int cmd_params_pos, ESP3DMessage* msg);
 #endif  // ESP3D_BUZZER_FEATURE
+#if ESP3D_BRIGHTNESS_CONTROL_FEATURE
+  void ESP920(int cmd_params_pos, ESP3DMessage* msg);
+#endif  // ESP3D_BRIGHTNESS_CONTROL_FEATURE
   const char* get_param(ESP3DMessage* msg, uint start, const char* label,
                         bool* found = nullptr);
   const char* get_param(const char* data, uint size, uint start,
