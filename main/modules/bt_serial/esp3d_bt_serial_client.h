@@ -46,6 +46,7 @@ class ESP3DBTSerialClient : public ESP3DClient {
   void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t* param);
   void sppCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t* param);
   char *bda2str(uint8_t * bda, char *str, size_t size);
+  bool str2bda(const char *str, esp_bd_addr_t bda);
  bool get_name_from_eir(uint8_t *eir, char *bdname, uint8_t *bdname_len);
  private:
   esp3d_bt_serial_config_t* _config;
@@ -55,7 +56,6 @@ class ESP3DBTSerialClient : public ESP3DClient {
   bool _scan_completed;
   pthread_mutex_t _tx_mutex;
   pthread_mutex_t _rx_mutex;
-  pthread_mutex_t _scan_mutex;
   int _spp_handle;
   std::vector<BTDevice> _last_scan_results;
   uint8_t* _rxBuffer;

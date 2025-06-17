@@ -50,6 +50,57 @@ char *ESP3DBTSerialClient::bda2str(uint8_t *bda, char *str, size_t size)
     sprintf(str, "%02x:%02x:%02x:%02x:%02x:%02x", p[0], p[1], p[2], p[3], p[4], p[5]);
     return str;
 }
+
+//Helper function to convert a string MAC address to binary format
+bool ESP3DBTSerialClient::str2bda(const char *str, esp_bd_addr_t bda)
+{
+    if (!str || !bda) {
+        esp3d_log_e("Invalid parameters for str2bda");
+        return false;
+    }
+    
+    // accept several formating "AA:BB:CC:DD:EE:FF" ou "AA-BB-CC-DD-EE-FF" ou "AABBCCDDEEFF"
+    int values[6];
+    int result = 0;
+    
+    // Try with ':'
+    result = sscanf(str, "%02x:%02x:%02x:%02x:%02x:%02x",
+                   &values[0], &values[1], &values[2],
+                   &values[3], &values[4], &values[5]);
+    
+    // if failed try with  '-'
+    if (result != 6) {
+        result = sscanf(str, "%02x-%02x-%02x-%02x-%02x-%02x",
+                       &values[0], &values[1], &values[2],
+                       &values[3], &values[4], &values[5]);
+    }
+    
+    // if still failed try without any separator
+    if (result != 6) {
+        result = sscanf(str, "%02x%02x%02x%02x%02x%02x",
+                       &values[0], &values[1], &values[2],
+                       &values[3], &values[4], &values[5]);
+    }
+    
+    if (result != 6) {
+        esp3d_log_e("Invalid MAC address format: %s (expected XX:XX:XX:XX:XX:XX)", str);
+        return false;
+    }
+    
+    // Check if values are in valid range
+    for (int i = 0; i < 6; i++) {
+        if (values[i] < 0 || values[i] > 255) {
+            esp3d_log_e("Invalid MAC address byte at position %d: %02x", i, values[i]);
+            return false;
+        }
+        bda[i] = (uint8_t)values[i];
+    }
+    
+    esp3d_log_d("Converted MAC %s to binary format", str);
+    return true;
+}
+
+
 // Helper to get the device name from EIR data
 bool ESP3DBTSerialClient::get_name_from_eir(uint8_t *eir, char *bdname, uint8_t *bdname_len)
 {
@@ -470,7 +521,6 @@ ESP3DBTSerialClient::ESP3DBTSerialClient()
     _rxBufferPos       = 0;
     pthread_mutex_init(&_tx_mutex, NULL);
     pthread_mutex_init(&_rx_mutex, NULL);
-    pthread_mutex_init(&_scan_mutex, NULL);
 }
 
 // Destructor
@@ -479,7 +529,6 @@ ESP3DBTSerialClient::~ESP3DBTSerialClient()
     end();
     pthread_mutex_destroy(&_tx_mutex);
     pthread_mutex_destroy(&_rx_mutex);
-    pthread_mutex_destroy(&_scan_mutex);
 }
 
 // Process incoming messages
@@ -557,15 +606,7 @@ bool ESP3DBTSerialClient::begin()
         return false;
     }
     setTxMutex(&_tx_mutex);
-    if (pthread_mutex_init(&_scan_mutex, NULL) != 0)
-    {
-        free(_rxBuffer);
-        _rxBuffer = NULL;
-        pthread_mutex_destroy(&_rx_mutex);
-        pthread_mutex_destroy(&_tx_mutex);
-        esp3d_log_e("Mutex creation for scan failed");
-        return false;
-    }
+
 
     esp_err_t ret = ESP_OK;
     // Release any previously allocated BT BLE memory
