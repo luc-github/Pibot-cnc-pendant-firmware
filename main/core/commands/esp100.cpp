@@ -207,7 +207,7 @@ void ESP3DCommands::ESP100(int cmd_params_pos, ESP3DMessage *msg)
         if (esp3dTftsettings.isValidStringSetting(btserial_id.c_str(),
                                                   ESP3DSettingIndex::esp3d_btserial_id))
         {
-            esp3d_log("Value %s is valid", tmpstr.btserial_id());
+            esp3d_log("Value %s is valid", btserial_id.c_str());
             if (!esp3dTftsettings.writeString(ESP3DSettingIndex::esp3d_btserial_id,
                                               btserial_id.c_str()))
             {
@@ -224,7 +224,7 @@ void ESP3DCommands::ESP100(int cmd_params_pos, ESP3DMessage *msg)
         if (esp3dTftsettings.isValidStringSetting(btble_id.c_str(),
                                                   ESP3DSettingIndex::esp3d_btble_id))
         {
-            esp3d_log("Value %s is valid", tmpstr.btble_id());
+            esp3d_log("Value %s is valid", btble_id.c_str());
             if (!esp3dTftsettings.writeString(ESP3DSettingIndex::esp3d_btble_id, btble_id.c_str()))
             {
                 hasError  = true;

@@ -31,9 +31,8 @@
 #include "esp3d_settings.h"
 #include "esp_heap_caps.h"
 
-#if ESP3D_WIFI_FEATURE
 #include "network/esp3d_tft_network.h"
-#endif  // ESP3D_WIFI_FEATURE
+
 #include "esp_freertos_hooks.h"
 #include "filesystem/esp3d_flash.h"
 #include "freertos/FreeRTOS.h"
@@ -151,11 +150,11 @@ bool ESP3DTft::begin() {
     success = esp3dTftstream.begin();
   }
 
-#if ESP3D_WIFI_FEATURE
+#if ESP3D_WIFI_FEATURE ||  ESP3D_BT_FEATURE
   if (success) {
     success = esp3dTftnetwork.begin();
   }
-#endif  // ESP3D_WIFI_FEATURE
+#endif  // ESP3D_WIFI_FEATURE || ESP3D_BT_FEATURE
    esp3d_log("Freeheap %u, %u", (unsigned int)esp_get_free_heap_size(),
             (unsigned int)heap_caps_get_free_size(MALLOC_CAP_8BIT |
                                                   MALLOC_CAP_INTERNAL));

@@ -50,9 +50,12 @@ class ESP3DBTSerialClient : public ESP3DClient {
  private:
   esp3d_bt_serial_config_t* _config;
   bool _started;
+  bool _connected;
+  bool _discovery_started;
+  bool _scan_completed;
   pthread_mutex_t _tx_mutex;
   pthread_mutex_t _rx_mutex;
-  uint8_t* _data;
+  pthread_mutex_t _scan_mutex;
   int _spp_handle;
   std::vector<BTDevice> _last_scan_results;
   uint8_t* _rxBuffer;

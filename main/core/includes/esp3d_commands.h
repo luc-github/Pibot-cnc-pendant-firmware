@@ -131,9 +131,9 @@ void ESP290(int cmd_params_pos, ESP3DMessage* msg);
   void ESP402(int cmd_params_pos, ESP3DMessage* msg);
 #endif  // ESP3D_UPDATE_FEATURE
 #endif  // ESP3D_SD_CARD_FEATURE
-#if ESP3D_WIFI_FEATURE
+#if ESP3D_WIFI_FEATURE || ESP3D_BT_FEATURE
   void ESP410(int cmd_params_pos, ESP3DMessage* msg);
-#endif  // ESP3D_WIFI_FEATURE
+#endif  // ESP3D_WIFI_FEATURE  || ESP3D_BT_FEATURE
   void ESP420(int cmd_params_pos, ESP3DMessage* msg);
   void ESP444(int cmd_params_pos, ESP3DMessage* msg);
 #if ESP3D_MDNS_FEATURE

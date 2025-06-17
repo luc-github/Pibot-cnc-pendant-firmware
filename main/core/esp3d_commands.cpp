@@ -1249,11 +1249,11 @@ void ESP3DCommands::execute_internal_command(int cmd, int cmd_params_pos, ESP3DM
             break;
 #endif  // ESP3D_UPDATE_FEATURE
 #endif  // ESP3D_SD_CARD_FEATURE
-#if ESP3D_WIFI_FEATURE
+#if ESP3D_WIFI_FEATURE || ESP3D_BT_FEATURE
         case 410:
             ESP410(cmd_params_pos, msg);
             break;
-#endif  // ESP3D_WIFI_FEATURE
+#endif  // ESP3D_WIFI_FEATURE  || ESP3D_BT_FEATURE
         case 420:
             ESP420(cmd_params_pos, msg);
             break;
@@ -1434,8 +1434,8 @@ ESP3DClientType ESP3DCommands::getOutputClient(bool fromSettings)
                 break;
         };
     }
-    esp3d_log("Output client is %d (%s)",
-              static_cast<uint8_t>(_output_client),
-              GETCLIENTSTR(_output_client));
+    //esp3d_log("Output client is %d (%s)",
+    //          static_cast<uint8_t>(_output_client),
+    //          GETCLIENTSTR(_output_client));
     return _output_client;
 }

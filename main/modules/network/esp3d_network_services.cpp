@@ -58,45 +58,45 @@ bool ESP3DNetworkServices::begin() {
   bool start = false;
   (void)start;
   esp3dTftValues.set_string_value(ESP3DValuesIndex::network_status, "+");
-  esp3d_log("Starting Services");
+  esp3d_log_d("Starting Services");
   _started = esp3dAuthenthicationService.begin();
-  esp3d_log("Starting autenthication Service %s", _started ? "OK" : "KO");
+  esp3d_log_d("Starting autenthication Service %s", _started ? "OK" : "KO");
 #if ESP3D_TIMESTAMP_FEATURE
   start = esp3dTimeService.begin();
-  esp3d_log("Starting Time Service %s", start ? "OK" : "KO");
+  esp3d_log_d("Starting Time Service %s", start ? "OK" : "KO");
   _started = _started && start;
 #endif  // ESP3D_TIMESTAMP_FEATURE
 
 #if ESP3D_HTTP_FEATURE
   start = esp3dHttpService.begin();
-  esp3d_log("Starting Http Service %s", start ? "OK" : "KO");
+  esp3d_log_d("Starting Http Service %s", start ? "OK" : "KO");
   _started = _started && start;
 #endif  // ESP3D_HTTP_FEATURE
 
 #if ESP3D_NOTIFICATIONS_FEATURE
   start = esp3dNotificationsService.begin(true);
-  esp3d_log("Starting Notifications Service %s", start ? "OK" : "KO");
+  esp3d_log_d("Starting Notifications Service %s", start ? "OK" : "KO");
   _started = _started && start;
 #endif  // ESP3D_NOTIFICATIONS_FEATURE
 
 #if ESP3D_MDNS_FEATURE
   start = esp3dmDNS.begin();
-  esp3d_log("Starting mDNS Service %s", start ? "OK" : "KO");
+  esp3d_log_d("Starting mDNS Service %s", start ? "OK" : "KO");
   _started = _started && start;
 #endif  // ESP3D_MDNS_FEATURE
 
 #if ESP3D_SSDP_FEATURE
   start = esp3d_ssdp_service.begin();
-  esp3d_log("Starting SSDP Service %s", start ? "OK" : "KO");
+  esp3d_log_d("Starting SSDP Service %s", start ? "OK" : "KO");
   _started = _started && start;
 #endif  // ESP3D_SSDP_FEATURE
 
 #if ESP3D_TELNET_FEATURE
   start = esp3dSocketServer.begin();
-  esp3d_log("Starting Telnet Service %s", start ? "OK" : "KO");
+  esp3d_log_d("Starting Telnet Service %s", start ? "OK" : "KO");
   _started = _started && start;
 #endif  // ESP3D_TELNET_FEATURE
-  esp3d_log("Services started %s", _started ? "OK" : "KO");
+  esp3d_log_d("Services started %s", _started ? "OK" : "KO");
   std::string stmp = esp3dNetwork.getLocalIpString();
   esp3dTftValues.set_string_value(ESP3DValuesIndex::status_bar_label,
                                   stmp.c_str());
@@ -116,7 +116,7 @@ void ESP3DNetworkServices::end() {
   if (!_started) {
     return;
   }
-  esp3d_log("Stop Services");
+  esp3d_log_d("Stop Services");
   esp3dAuthenthicationService.end();
 #if ESP3D_TELNET_FEATURE
   esp3dSocketServer.end();

@@ -148,6 +148,15 @@ bool ESP3DTftStream::begin()
 #endif  // ESP3D_USB_SERIAL_FEATURE
 #if ESP3D_BT_FEATURE
             case ESP3DClientType::bt_serial:
+                if (serialClient.begin())
+                {
+                    esp3d_log("Serial client started");
+                    return true;
+                }
+                else
+                {
+                    esp3d_log_e("Serial client start failed");
+                }
                 esp3d_log("Bluetooth Serial client starting");
                 if (btSerialClient.begin())
                 {

@@ -24,6 +24,10 @@
 
 #include <string>
 
+#if ESP3D_BT_FEATURE
+#include "bt_serial/esp3d_bt_serial_client.h"
+#include "bt_ble/esp3d_bt_ble_client.h"
+#endif  // ESP3D_BT_FEATURE
 
 
 #ifdef __cplusplus
@@ -43,12 +47,16 @@ enum class ESP3DIpMode : uint8_t {
   staticIp = 1,
 };
 #endif  // ESP3D_WIFI_FEATURE
+
+
+
 enum class ESP3DRadioMode : uint8_t {
   off = 0,
   wifi_sta = 1,
   wifi_ap = 2,
   wifi_ap_config = 3,
   bluetooth_serial = 4,
+  bluetooth_ble = 5,
   wifi_ap_limited = 6,
   none = 7,
 };
@@ -81,9 +89,13 @@ class ESP3DNetwork final {
   const char* getLocalIpString();
 
 #endif  // ESP3D_WIFI_FEATURE
-  bool startBtMode();
+#if ESP3D_BT_FEATURE
+  bool startBtSerialMode();
+  bool startBtBleMode();
+  bool stopBtBleMode();
+  bool stopBtSerialMode();  
+#endif  // ESP3D_BT_FEATURE
   bool stopNoRadioMode();
-  bool stopBtMode();
   bool setMode(ESP3DRadioMode mode, bool restart = false);
   bool setModeAsync(ESP3DRadioMode mode);
   const char* getBTMac();

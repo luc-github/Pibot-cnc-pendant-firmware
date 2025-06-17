@@ -102,8 +102,8 @@ const char* help[] = {
     "OFF",
 #endif  // ESP3D_UPDATE_FEATURE
 #endif  // ESP3D_SD_CARD_FEATURE
-#if ESP3D_WIFI_FEATURE
-    "[ESP410] - display available AP list",
+#if ESP3D_WIFI_FEATURE || ESP3D_BT_FEATURE
+    "[ESP410]<WIFI/BTSERIAL/BTBLE>- display available AP/BT Devices list",
 #endif  // ESP3D_WIFI_FEATURE
     "[ESP420] - display ESP3D current status",
     "[ESP444](state) - set ESP3D state (RESET/RESTART)",
@@ -212,9 +212,9 @@ const uint cmdlist[] = {
     402,
 #endif  // ESP3D_UPDATE_FEATURE
 #endif  // ESP3D_SD_CARD_FEATURE
-#if ESP3D_WIFI_FEATURE
-    410,
-#endif  // ESP3D_WIFI_FEATURE
+#if ESP3D_WIFI_FEATURE || ESP3D_BT_FEATURE
+    410, 
+#endif  // ESP3D_WIFI_FEATURE || ESP3D_BT_FEATURE
     420, 444,
 #if ESP3D_MDNS_FEATURE
     450,
@@ -257,7 +257,7 @@ void ESP3DCommands::ESP0(int cmd_params_pos, ESP3DMessage* msg) {
   const uint cmdlistNb = sizeof(cmdlist) / sizeof(uint);
   bool json = hasTag(msg, cmd_params_pos, "json");
   if (cmdNb != cmdlistNb) {
-    esp3d_log("Help corrupted: %d vs %d", cmdNb, cmdlistNb);
+    esp3d_log_e("Help corrupted: %d vs %d", cmdNb, cmdlistNb);
     msg->type = ESP3DMessageType::unique;
     if (!dispatch(msg, "Help corrupted")) {
       esp3d_log_e("Error sending command to clients");

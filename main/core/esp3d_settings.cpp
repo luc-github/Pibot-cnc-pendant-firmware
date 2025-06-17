@@ -661,7 +661,11 @@ bool ESP3DSettings::isValidByteSetting(uint8_t value, ESP3DSettingIndex settingE
                 || value == (uint8_t)ESP3DRadioMode::wifi_ap
                 || value == (uint8_t)ESP3DRadioMode::wifi_ap_config
 #endif  // ESP3D_WIFI_FEATURE
-                || value == (uint8_t)ESP3DRadioMode::bluetooth_serial)
+#if ESP3D_BT_FEATURE
+                || value == (uint8_t)ESP3DRadioMode::bluetooth_serial
+                || value == (uint8_t)ESP3DRadioMode::bluetooth_ble
+#endif  // ESP3D_BT_FEATURE
+        )
             {
                 return true;
             }

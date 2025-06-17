@@ -226,7 +226,10 @@ bool ESP3DBTBleClient::begin() {
     esp3d_log_e("Failed to release BT Classic memory");
     return false;
   }
-
+esp3d_log_d("BT Classic memory released");
+ esp3d_log_d("Initializing Bluetooth controller");
+esp_bt_controller_status_t status = esp_bt_controller_get_status();
+esp3d_log_d("Bluetooth controller status: %d", status);
   esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
   ret = esp_bt_controller_init(&bt_cfg);
   if (ret != ESP_OK) {

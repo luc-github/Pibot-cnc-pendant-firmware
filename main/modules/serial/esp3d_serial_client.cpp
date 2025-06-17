@@ -28,11 +28,13 @@
 #include "esp3d_log.h"
 #include "esp3d_settings.h"
 #include "esp_bt.h"
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "serial_def.h"
 
+#if ESP3D_BT_FEATURE
+#include "network/esp3d_network.h"
+#endif  // ESP3D_BT_FEATURE
 
 ESP3DSerialClient serialClient;
 
@@ -151,10 +153,20 @@ bool ESP3DSerialClient::isEndChar(uint8_t ch)
 bool ESP3DSerialClient::begin()
 {
     esp3d_log("Freeheap before BT release %u, %u",
-                (unsigned int)esp_get_free_heap_size(),
-                (unsigned int)heap_caps_get_free_size(MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
-    // free unused BT memory
-    esp_bt_controller_mem_release(ESP_BT_MODE_BTDM);
+              (unsigned int)esp_get_free_heap_size(),
+              (unsigned int)heap_caps_get_free_size(MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
+   
+#if ESP3D_BT_FEATURE
+    uint8_t byteValue = esp3dTftsettings.readByte(ESP3DSettingIndex::esp3d_radio_mode);
+    if (byteValue != (uint8_t)ESP3DRadioMode::bluetooth_ble
+        && byteValue != (uint8_t)ESP3DRadioMode::bluetooth_serial)
+    {
+        // Release BT memory if not used
+        esp3d_log_d("Release BT memory");
+        esp_bt_controller_mem_release(ESP_BT_MODE_BTDM);
+    }
+#endif  // ESP3D_BT_FEATURE
+
     end();
     configure(&esp3dSerialConfig);
     if (!_config)
@@ -238,9 +250,9 @@ bool ESP3DSerialClient::begin()
                                  _config->rx_pin,
                                  _config->rts_pin,
                                  _config->cts_pin));
-     esp3d_log("Freeheap after BT release %u, %u",
-                (unsigned int)esp_get_free_heap_size(),
-                (unsigned int)heap_caps_get_free_size(MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
+    esp3d_log("Freeheap after BT release %u, %u",
+              (unsigned int)esp_get_free_heap_size(),
+              (unsigned int)heap_caps_get_free_size(MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
 
     // Create RX task
     _started       = true;
