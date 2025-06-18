@@ -24,7 +24,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#define BT_NAME_TARGET "grblHAL"
+#define BT_ADDRESS_TARGET "00:00:00:00:00:00"
 #define BTSERIAL_PIN_TARGET "1234"
 #define BTBLE_PIN_TARGET "123456"
 

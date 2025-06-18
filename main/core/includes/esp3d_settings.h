@@ -35,7 +35,7 @@ extern const char *SupportedTimeZones[];
 #define SIZE_OF_TIMEZONE   7
 #endif  // ESP3D_TIMESTAMP_FEATURE
 
-#define SIZE_OF_BT_SERIAL_ID     32
+#define SIZE_OF_BT_SERIAL_ADDRESS     17
 #define SIZE_OF_BT_SERIAL_PIN    4
 #define SIZE_OF_BT_BLE_ID        32
 #define SIZE_OF_BT_BLE_PASSKEY   16
@@ -133,7 +133,7 @@ enum class ESP3DSettingIndex : uint16_t
 #endif  // ESP3D_WEBDAV_SERVICES_FEATURE
 
 #if ESP3D_BT_FEATURE
-    esp3d_btserial_id,
+    esp3d_btserial_address,
     esp3d_btserial_pin,
     esp3d_btble_id,
     esp3d_btble_passkey,

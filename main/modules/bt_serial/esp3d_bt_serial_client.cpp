@@ -708,13 +708,15 @@ bool ESP3DBTSerialClient::begin()
     return true;
 }
 
-bool ESP3DBTSerialClient::connect(esp_bd_addr_t addr)
+bool ESP3DBTSerialClient::connect()
 {
     if (!_started)
     {
         esp3d_log_e("BT Serial not started");
         return false;
     }
+    esp_bd_addr_t addr;
+
     esp_err_t ret =
         esp_spp_connect(ESP_SPP_SEC_NONE, ESP_SPP_ROLE_MASTER, _config->spp_channel, addr);
     if (ret != ESP_OK)

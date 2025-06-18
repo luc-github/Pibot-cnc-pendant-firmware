@@ -58,7 +58,7 @@ void ESP3DCommands::ESP100(int cmd_params_pos, ESP3DMessage *msg)
     }
 #    endif  // ESP3D_WIFI_FEATURE
 #    if ESP3D_BT_FEATURE
-    std::string btserial_id = get_param(msg, cmd_params_pos, "BTSERIAL=");
+    std::string btserial_address = get_param(msg, cmd_params_pos, "BTSERIAL=");
     std::string btble_id    = get_param(msg, cmd_params_pos, "BTBLE=");
 #    endif  // ESP3D_BT_FEATURE
     // it is query without parameter
@@ -106,10 +106,10 @@ void ESP3DCommands::ESP100(int cmd_params_pos, ESP3DMessage *msg)
 
 #    endif  // ESP3D_WIFI_FEATURE
 #    if ESP3D_BT_FEATURE
-        settingPtr = esp3dTftsettings.getSettingPtr(ESP3DSettingIndex::esp3d_btserial_id);
+        settingPtr = esp3dTftsettings.getSettingPtr(ESP3DSettingIndex::esp3d_btserial_address);
         if (settingPtr)
         {
-            tmpstr = esp3dTftsettings.readString(ESP3DSettingIndex::esp3d_btserial_id,
+            tmpstr = esp3dTftsettings.readString(ESP3DSettingIndex::esp3d_btserial_address,
                                                  out_str,
                                                  settingPtr->size);
         }
@@ -125,7 +125,7 @@ void ESP3DCommands::ESP100(int cmd_params_pos, ESP3DMessage *msg)
             {
                 ok_msg += ",";
             }
-            ok_msg += "\"btserial_id\":\"";
+            ok_msg += "\"btserial_address\":\"";
         }
         else
         {
@@ -204,12 +204,12 @@ void ESP3DCommands::ESP100(int cmd_params_pos, ESP3DMessage *msg)
 
 #    if ESP3D_BT_FEATURE
         esp3d_log("Save btserial");
-        if (esp3dTftsettings.isValidStringSetting(btserial_id.c_str(),
-                                                  ESP3DSettingIndex::esp3d_btserial_id))
+        if (esp3dTftsettings.isValidStringSetting(btserial_address.c_str(),
+                                                  ESP3DSettingIndex::esp3d_btserial_address))
         {
-            esp3d_log("Value %s is valid", btserial_id.c_str());
-            if (!esp3dTftsettings.writeString(ESP3DSettingIndex::esp3d_btserial_id,
-                                              btserial_id.c_str()))
+            esp3d_log("Value %s is valid", btserial_address.c_str());
+            if (!esp3dTftsettings.writeString(ESP3DSettingIndex::esp3d_btserial_address,
+                                              btserial_address.c_str()))
             {
                 hasError  = true;
                 error_msg = "Set value failed";

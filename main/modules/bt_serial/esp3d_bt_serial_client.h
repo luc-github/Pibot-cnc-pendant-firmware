@@ -41,7 +41,7 @@ class ESP3DBTSerialClient : public ESP3DClient {
   bool started() { return _started; }
   bool scan(std::vector<BTDevice>& devices);
   bool getDeviceAddress(const std::string& name, esp_bd_addr_t& addr);
-  bool connect(esp_bd_addr_t addr);
+  bool connect();
   bool isConnected() { return _spp_handle != -1; }
   void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t* param);
   void sppCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t* param);

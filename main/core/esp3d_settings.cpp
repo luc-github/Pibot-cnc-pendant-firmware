@@ -127,7 +127,7 @@ static const char *esp3d_setting_names[] = {"esp3d_version",
                                             "esp3d_webdav_on",
 #endif  // ESP3D_WEBDAV_SERVICES_FEATURE
 #if ESP3D_BT_FEATURE
-                                            "esp3d_btserial_id",
+                                            "esp3d_btserial_address",
                                             "esp3d_btserial_pin",
                                             "esp3d_btble_id",
                                             "esp3d_btble_passkey",
@@ -208,10 +208,10 @@ const ESP3DSettingDescription ESP3DSettingsData[] = {
     {ESP3DSettingIndex::esp3d_radio_boot_mode, ESP3DSettingType::byte_t, 1, "1"},
     {ESP3DSettingIndex::esp3d_radio_mode, ESP3DSettingType::byte_t, 1, "3"},
 #if ESP3D_BT_FEATURE
-    {ESP3DSettingIndex::esp3d_btserial_id,
+    {ESP3DSettingIndex::esp3d_btserial_address,
      ESP3DSettingType::string_t,
-     SIZE_OF_BT_SERIAL_ID,
-     BT_NAME_TARGET},
+     SIZE_OF_BT_SERIAL_ADDRESS,
+     BT_ADDRESS_TARGET},
     {ESP3DSettingIndex::esp3d_btserial_pin,
      ESP3DSettingType::string_t,
      SIZE_OF_BT_SERIAL_PIN,
@@ -219,7 +219,7 @@ const ESP3DSettingDescription ESP3DSettingsData[] = {
     {ESP3DSettingIndex::esp3d_btble_id,
      ESP3DSettingType::string_t,
      SIZE_OF_BT_BLE_ID,
-     BT_NAME_TARGET},
+     BT_ADDRESS_TARGET},
     {ESP3DSettingIndex::esp3d_btble_passkey,
      ESP3DSettingType::string_t,
      SIZE_OF_BT_BLE_PASSKEY,
@@ -428,8 +428,37 @@ bool ESP3DSettings::isValidStringSetting(const char *value, ESP3DSettingIndex se
 #endif                    // ESP3D_TIMESTAMP_FEATURE
             return true;  // len test already done so return true
 #if ESP3D_BT_FEATURE
-        case ESP3DSettingIndex::esp3d_btserial_id:
-            return (len > 0 && len <= SIZE_OF_BT_SERIAL_ID);  // any string from 1 to 32
+        case ESP3DSettingIndex::esp3d_btserial_address:
+            esp3d_log("Checking address validity");
+            // length must be 17 characters
+            // 12 characters for MAC address + 5 colons
+            if (strlen(value)!= 17)
+            {
+                return false;
+            }
+
+            // parse the address
+            for (size_t i = 0; i < 17; i++)
+            {
+                if (i % 3 == 2)
+                {  // every 3rd character must be a colon
+                    // check if it is a colon
+                    if (value[i] != ':')
+                    {
+                        return false;
+                    }
+                }
+                else
+                {  // every other character must be a hex digit
+                    // check if it is a hex digit
+                    if (!std::isxdigit(value[i]))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         case ESP3DSettingIndex::esp3d_btble_id:
             return (len > 0 && len <= SIZE_OF_BT_BLE_ID);  // any string from 1 to 32
         case ESP3DSettingIndex::esp3d_btserial_pin:
@@ -665,7 +694,7 @@ bool ESP3DSettings::isValidByteSetting(uint8_t value, ESP3DSettingIndex settingE
                 || value == (uint8_t)ESP3DRadioMode::bluetooth_serial
                 || value == (uint8_t)ESP3DRadioMode::bluetooth_ble
 #endif  // ESP3D_BT_FEATURE
-        )
+            )
             {
                 return true;
             }
