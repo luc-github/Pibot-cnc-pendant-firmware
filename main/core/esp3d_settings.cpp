@@ -429,14 +429,19 @@ bool ESP3DSettings::isValidStringSetting(const char *value, ESP3DSettingIndex se
             return true;  // len test already done so return true
 #if ESP3D_BT_FEATURE
         case ESP3DSettingIndex::esp3d_btserial_address:
-            esp3d_log("Checking address validity");
+            esp3d_log_d("Checking address validity");
             // length must be 17 characters
             // 12 characters for MAC address + 5 colons
             if (strlen(value)!= 17)
             {
+                esp3d_log_e("Invalid address length %d,  expected 17", len);
                 return false;
             }
-
+            if (strncmp(value, "00:00:00:00:00:00", 17) == 0)
+            {  // check if it is not all zeros
+                esp3d_log_e("Invalid address, all zeros");
+                return false;
+            }
             // parse the address
             for (size_t i = 0; i < 17; i++)
             {
@@ -445,6 +450,7 @@ bool ESP3DSettings::isValidStringSetting(const char *value, ESP3DSettingIndex se
                     // check if it is a colon
                     if (value[i] != ':')
                     {
+                        esp3d_log_e("Invalid address, colon not found at position %d", i);
                         return false;
                     }
                 }
@@ -453,11 +459,12 @@ bool ESP3DSettings::isValidStringSetting(const char *value, ESP3DSettingIndex se
                     // check if it is a hex digit
                     if (!std::isxdigit(value[i]))
                     {
+                        esp3d_log_e("Invalid address, hex digit not found at position %d", i);
                         return false;
                     }
                 }
             }
-
+            esp3d_log_d("Address is valid");
             return true;
         case ESP3DSettingIndex::esp3d_btble_id:
             return (len > 0 && len <= SIZE_OF_BT_BLE_ID);  // any string from 1 to 32
@@ -1145,7 +1152,7 @@ ESP3DSettings::readString(ESP3DSettingIndex index, char *out_str, size_t len, bo
     const ESP3DSettingDescription *query = getSettingPtr(index);
     if (query != NULL)
     {
-        esp3d_log("read setting %d, type: %d : %s",
+        esp3d_log_d("read setting %d, type: %d : %s",
                   (uint16_t)index,
                   (uint8_t)query->type,
                   query->default_val);

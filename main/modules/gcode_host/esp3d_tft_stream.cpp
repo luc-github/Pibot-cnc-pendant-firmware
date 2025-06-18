@@ -37,8 +37,9 @@
 #include "usb_serial/esp3d_usb_serial_client.h"
 #endif  // ESP3D_USB_SERIAL_FEATURE
 #if ESP3D_BT_FEATURE
-#include "bt_serial/esp3d_bt_serial_client.h"
 #include "bt_ble/esp3d_bt_ble_client.h"
+#include "bt_serial/esp3d_bt_serial_client.h"
+
 #endif  // ESP3D_BT_FEATURE
 
 #define STACKDEPTH   STREAM_STACK_DEPTH
@@ -196,29 +197,14 @@ bool ESP3DTftStream::begin()
 
 void ESP3DTftStream::handle()
 {
-    switch (esp3dCommands.getOutputClient())
-    {
-        case ESP3DClientType::serial:
-            serialClient.handle();
-            break;
+    serialClient.handle();
 #if ESP3D_USB_SERIAL_FEATURE
-        case ESP3DClientType::usb_serial:
-            usbSerialClient.handle();
-            break;
+    usbSerialClient.handle();
 #endif  // ESP3D_USB_SERIAL_FEATURE
 #if ESP3D_BT_FEATURE
-        case ESP3DClientType::bt_serial:
-            btSerialClient.handle();
-            break;
-        case ESP3DClientType::bt_ble:
-            btBleClient.handle();
-            break;
+    btSerialClient.handle();
+    btBleClient.handle();
 #endif  // ESP3D_BT_FEATURE
-
-        default:
-            esp3d_log_e("Unsupported output client type");
-            return;
-    }
 }
 
 bool ESP3DTftStream::end()

@@ -470,19 +470,34 @@ void ESP3DCommands::ESP420(int cmd_params_pos, ESP3DMessage *msg) {
     }
   }
 #endif  // ESP3D_WIFI_FEATURE
+#if ESP3D_BT_FEATURE
   // bt
+  std::string bt_type = "bluetooth";
   if (esp3dNetwork.getMode() == ESP3DRadioMode::bluetooth_serial) {
+    bt_type = "Bluetooth Serial";
     tmpstr = "ON";
-  } else {
+    if (btSerialClient.isConnected()){
+      tmpstr += "(Connected to ";
+      
+      tmpstr += btSerialClient.getCurrentName();
+      tmpstr += "-";
+      tmpstr += btSerialClient.getCurrentAddress();
+      tmpstr += ")";
+    }
+  } else  if (esp3dNetwork.getMode() == ESP3DRadioMode::bluetooth_ble) {
+    bt_type = "Bluetooth BLE";
+    tmpstr = "ON";
+  
+  }else {
     tmpstr = "OFF";
   }
   tmpstr += " (";
   tmpstr += esp3dNetwork.getBTMac();
   tmpstr += ")";
-  if (!dispatchIdValue(json, "bt", tmpstr.c_str(), target, requestId)) {
+  if (!dispatchIdValue(json, bt_type.c_str(), tmpstr.c_str(), target, requestId)) {
     return;
   }
-
+#endif  // ESP3D_BT_FEATURE
 #if ESP3D_MDNS_FEATURE
   // mdsn service
   if (!esp3dmDNS.started()) {

@@ -42,16 +42,22 @@ class ESP3DBTSerialClient : public ESP3DClient {
   bool scan(std::vector<BTDevice>& devices);
   bool getDeviceAddress(const std::string& name, esp_bd_addr_t& addr);
   bool connect();
-  bool isConnected() { return _spp_handle != -1; }
+  bool isConnected() { return (_spp_handle != -1); }
+  bool clearBondedDevices();
   void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t* param);
   void sppCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t* param);
   char *bda2str(uint8_t * bda, char *str, size_t size);
   bool str2bda(const char *str, esp_bd_addr_t bda);
  bool get_name_from_eir(uint8_t *eir, char *bdname, uint8_t *bdname_len);
+  const char* getCurrentName() {
+    return _current_name.c_str();
+  }
+  const char* getCurrentAddress() {
+    return _current_address.c_str();
+  }
  private:
   esp3d_bt_serial_config_t* _config;
   bool _started;
-  bool _connected;
   bool _discovery_started;
   bool _scan_completed;
   pthread_mutex_t _tx_mutex;
@@ -60,6 +66,8 @@ class ESP3DBTSerialClient : public ESP3DClient {
   std::vector<BTDevice> _last_scan_results;
   uint8_t* _rxBuffer;
   size_t _rxBufferPos;
+  std::string _current_name;
+  std::string _current_address;
 };
 
 extern ESP3DBTSerialClient btSerialClient;

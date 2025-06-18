@@ -51,55 +51,75 @@ char *ESP3DBTSerialClient::bda2str(uint8_t *bda, char *str, size_t size)
     return str;
 }
 
-//Helper function to convert a string MAC address to binary format
+// Helper function to convert a string MAC address to binary format
 bool ESP3DBTSerialClient::str2bda(const char *str, esp_bd_addr_t bda)
 {
-    if (!str || !bda) {
+    if (!str || !bda)
+    {
         esp3d_log_e("Invalid parameters for str2bda");
         return false;
     }
-    
+
     // accept several formating "AA:BB:CC:DD:EE:FF" ou "AA-BB-CC-DD-EE-FF" ou "AABBCCDDEEFF"
     int values[6];
     int result = 0;
-    
+
     // Try with ':'
-    result = sscanf(str, "%02x:%02x:%02x:%02x:%02x:%02x",
-                   &values[0], &values[1], &values[2],
-                   &values[3], &values[4], &values[5]);
-    
+    result = sscanf(str,
+                    "%02x:%02x:%02x:%02x:%02x:%02x",
+                    &values[0],
+                    &values[1],
+                    &values[2],
+                    &values[3],
+                    &values[4],
+                    &values[5]);
+
     // if failed try with  '-'
-    if (result != 6) {
-        result = sscanf(str, "%02x-%02x-%02x-%02x-%02x-%02x",
-                       &values[0], &values[1], &values[2],
-                       &values[3], &values[4], &values[5]);
+    if (result != 6)
+    {
+        result = sscanf(str,
+                        "%02x-%02x-%02x-%02x-%02x-%02x",
+                        &values[0],
+                        &values[1],
+                        &values[2],
+                        &values[3],
+                        &values[4],
+                        &values[5]);
     }
-    
+
     // if still failed try without any separator
-    if (result != 6) {
-        result = sscanf(str, "%02x%02x%02x%02x%02x%02x",
-                       &values[0], &values[1], &values[2],
-                       &values[3], &values[4], &values[5]);
+    if (result != 6)
+    {
+        result = sscanf(str,
+                        "%02x%02x%02x%02x%02x%02x",
+                        &values[0],
+                        &values[1],
+                        &values[2],
+                        &values[3],
+                        &values[4],
+                        &values[5]);
     }
-    
-    if (result != 6) {
+
+    if (result != 6)
+    {
         esp3d_log_e("Invalid MAC address format: %s (expected XX:XX:XX:XX:XX:XX)", str);
         return false;
     }
-    
+
     // Check if values are in valid range
-    for (int i = 0; i < 6; i++) {
-        if (values[i] < 0 || values[i] > 255) {
+    for (int i = 0; i < 6; i++)
+    {
+        if (values[i] < 0 || values[i] > 255)
+        {
             esp3d_log_e("Invalid MAC address byte at position %d: %02x", i, values[i]);
             return false;
         }
         bda[i] = (uint8_t)values[i];
     }
-    
+
     esp3d_log_d("Converted MAC %s to binary format", str);
     return true;
 }
-
 
 // Helper to get the device name from EIR data
 bool ESP3DBTSerialClient::get_name_from_eir(uint8_t *eir, char *bdname, uint8_t *bdname_len)
@@ -159,13 +179,13 @@ void ESP3DBTSerialClient::esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_
     switch (event)
     {
             // Handle device discovery results
-            // Dans esp_bt_gap_cb, case ESP_BT_GAP_DISC_RES_EVT:
+            // In esp_bt_gap_cb, case ESP_BT_GAP_DISC_RES_EVT:
         case ESP_BT_GAP_DISC_RES_EVT: {
             BTDevice device;
             memcpy(device.addr, param->disc_res.bda, ESP_BD_ADDR_LEN);
             device.name = "";
 
-            // Vérifier si ce device existe déjà
+            // Check if the device already exists in the discovered devices list
             bool device_exists = false;
             for (const auto &existing_device : discovered_devices)
             {
@@ -176,7 +196,7 @@ void ESP3DBTSerialClient::esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_
                 }
             }
 
-            // Si le device n'existe pas déjà, l'ajouter
+            // If the device does not exist, add it to the list
             if (!device_exists)
             {
                 for (int i = 0; i < param->disc_res.num_prop; i++)
@@ -204,7 +224,7 @@ void ESP3DBTSerialClient::esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_
             }
             else
             {
-                // Device déjà trouvé, peut-être mettre à jour le nom si il était vide
+                // Device already exists, update its name if necessary
                 for (auto &existing_device : discovered_devices)
                 {
                     if (memcmp(existing_device.addr, device.addr, ESP_BD_ADDR_LEN) == 0)
@@ -240,6 +260,24 @@ void ESP3DBTSerialClient::esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_
             }
             break;
         }
+
+        case ESP_BT_GAP_READ_REMOTE_NAME_EVT:
+            if (param->read_rmt_name.stat == ESP_BT_STATUS_SUCCESS)
+            {
+                char remote_device_name[ESP_BT_GAP_MAX_BDNAME_LEN + 1] = {0};
+                strncpy(remote_device_name,
+                        (char *)param->read_rmt_name.rmt_name,
+                        ESP_BT_GAP_MAX_BDNAME_LEN);
+                remote_device_name[ESP_BT_GAP_MAX_BDNAME_LEN] = '\0';
+                _current_name = remote_device_name;  // Store the name for later use
+                esp3d_log_d("Remote device name: %s", remote_device_name);
+            }
+            else
+            {
+                esp3d_log_e("Failed to read remote device name");
+                _current_name = "Unknown";  // Set a default name if reading fails
+            }
+            break;
             // Handle discovery state changes
             // Dans esp_bt_gap_cb, case ESP_BT_GAP_DISC_STATE_CHANGED_EVT:
         case ESP_BT_GAP_DISC_STATE_CHANGED_EVT: {
@@ -256,7 +294,7 @@ void ESP3DBTSerialClient::esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_
                 _discovery_started = false;
                 esp3d_log_d("BT scan stopped, found %d devices", discovered_devices.size());
 
-                // Copier les résultats
+                // Store the discovered devices in the last scan results
                 _last_scan_results = discovered_devices;
 
 #if ESP3D_TFT_LOG
@@ -272,7 +310,7 @@ void ESP3DBTSerialClient::esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_
                                 device.addr[5]);
                 }
 #endif
-                // Marquer le scan comme terminé
+                // Set the scan completed flag
                 _scan_completed = true;
             }
             break;
@@ -286,12 +324,17 @@ void ESP3DBTSerialClient::esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_
                 // Iterate through the discovered services
                 for (int i = 0; i < param->rmt_srvcs.num_uuids; i++)
                 {
-                    esp_bt_uuid_t *uuid = &param->rmt_srvcs.uuid_list[i];
-                    if (uuid->len == ESP_UUID_LEN_16 && uuid->uuid.uuid16 == 0x1101)
+                    esp_bt_uuid_t uuid =
+                        param->rmt_srvcs.uuid_list[i];  // Accès direct, pas de pointeur
+                    if (uuid.len == ESP_UUID_LEN_16 && uuid.uuid.uuid16 == 0x1101)
                     {
-                        esp3d_log_d("Found SPP service ");
+                        esp3d_log_d("Found SPP service");
                     }
                 }
+            }
+            else
+            {
+                esp3d_log_e("Remote services discovery failed, status: %d", param->rmt_srvcs.stat);
             }
             break;
         }
@@ -381,18 +424,37 @@ void ESP3DBTSerialClient::sppCallback(esp_spp_cb_event_t event, esp_spp_cb_param
             }
             break;
             // Handle SPP open event inb client mode
-        case ESP_SPP_OPEN_EVT:
+        case ESP_SPP_OPEN_EVT: {
             esp3d_log_d("SPP Connection opened, handle: %d", (int)param->open.handle);
             if (param->open.status == ESP_SPP_SUCCESS)
             {
                 _spp_handle = param->open.handle;
-                _connected  = true;
+                esp3d_log_d("ESP_SPP_OPEN_EVT - SPP opened successfully, handle: %d", _spp_handle);
+                char addr_str[18] = {0};
+                bda2str(param->open.rem_bda, addr_str, sizeof(addr_str));
+                _current_address = addr_str;  // Store the address for later use
+                _current_name.clear();        // Clear the current name as it will be updated later
+                esp3d_log_d("Connected to device address: %s", addr_str);
+                esp_err_t ret = esp_spp_write(_spp_handle, strlen("Hello"), (uint8_t *)"Hello");
+                // Check if the write operation was successful
+                if (ret != ESP_OK)
+                {
+                    esp3d_log_e("Error writing message : %s", esp_err_to_name(ret));
+                }
+                // get remote name
+                ret = esp_bt_gap_read_remote_name(param->open.rem_bda);
+                if (ret != ESP_OK)
+                {
+                    esp3d_log_e("Failed to read remote name: %s", esp_err_to_name(ret));
+                    _current_name = "Unknown";  // Set a default name if reading fails
+                }
             }
             else
             {
                 esp3d_log_d("ESP_SPP_OPEN_EVT status:%d", param->open.status);
             }
             break;
+        }
         // Handle SPP close event
         case ESP_SPP_CLOSE_EVT:
             esp3d_log_d("ESP_SPP_CLOSE_EVT status:%d handle:%" PRIu32 " close_by_remote:%d",
@@ -400,8 +462,9 @@ void ESP3DBTSerialClient::sppCallback(esp_spp_cb_event_t event, esp_spp_cb_param
                         param->close.handle,
                         param->close.async);
             _spp_handle  = -1;
-            _connected   = false;
             _rxBufferPos = 0;  // Reset the RX buffer position
+            _current_name.clear();
+            _current_address.clear();
             break;
         // SPP  discovery complete event
         case ESP_SPP_DISCOVERY_COMP_EVT:
@@ -439,6 +502,7 @@ void ESP3DBTSerialClient::sppCallback(esp_spp_cb_event_t event, esp_spp_cb_param
         case ESP_SPP_DATA_IND_EVT: {
             for (size_t i = 0; i < param->data_ind.len; i++)
             {
+                esp3d_log_d("Received data: %02X", param->data_ind.data[i]);
                 if (_rxBufferPos < _config->rx_buffer_size)
                 {
                     _rxBuffer[_rxBufferPos++] = param->data_ind.data[i];
@@ -451,6 +515,7 @@ void ESP3DBTSerialClient::sppCallback(esp_spp_cb_event_t event, esp_spp_cb_param
                 }
                 if (isEndChar(param->data_ind.data[i]))
                 {
+                    esp3d_log_d("End character detected, pushing message to RX queue");
                     pushMsgToRxQueue(_rxBuffer, _rxBufferPos);
                     _rxBufferPos = 0;
                 }
@@ -513,7 +578,6 @@ ESP3DBTSerialClient::ESP3DBTSerialClient()
 {
     _started           = false;
     _config            = NULL;
-    _connected         = false;
     _discovery_started = false;
     _scan_completed    = false;
     _spp_handle        = -1;
@@ -568,6 +632,60 @@ bool ESP3DBTSerialClient::isEndChar(uint8_t ch)
     return ((char)ch == '\n');
 }
 
+bool ESP3DBTSerialClient::clearBondedDevices()
+{
+
+    int expected_dev_num = esp_bt_gap_get_bond_device_num();
+    if (expected_dev_num == 0)
+    {
+        esp3d_log_d("No bonded devices found");
+        return true;
+    }
+    esp3d_log_d("Found %d bonded devices", expected_dev_num);
+
+    esp_bd_addr_t *dev_list = (esp_bd_addr_t *)malloc(sizeof(esp_bd_addr_t) * expected_dev_num);
+    if (dev_list == NULL)
+    {
+        esp3d_log_e("Could not allocate buffer for bonded devices");
+        return false;
+    }
+
+    int dev_num;
+    esp_err_t ret = esp_bt_gap_get_bond_device_list(&dev_num, dev_list);
+    if (ret != ESP_OK)
+    {
+        esp3d_log_e("Failed to get bonded device list: %s", esp_err_to_name(ret));
+        free(dev_list);
+        return false;
+    }
+
+    if (dev_num != expected_dev_num)
+    {
+        esp3d_log_w("Inconsistent number of bonded devices. Expected %d, returned %d", expected_dev_num, dev_num);
+    }
+
+    bool success = true;
+    for (int i = 0; i < dev_num; i++)
+    {
+        char addr_str[18] = {0};
+        bda2str(dev_list[i], addr_str, sizeof(addr_str));
+        ret = esp_bt_gap_remove_bond_device(dev_list[i]);
+        if (ret == ESP_OK)
+        {
+            esp3d_log_d("Removed bonded device #%d: %s", i, addr_str);
+        }
+        else
+        {
+            esp3d_log_e("Failed to remove bonded device #%d: %s, error: %s", i, addr_str, esp_err_to_name(ret));
+            success = false;
+        }
+    }
+
+    free(dev_list);
+    esp3d_log_d("Remaining bonded devices: %d", esp_bt_gap_get_bond_device_num());
+    return success;
+}
+
 // Begin the Bluetooth Serial Client
 bool ESP3DBTSerialClient::begin()
 {
@@ -606,7 +724,6 @@ bool ESP3DBTSerialClient::begin()
         return false;
     }
     setTxMutex(&_tx_mutex);
-
 
     esp_err_t ret = ESP_OK;
     // Release any previously allocated BT BLE memory
@@ -705,6 +822,15 @@ bool ESP3DBTSerialClient::begin()
 
     _started = true;
     flush();
+    esp3d_log_d("BT Serial Client started successfully");
+    clearBondedDevices(); // Supprimer les appareils appairés
+    esp3d_hal::wait(1000);
+    // Start the connection process
+    connect();
+    if (!isConnected())
+    {
+        esp3d_log_e("Failed to start connect to Bluetooth device");
+    }
     return true;
 }
 
@@ -715,17 +841,40 @@ bool ESP3DBTSerialClient::connect()
         esp3d_log_e("BT Serial not started");
         return false;
     }
+    bool connection_started = false;
     esp_bd_addr_t addr;
-
+    char out_str[18] = {0};
+    // Retrieve the Bluetooth address from settings
+    std::string addr_str =
+        esp3dTftsettings.readString(ESP3DSettingIndex::esp3d_btserial_address, out_str, 18);
+    _current_name.clear();
+    _current_address.clear();
+    // Check if the address is valid to save time
+    if (!esp3dTftsettings.isValidStringSetting(addr_str.c_str(),
+                                               ESP3DSettingIndex::esp3d_btserial_address))
+    {
+        esp3d_log_e("Invalid Bluetooth address setting");
+        return connection_started;
+    }
+    // Convert the address string to binary format
+    if (!str2bda(addr_str.c_str(), addr))
+    {
+        esp3d_log_e("Failed to convert address string to binary format");
+        return connection_started;
+    }
+    // Now try to connect to the device
+    esp3d_log_d("Connecting to Bluetooth device: %s", addr_str.c_str());
     esp_err_t ret =
         esp_spp_connect(ESP_SPP_SEC_NONE, ESP_SPP_ROLE_MASTER, _config->spp_channel, addr);
     if (ret != ESP_OK)
     {
         esp3d_log_e("Failed to initiate SPP connection : %s", esp_err_to_name(ret));
-        return false;
+        return connection_started;
     }
     esp3d_log_d("Initiated SPP client connection");
-    return true;
+    connection_started = true;
+    _current_address   = addr_str;
+    return connection_started;
 }
 
 bool ESP3DBTSerialClient::pushMsgToRxQueue(const uint8_t *msg, size_t size)
@@ -734,7 +883,8 @@ bool ESP3DBTSerialClient::pushMsgToRxQueue(const uint8_t *msg, size_t size)
     if (newMsgPtr)
     {
         if (ESP3DClient::setDataContent(newMsgPtr, msg, size))
-        {
+        {   
+            esp3d_log_d("Pushing message to RX queue, size: %s", (const char *)newMsgPtr->data);
             newMsgPtr->origin = ESP3DClientType::bt_serial;
             newMsgPtr->type   = ESP3DMessageType::unique;
             if (!addRxData(newMsgPtr))
@@ -765,17 +915,21 @@ void ESP3DBTSerialClient::handle()
     {
         if (getRxMsgsCount() > 0)
         {
+            esp3d_log_d("Got %d messages in RX queue", getRxMsgsCount());
             ESP3DMessage *msg = popRx();
             if (msg)
             {
+                esp3d_log_d("Processing message from RX queue: %s", msg->data);
                 esp3dCommands.process(msg);
             }
         }
         if (getTxMsgsCount() > 0)
         {
+            esp3d_log_d("Got %d messages in TX queue", getTxMsgsCount());
             ESP3DMessage *msg = popTx();
             if (msg)
             {
+                esp3d_log_d("Sending message from TX queue: %s", msg->data);
                 esp_err_t ret = esp_spp_write(_spp_handle, msg->size, msg->data);
                 if (ret != ESP_OK)
                 {
@@ -784,7 +938,7 @@ void ESP3DBTSerialClient::handle()
                 deleteMsg(msg);
             }
         }
-    }
+    } 
 }
 
 void ESP3DBTSerialClient::flush()
@@ -807,6 +961,7 @@ void ESP3DBTSerialClient::end()
         clearRxQueue();
         clearTxQueue();
         esp3d_hal::wait(1000);
+        _spp_handle = -1;  // Reset SPP handle
         if (pthread_mutex_destroy(&_tx_mutex) != 0)
         {
             esp3d_log_w("Mutex destruction for tx failed");
@@ -856,7 +1011,7 @@ bool ESP3DBTSerialClient::scan(std::vector<BTDevice> &devices)
         return false;
     }
 
-    // Attendre que le scan se termine en checkant le flag
+    // Wait for the scan to complete
     uint32_t timeout_ms              = (_config->scan_duration + 2) * 1000;
     uint32_t elapsed_ms              = 0;
     const uint32_t check_interval_ms = 100;
@@ -874,7 +1029,7 @@ bool ESP3DBTSerialClient::scan(std::vector<BTDevice> &devices)
         return false;
     }
 
-    // Copier les résultats du scan
+    // Copy the discovered devices to the output vector
     devices = _last_scan_results;
 
     esp3d_log_d("Scan completed with %d unique devices", devices.size());
