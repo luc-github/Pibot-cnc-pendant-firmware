@@ -24,6 +24,7 @@ extern "C" {
 struct BTDevice {
   esp_bd_addr_t addr;
   std::string name;
+  int8_t rssi; 
 };
 
 class ESP3DBTSerialClient : public ESP3DClient {
@@ -41,6 +42,7 @@ class ESP3DBTSerialClient : public ESP3DClient {
   bool started() { return _started; }
   bool scan(std::vector<BTDevice>& devices);
   bool getDeviceAddress(const std::string& name, esp_bd_addr_t& addr);
+  bool disconnect();
   bool connect();
   bool isConnected() { return (_spp_handle != -1); }
   bool clearBondedDevices();
@@ -48,7 +50,8 @@ class ESP3DBTSerialClient : public ESP3DClient {
   void sppCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t* param);
   char *bda2str(uint8_t * bda, char *str, size_t size);
   bool str2bda(const char *str, esp_bd_addr_t bda);
- bool get_name_from_eir(uint8_t *eir, char *bdname, uint8_t *bdname_len);
+  bool get_name_from_eir(uint8_t *eir, char *bdname, uint8_t *bdname_len);
+  uint8_t rssi_to_percentage(int8_t rssi) ;
   const char* getCurrentName() {
     return _current_name.c_str();
   }

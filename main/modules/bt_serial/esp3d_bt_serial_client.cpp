@@ -160,6 +160,20 @@ bool ESP3DBTSerialClient::get_name_from_eir(uint8_t *eir, char *bdname, uint8_t 
 
     return false;
 }
+// Helper function to convert RSSI to percentage
+// RSSI is typically in the range of -100 to -30 dBm
+// This function maps -100 dBm to 0% and -30 dBm to 100%
+// The formula used is: percentage = (rssi + 100) * 1.43
+// This means that for every 1 dBm increase in RSSI,
+// the percentage increases by approximately 1.43%
+// This is a common way to convert RSSI to a percentage scale
+// where -100 dBm is 0% and -30 dBm is 100%
+// Values between -100 and -30 dBm will be linearly mapped to a percentage
+uint8_t ESP3DBTSerialClient::rssi_to_percentage(int8_t rssi) {
+    if (rssi <= -100) return 0;
+    if (rssi >= -30) return 100;
+    return (uint8_t)((rssi + 100) * 1.43);
+}
 
 // Callback function for Bluetooth GAP events
 static void esp_bt_gap_callback(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
@@ -180,83 +194,83 @@ void ESP3DBTSerialClient::esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_
     {
             // Handle device discovery results
             // In esp_bt_gap_cb, case ESP_BT_GAP_DISC_RES_EVT:
-        case ESP_BT_GAP_DISC_RES_EVT: {
+                    case ESP_BT_GAP_DISC_RES_EVT: {
             BTDevice device;
             memcpy(device.addr, param->disc_res.bda, ESP_BD_ADDR_LEN);
             device.name = "";
+            device.rssi = -128; // Default value, only updated if RSSI is provided
 
-            // Check if the device already exists in the discovered devices list
+            bool has_rssi = false;
+            bool has_name = false;
+
+            for (int i = 0; i < param->disc_res.num_prop; i++)
+            {
+                if (param->disc_res.prop[i].type == ESP_BT_GAP_DEV_PROP_EIR)
+                {
+                    uint8_t *eir  = (uint8_t *)param->disc_res.prop[i].val;
+                    uint8_t len   = param->disc_res.prop[i].len;
+                    char name[32] = {0};
+                    if (get_name_from_eir(eir, name, &len))
+                    {
+                        device.name = name;
+                        has_name = true;
+                    }
+                }
+                else if (param->disc_res.prop[i].type == ESP_BT_GAP_DEV_PROP_RSSI)
+                {
+                    if (param->disc_res.prop[i].len <= sizeof(int8_t))
+                    {
+                        int8_t rssi = 0;
+                        memcpy(&rssi, param->disc_res.prop[i].val, param->disc_res.prop[i].len);
+                        device.rssi = rssi;
+                        has_rssi = true;
+                    }
+                    else
+                    {
+                        esp3d_log_d("Invalid RSSI: Value size larger than int8_t");
+                    }
+                }
+            }
+
             bool device_exists = false;
-            for (const auto &existing_device : discovered_devices)
+            for (auto &existing_device : discovered_devices)
             {
                 if (memcmp(existing_device.addr, device.addr, ESP_BD_ADDR_LEN) == 0)
                 {
                     device_exists = true;
+                    if (has_name && !device.name.empty())
+                    {
+                        existing_device.name = device.name;
+                    }
+                    if (has_rssi)
+                    {
+                        existing_device.rssi = device.rssi;
+                        esp3d_log_d("Updated device: %s (%02X:%02X:%02X:%02X:%02X:%02X), RSSI: %d dBm, Signal: %u%%",
+                                    existing_device.name.c_str(),
+                                    existing_device.addr[0], existing_device.addr[1], existing_device.addr[2],
+                                    existing_device.addr[3], existing_device.addr[4], existing_device.addr[5],
+                                    existing_device.rssi, rssi_to_percentage(existing_device.rssi));
+                    }
+                    else
+                    {
+                        esp3d_log_d("No RSSI provided for device: %s (%02X:%02X:%02X:%02X:%02X:%02X), keeping RSSI: %d dBm",
+                                    existing_device.name.c_str(),
+                                    existing_device.addr[0], existing_device.addr[1], existing_device.addr[2],
+                                    existing_device.addr[3], existing_device.addr[4], existing_device.addr[5],
+                                    existing_device.rssi);
+                    }
                     break;
                 }
             }
 
-            // If the device does not exist, add it to the list
             if (!device_exists)
             {
-                for (int i = 0; i < param->disc_res.num_prop; i++)
-                {
-                    if (param->disc_res.prop[i].type == ESP_BT_GAP_DEV_PROP_EIR)
-                    {
-                        uint8_t *eir  = (uint8_t *)param->disc_res.prop[i].val;
-                        uint8_t len   = param->disc_res.prop[i].len;
-                        char name[32] = {0};
-                        if (get_name_from_eir(eir, name, &len))
-                        {
-                            device.name = name;
-                        }
-                    }
-                }
                 discovered_devices.push_back(device);
-                esp3d_log_d("Found new device: %s (%02X:%02X:%02X:%02X:%02X:%02X)",
+                esp3d_log_d("Found new device: %s (%02X:%02X:%02X:%02X:%02X:%02X), RSSI: %d dBm, Signal: %u%%",
                             device.name.c_str(),
-                            device.addr[0],
-                            device.addr[1],
-                            device.addr[2],
-                            device.addr[3],
-                            device.addr[4],
-                            device.addr[5]);
-            }
-            else
-            {
-                // Device already exists, update its name if necessary
-                for (auto &existing_device : discovered_devices)
-                {
-                    if (memcmp(existing_device.addr, device.addr, ESP_BD_ADDR_LEN) == 0)
-                    {
-                        if (existing_device.name.empty())
-                        {
-                            for (int i = 0; i < param->disc_res.num_prop; i++)
-                            {
-                                if (param->disc_res.prop[i].type == ESP_BT_GAP_DEV_PROP_EIR)
-                                {
-                                    uint8_t *eir  = (uint8_t *)param->disc_res.prop[i].val;
-                                    uint8_t len   = param->disc_res.prop[i].len;
-                                    char name[32] = {0};
-                                    if (get_name_from_eir(eir, name, &len))
-                                    {
-                                        existing_device.name = name;
-                                        esp3d_log_d("Updated device name: %s "
-                                                    "(%02X:%02X:%02X:%02X:%02X:%02X)",
-                                                    name,
-                                                    device.addr[0],
-                                                    device.addr[1],
-                                                    device.addr[2],
-                                                    device.addr[3],
-                                                    device.addr[4],
-                                                    device.addr[5]);
-                                    }
-                                }
-                            }
-                        }
-                        break;
-                    }
-                }
+                            device.addr[0], device.addr[1], device.addr[2],
+                            device.addr[3], device.addr[4], device.addr[5],
+                            device.rssi, rssi_to_percentage(device.rssi));
             }
             break;
         }
@@ -834,12 +848,50 @@ bool ESP3DBTSerialClient::begin()
     return true;
 }
 
+bool ESP3DBTSerialClient::disconnect()
+{
+    if (!_started)
+    {
+        esp3d_log_e("BT Serial not started");
+        return false;
+    }
+    if (!isConnected())
+    {
+        esp3d_log_d("No active Bluetooth connection to disconnect");
+        return true;
+    }
+
+    esp_err_t ret = esp_spp_disconnect(_spp_handle);
+    if (ret != ESP_OK)
+    {
+        esp3d_log_e("Failed to disconnect SPP: %s", esp_err_to_name(ret));
+        return false;
+    }
+
+    _spp_handle = -1;
+    _rxBufferPos = 0;
+    _current_name.clear();
+    _current_address.clear();
+    esp3d_log_d("Bluetooth SPP disconnected successfully");
+    return true;
+}
+
 bool ESP3DBTSerialClient::connect()
 {
     if (!_started)
     {
         esp3d_log_e("BT Serial not started");
         return false;
+    }
+     if (isConnected())
+    {
+        esp3d_log_d("Disconnecting from current Bluetooth device before new connection");
+        if (!disconnect())
+        {
+            esp3d_log_e("Failed to disconnect before new connection");
+            return false;
+        }
+        esp3d_hal::wait(500); // Wait for disconnection to complete
     }
     bool connection_started = false;
     esp_bd_addr_t addr;
@@ -995,7 +1047,8 @@ bool ESP3DBTSerialClient::scan(std::vector<BTDevice> &devices)
 
     discovered_devices.clear();
     _last_scan_results.clear();
-    _scan_completed = false;  // Reset du flag
+    _scan_completed = false;
+    _discovery_started = false;
 
     esp_err_t ret = esp_bt_gap_register_callback(esp_bt_gap_callback);
     if (ret != ESP_OK)
@@ -1004,34 +1057,41 @@ bool ESP3DBTSerialClient::scan(std::vector<BTDevice> &devices)
         return false;
     }
 
+    esp3d_log_d("Starting Bluetooth discovery with duration: %d seconds", _config->scan_duration);
     ret = esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, _config->scan_duration, 0);
     if (ret != ESP_OK)
     {
-        esp3d_log_e("Failed to start discovery  : %s", esp_err_to_name(ret));
+        esp3d_log_e("Failed to start discovery : %s", esp_err_to_name(ret));
         return false;
     }
 
-    // Wait for the scan to complete
-    uint32_t timeout_ms              = (_config->scan_duration + 2) * 1000;
-    uint32_t elapsed_ms              = 0;
+    // Wait for the scan to complete or timeout
+    uint32_t timeout_ms = (_config->scan_duration + 10) * 1000; // Extended timeout
+    uint32_t elapsed_ms = 0;
     const uint32_t check_interval_ms = 100;
 
-    while (!_scan_completed && elapsed_ms < timeout_ms)
+    while (_discovery_started || (!_scan_completed && elapsed_ms < timeout_ms))
     {
+        if (elapsed_ms % 1000 == 0) { // Log every 1000 ms
+            esp3d_log_d("Waiting for scan completion, elapsed: %lu ms, discovery_started: %d, scan_completed: %d",
+                        elapsed_ms, _discovery_started, _scan_completed);
+        }
         esp3d_hal::wait(check_interval_ms);
         elapsed_ms += check_interval_ms;
     }
 
     if (!_scan_completed)
     {
-        esp3d_log_w("Scan timeout reached");
-        esp_bt_gap_cancel_discovery();
+        esp3d_log_w("Scan timeout reached after %u ms", elapsed_ms);
+        ret = esp_bt_gap_cancel_discovery();
+        if (ret != ESP_OK)
+        {
+            esp3d_log_e("Failed to cancel discovery : %s", esp_err_to_name(ret));
+        }
         return false;
     }
 
-    // Copy the discovered devices to the output vector
     devices = _last_scan_results;
-
     esp3d_log_d("Scan completed with %d unique devices", devices.size());
     return true;
 }

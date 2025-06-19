@@ -29,6 +29,11 @@
 #include "esp3d_version.h"
 #include "filesystem/esp3d_flash.h"
 #include "network/esp3d_network.h"
+#if ESP3D_BT_FEATURE
+#include "bt_ble/esp3d_bt_ble_client.h"
+#include "bt_serial/esp3d_bt_serial_client.h"
+
+#endif  // ESP3D_BT_FEATURE
 
 #define COMMAND_ID         410
 #define MAX_SCAN_LIST_SIZE 15
@@ -277,11 +282,19 @@ if (scanBTSerial)
                 tmpstr += addr_str;
                 if (json)
                 {
+                    tmpstr += "\",\"RSSI\":\"";
+                    tmpstr += std::to_string(devices[i].rssi);
+                    tmpstr += "\",\"SIGNAL\":\"";
+                    tmpstr += std::to_string(btSerialClient.rssi_to_percentage(devices[i].rssi));
                     tmpstr += "\"}";
                 }
                 else
                 {
-                    tmpstr += "\n";
+                    tmpstr += " RSSI: ";
+                    tmpstr += std::to_string(devices[i].rssi);
+                    tmpstr += " dBm Signal: ";
+                    tmpstr += std::to_string(btSerialClient.rssi_to_percentage(devices[i].rssi));
+                    tmpstr += "%\n";
                 }
                 if (!dispatch(tmpstr.c_str(), target, requestId, ESP3DMessageType::core))
                 {

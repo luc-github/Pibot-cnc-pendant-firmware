@@ -19,7 +19,7 @@ extern "C" {
     .device_name = "PibotCNC",
     .discoverable = true,
     .connectable = true,
-    .scan_duration = 10,
+    .scan_duration = 20, // seconds
     .rx_buffer_size = 512,
     .tx_buffer_size = 512
 };
