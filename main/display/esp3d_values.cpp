@@ -29,12 +29,17 @@
 
 #include "esp3d_version.h"
 
-#if ESP3D_DISPLAY_FEATURE1
-#include "components/status_bar_component.h"
-#include "components/wifi_status_component.h"
-#include "screens/main_screen.h"
 
-#endif  // ESP3D_DISPLAY_FEATURE
+#if ESP3D_HAS_STATUS_BAR
+#include "components/status_bar_component.h"
+#if ESP3D_WIFI_FEATURE
+#include "components/wifi_status_component.h"
+#endif  // ESP3D_WIFI_FEATURE
+#endif  // ESP3D_HAS_STATUS_BAR
+
+//#include "components/positions_component.h"
+
+
 
 ESP3DValues esp3dTftValues;
 
@@ -141,12 +146,13 @@ bool ESP3DValues::set_string_value(ESP3DValuesIndex index, const char* value,
 
 bool ESP3DValues::intialize() {
   clear();
-#if ESP3D_DISPLAY_FEATURE1
+
+#if ESP3D_HAS_STATUS_BAR
   // status bar label
   _values.push_back({ESP3DValuesIndex::status_bar_label,
                      ESP3DValuesType::string_t, 200, std::string(""),
                      statusBar::callback});
-
+#if ESP3D_WIFI_FEATURE
   //  current ip
   _values.push_back({
       ESP3DValuesIndex::current_ip,
@@ -156,13 +162,17 @@ bool ESP3DValues::intialize() {
       nullptr,
   });
 
+#endif  // ESP3D_WIFI_FEATURE
+
+#endif  // ESP3D_HAS_STATUS_BAR
+/*
   //  x machine position
   _values.push_back({
       ESP3DValuesIndex::m_position_x,
       ESP3DValuesType::float_t,
       4,  // precision
       std::string("?"),
-      mainScreen::position_values,
+      positionsComponent::position_values,
   });
 
   //  y machine position
@@ -183,93 +193,6 @@ bool ESP3DValues::intialize() {
       nullptr,
   });
 
-  //  a machine position
-  _values.push_back({
-      ESP3DValuesIndex::m_position_a,
-      ESP3DValuesType::float_t,
-      4,  // precision
-      std::string("?"),
-      nullptr,
-  });
-
-  //  b machine position
-  _values.push_back({
-      ESP3DValuesIndex::m_position_b,
-      ESP3DValuesType::float_t,
-      4,  // precision
-      std::string("?"),
-      nullptr,
-  });
-
-  //  c machine position
-
-  _values.push_back({
-      ESP3DValuesIndex::m_position_c,
-      ESP3DValuesType::float_t,
-      4,  // precision
-      std::string("?"),
-      nullptr,
-  });
-
-  //  x work position
-  _values.push_back({
-      ESP3DValuesIndex::w_position_x,
-      ESP3DValuesType::float_t,
-      4,  // precision
-      std::string("?"),
-      nullptr,
-  });
-
-  //  y work position
-  _values.push_back({
-      ESP3DValuesIndex::w_position_y,
-      ESP3DValuesType::float_t,
-      4,  // precision
-      std::string("?"),
-      nullptr,
-  });
-
-  //  z work position
-  _values.push_back({
-      ESP3DValuesIndex::w_position_z,
-      ESP3DValuesType::float_t,
-      4,  // precision
-      std::string("?"),
-      nullptr,
-  });
-
-  //  a work position
-  _values.push_back({
-      ESP3DValuesIndex::w_position_a,
-      ESP3DValuesType::float_t,
-      4,  // precision
-      std::string("?"),
-      nullptr,
-  });
-
-  //  b work position
-  _values.push_back({
-      ESP3DValuesIndex::w_position_b,
-      ESP3DValuesType::float_t,
-      4,  // precision
-      std::string("?"),
-      nullptr,
-  });
-
-  //  c work position
-  _values.push_back({
-      ESP3DValuesIndex::w_position_c,
-      ESP3DValuesType::float_t,
-      4,  // precision
-      std::string("?"),
-      nullptr,
-  });
-
-  // state
-  _values.push_back({ESP3DValuesIndex::state, ESP3DValuesType::string_t,
-                     10,  // precision
-                     std::string("idle"), mainScreen::state_value_cb});
-
   //  state comment
   _values.push_back({
       ESP3DValuesIndex::state_comment,
@@ -278,7 +201,8 @@ bool ESP3DValues::intialize() {
       std::string(""),
       mainScreen::state_comment_value_cb,
   });
-
+  */
+/*
   //  print status
   _values.push_back({
       ESP3DValuesIndex::job_status,
@@ -338,8 +262,9 @@ bool ESP3DValues::intialize() {
       std::string("0"),
       nullptr,
   });
+  */
 
-#endif  // ESP3D_DISPLAY_FEATURE
   initialize_target();
+  initialize_system();
   return true;
 }

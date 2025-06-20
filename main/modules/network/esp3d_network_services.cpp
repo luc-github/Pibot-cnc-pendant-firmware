@@ -98,8 +98,10 @@ bool ESP3DNetworkServices::begin() {
 #endif  // ESP3D_TELNET_FEATURE
   esp3d_log_d("Services started %s", _started ? "OK" : "KO");
   std::string stmp = esp3dNetwork.getLocalIpString();
+  #if ESP3D_HAS_STATUS_BAR
   esp3dTftValues.set_string_value(ESP3DValuesIndex::status_bar_label,
                                   stmp.c_str());
+  #endif  // ESP3D_HAS_STATUS_BAR
   return _started;
 }
 

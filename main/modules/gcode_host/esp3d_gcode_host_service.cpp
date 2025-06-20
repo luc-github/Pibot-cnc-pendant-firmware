@@ -224,8 +224,10 @@ bool ESP3DGCodeHostService::_add_stream(const char* data,
     std::string text = esp3dTranslationService.translate(ESP3DLabel::error);
     text += ": S";
     text += std::to_string((uint8_t)ESP3DGcodeHostError::list_full);
+    #if ESP3D_HAS_STATUS_BAR
     esp3dTftValues.set_string_value(ESP3DValuesIndex::status_bar_label,
                                     text.c_str());
+    #endif  // ESP3D_HAS_STATUS_BAR
     return false;
   }
   // Create a new stream
@@ -500,6 +502,7 @@ bool ESP3DGCodeHostService::_startStream(ESP3DGcodeStream* stream) {
       esp3d_log("Add command: %s", cmd.c_str());
       _add_stream(cmd.c_str(), stream->auth_type, true);
       _command_number = 0;
+      
       esp3dTftValues.set_string_value(ESP3DValuesIndex::job_status,
                                       "processing");
       esp3dTftValues.set_string_value(ESP3DValuesIndex::file_name,
@@ -823,8 +826,10 @@ bool ESP3DGCodeHostService::_parseResponse(ESP3DMessage* rx) {
         std::string text = esp3dTranslationService.translate(ESP3DLabel::error);
         text += ": P";
         text += esp3dGcodeParser.getLastError();
+        #if ESP3D_HAS_STATUS_BAR
         esp3dTftValues.set_string_value(ESP3DValuesIndex::status_bar_label,
                                         text.c_str());
+        #endif  // ESP3D_HAS_STATUS_BAR
         esp3d_log("Got error but out of the query");
       }
       break;
@@ -861,8 +866,10 @@ bool ESP3DGCodeHostService::_processRx(ESP3DMessage* rx) {
     if (_connection_lost) {
       std::string text = esp3dTranslationService.translate(
           ESP3DLabel::communication_recovered);
+      #if ESP3D_HAS_STATUS_BAR
       esp3dTftValues.set_string_value(ESP3DValuesIndex::status_bar_label,
                                       text.c_str());
+      #endif  // ESP3D_HAS_STATUS_BAR
     }
     _connection_lost = false;
 
@@ -1547,10 +1554,13 @@ void ESP3DGCodeHostService::_handle_stream_states() {
         _error = ESP3DGcodeHostError::time_out;
         _setStreamState(ESP3DGcodeStreamState::error);
         if (!_connection_lost) {
+          #if ESP3D_HAS_STATUS_BAR
           std::string text =
               esp3dTranslationService.translate(ESP3DLabel::communication_lost);
+
           esp3dTftValues.set_string_value(ESP3DValuesIndex::status_bar_label,
                                           text.c_str());
+          #endif  // ESP3D_HAS_STATUS_BAR
         }
         _connection_lost = true;
       }
@@ -1683,9 +1693,10 @@ void ESP3DGCodeHostService::_handle_stream_states() {
       }
       text += " S" + std::to_string(static_cast<uint8_t>(_error));
       text = esp3d_string::str_replace(text.c_str(), "\n", "");
+      #if ESP3D_HAS_STATUS_BAR
       esp3dTftValues.set_string_value(ESP3DValuesIndex::status_bar_label,
                                       text.c_str());
-
+      #endif  // ESP3D_HAS_STATUS_BAR
       // send error message
       if (!esp3dCommands.dispatch(text.c_str(), ESP3DClientType::all_clients,
                                   requestId, ESP3DMessageType::unique,

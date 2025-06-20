@@ -83,11 +83,13 @@ const char* help[] = {
     "[ESP202](factor) - display / set  SD Card  SD card Speed divider factor "
     "(1 2 4 6 8 16 32)",
 #endif  // SD_INTERFACE_TYPE == 0
-#if ESP3D_DISPLAY_FEATURE
+#if ESP3D_DISPLAY_FEATURE 
+#if ESP3D_HAS_STATUS_BAR
     "[ESP214](Text) - Output to esp screen status",
-#if LV_USE_SNAPSHOT
+#endif  // ESP3D_HAS_STATUS_BAR
+#if ESP3D_USE_SNAPSHOT
     "[ESP216](SNAP) - Do Snapshot of current screen",
-#endif  // LV_USE_SNAPSHOT
+#endif  // ESP3D_USE_SNAPSHOT
 #endif  // ESP3D_DISPLAY_FEATURE
 #if ESP3D_BUZZER_FEATURE
     "[ESP250]F=<frequency> D=<duration> - Generate Buzzer sound",
@@ -196,10 +198,12 @@ const uint cmdlist[] = {
     202,
 #endif  // SD_INTERFACE_TYPE == 0
 #if ESP3D_DISPLAY_FEATURE
+#if ESP3D_HAS_STATUS_BAR
     214,
-#if LV_USE_SNAPSHOT
+#endif  // ESP3D_HAS_STATUS_BAR
+#if ESP3D_USE_SNAPSHOT
     216,
-#endif  // LV_USE_SNAPSHOT
+#endif  // ESP3D_USE_SNAPSHOT
 #endif  // ESP3D_DISPLAY_FEATURE
 #endif  // ESP3D_SD_CARD_FEATURE
 #if ESP3D_BUZZER_FEATURE

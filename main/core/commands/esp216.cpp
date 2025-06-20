@@ -16,7 +16,7 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#if LV_USE_SNAPSHOT && ESP3D_DISPLAY_FEATURE
+#if ESP3D_USE_SNAPSHOT && ESP3D_DISPLAY_FEATURE
 
 #include <lvgl.h>
 
@@ -94,4 +94,4 @@ void ESP3DCommands::ESP216(int cmd_params_pos, ESP3DMessage* msg) {
     esp3d_log_e("Error sending response to clients");
   }
 }
-#endif  // LV_USE_SNAPSHOT && ESP3D_DISPLAY_FEATURE
+#endif  // ESP3D_USE_SNAPSHOT && ESP3D_DISPLAY_FEATURE

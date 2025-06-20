@@ -115,10 +115,12 @@ class ESP3DCommands {
 #endif  // SD_INTERFACE_TYPE == 0
 #endif  // ESP3D_SD_CARD_FEATURE
 #if ESP3D_DISPLAY_FEATURE
+#if ESP3D_HAS_STATUS_BAR
   void ESP214(int cmd_params_pos, ESP3DMessage* msg);
-#if LV_USE_SNAPSHOT
+#endif  // ESP3D_HAS_STATUS_BAR
+#if ESP3D_USE_SNAPSHOT
   void ESP216(int cmd_params_pos, ESP3DMessage* msg);
-#endif  // LV_USE_SNAPSHOT
+#endif  // ESP3D_USE_SNAPSHOT
 #if ESP3D_BUZZER_FEATURE
   void ESP250(int cmd_params_pos, ESP3DMessage* msg);
 #endif  // ESP3D_BUZZER_FEATURE 

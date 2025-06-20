@@ -752,8 +752,10 @@ bool ESP3DNetwork::startNoRadioMode()
 {
     esp3d_log_d("Start No Radio Mode");
     std::string text = esp3dTranslationService.translate(ESP3DLabel::not_connected);
+    #if  ESP3D_HAL_FEATURE
     esp3dTftValues.set_string_value(ESP3DValuesIndex::status_bar_label, text.c_str());
     esp3dTftValues.set_string_value(ESP3DValuesIndex::network_status, ".");
+    #endif  // ESP3D_HAL_FEATURE
     std::string stmp       = "Radio is off\n";
     _current_radio_mode    = ESP3DRadioMode::off;
     ESP3DRequest requestId = {.id = 0};

@@ -1218,15 +1218,17 @@ void ESP3DCommands::execute_internal_command(int cmd, int cmd_params_pos, ESP3DM
             break;
 #endif  // SD_INTERFACE_TYPE == 0
 #endif  // ESP3D_SD_CARD_FEATURE
-#if ESP3D_DISPLAY_FEATURE
+#if ESP3D_DISPLAY_FEATURE 
+#if ESP3D_HAS_STATUS_BAR
         case 214:
             ESP214(cmd_params_pos, msg);
             break;
-#if LV_USE_SNAPSHOT
+#endif  // ESP3D_HAS_STATUS_BAR
+#if ESP3D_USE_SNAPSHOT
         case 216:
             ESP216(cmd_params_pos, msg);
             break;
-#endif  // LV_USE_SNAPSHOT
+#endif  // ESP3D_USE_SNAPSHOT
 #if ESP3D_BUZZER_FEATURE
         case 250:
             ESP250(cmd_params_pos, msg);

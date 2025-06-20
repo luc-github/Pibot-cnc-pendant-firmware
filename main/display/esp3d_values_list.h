@@ -30,40 +30,27 @@
 extern "C" {
 #endif
 
-#if !ESP3D_DISPLAY_FEATURE
-#define LV_SYMBOL_STATION_MODE "S"
-#define LV_SYMBOL_ACCESS_POINT "A"
-#define LV_SYMBOL_BLUETOOTH "B"
-#define LV_SYMBOL_WIFI "O"
-#endif  // ESP3D_DISPLAY_FEATURE
-
 // this list depend of target feature
-enum class ESP3DValuesIndex : uint16_t {
-  status_bar_label,
-  current_ip,
-  m_position_x,
-  m_position_y,
-  m_position_z,
-  m_position_a,
-  m_position_b,
-  m_position_c,
-  w_position_x,
-  w_position_y,
-  w_position_z,
-  w_position_a,
-  w_position_b,
-  w_position_c,
-  job_status,
-  file_path,
-  file_name,
-  network_status,
-  network_mode,
-  job_progress,
-  job_duration,
-  job_id,
-  state,
-  state_comment,
-  unknown_index
+enum class ESP3DValuesIndex : uint16_t
+{
+#if ESP3D_HAS_STATUS_BAR
+    status_bar_label,
+#endif  // ESP3D_HAS_STATUS_BAR
+
+#if ESP3D_WIFI_FEATURE || ESP3D_BT_FEATURE
+#if ESP3D_WIFI_FEATURE
+    current_ip,
+#endif  // ESP3D_WIFI_FEATURE
+    network_status,
+    network_mode,
+
+#endif  // ESP3D_WIFI_FEATURE
+    m_position_x,
+    m_position_y,
+    m_position_z,
+#include "esp3d_system_values_list.inc"
+#include "esp3d_target_values_list.inc"
+    unknown_index
 };
 
 #ifdef __cplusplus

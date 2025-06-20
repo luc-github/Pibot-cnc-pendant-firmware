@@ -7,36 +7,42 @@ if(TARGET_FW_MARLIN)
     add_compile_options(-DTARGET_IS_MARLIN=1)
     if(TFT_UI_SERVICE)
         add_compile_options("-I${CMAKE_SOURCE_DIR}/main/display/3dprinter/marlin")
+        add_compile_options("-I${CMAKE_SOURCE_DIR}/main/display/3dprinter")
     endif()
     add_compile_options("-I${CMAKE_SOURCE_DIR}/main/target/3dprinter/marlin")
 elseif(TARGET_FW_REPETIER)
     add_compile_options(-DTARGET_IS_REPETIER=1)
     if(TFT_UI_SERVICE)
         add_compile_options("-I${CMAKE_SOURCE_DIR}/main/display/3dprinter/repetier")
+        add_compile_options("-I${CMAKE_SOURCE_DIR}/main/display/3dprinter")     
     endif()
     add_compile_options("-I${CMAKE_SOURCE_DIR}/main/target/3dprinter/repetier")
 elseif(TARGET_FW_SMOOTHIEWARE)
     add_compile_options(-DTARGET_IS_SMOOTHIEWARE=1)
     if(TFT_UI_SERVICE)
         add_compile_options("-I${CMAKE_SOURCE_DIR}/main/display/3dprinter/smoothieware")
+        add_compile_options("-I${CMAKE_SOURCE_DIR}/main/display/3dprinter")
     endif()
     add_compile_options("-I${CMAKE_SOURCE_DIR}/main/target/3dprinter/smoothieware")
 elseif(TARGET_FW_GRBL)
     add_compile_options(-DTARGET_IS_GRBL=1)
     if(TFT_UI_SERVICE)
         add_compile_options("-I${CMAKE_SOURCE_DIR}/main/display/cnc/grbl")
+        add_compile_options("-I${CMAKE_SOURCE_DIR}/main/display/cnc")
     endif()
     add_compile_options("-I${CMAKE_SOURCE_DIR}/main/target/cnc/grbl")
 elseif(TARGET_FW_GRBLHAL)
     add_compile_options(-DTARGET_IS_GRBLHAL=1)
     if(TFT_UI_SERVICE)
         add_compile_options("-I${CMAKE_SOURCE_DIR}/main/display/cnc/grblhal")
+        add_compile_options("-I${CMAKE_SOURCE_DIR}/main/display/cnc")
     endif()
     add_compile_options("-I${CMAKE_SOURCE_DIR}/main/target/cnc/grblhal")
 elseif(TARGET_FW_FLUIDNC)
-    add_compile_options(-DTARGET_IS_FLUIDNCL=1)
+    add_compile_options(-DTARGET_IS_FLUIDNC=1)
     if(TFT_UI_SERVICE)
         add_compile_options("-I${CMAKE_SOURCE_DIR}/main/display/cnc/fluidnc")
+        add_compile_options("-I${CMAKE_SOURCE_DIR}/main/display/cnc")
     endif()
     add_compile_options("-I${CMAKE_SOURCE_DIR}/main/target/cnc/fluidnc")
 endif()
@@ -260,35 +266,6 @@ message(STATUS "${Cyan}Rotary encoder Service:  ${White}${HARDWARE_ENCODER} ${Co
 message(STATUS "${Cyan}Hardware Buttons:  ${White}${HARDWARE_BUTTONS} ${ColourReset}")
 message(STATUS "${Cyan}Hardware Switch:  ${White}${HARDWARE_SWITCH} ${ColourReset}")
 message(STATUS "${Cyan}Hardware Potentiometer:  ${White}${HARDWARE_POTENTIOMETER} ${ColourReset}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 message(STATUS "${Cyan}WebDav Services:  ${White}${WEBDAV_SERVICES} ${ColourReset}")
 message(STATUS "${Cyan}Telnet Service:  ${White}${TELNET_SERVICE} ${ColourReset}")
 message(STATUS "${Cyan}WebSocket Service:  ${White}${WS_SERVICE} ${ColourReset}")
@@ -311,7 +288,7 @@ if (DISABLE_COLOR_LOG EQUAL 1)
 else()
     set(TFT_LOG_COLOR_STATUS "Enabled")
 endif()
-if (LV_USE_SNAPSHOT EQUAL 1)
+if (ESP3D_USE_SNAPSHOT EQUAL 1)
     set(TFT_LVGL_SNAPSHOT_STATUS "Enabled")
 else()
     set(TFT_LVGL_SNAPSHOT_STATUS "Disabled")

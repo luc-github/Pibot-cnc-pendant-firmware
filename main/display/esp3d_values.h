@@ -26,9 +26,8 @@
 #include <list>
 #include <string>
 // For the symbol used
-#if ESP3D_DISPLAY_FEATURE
 #include "lvgl.h"
-#endif  // ESP3D_DISPLAY_FEATURE
+
 #include <pthread.h>
 
 #include "esp3d_values_list.h"
@@ -75,10 +74,8 @@ class ESP3DValues final {
   ESP3DValues();
   ~ESP3DValues();
   bool intialize();
-  void initialize_target() {
-    // This function is used to initialize target specific values
-    // It can be overridden in target specific files
-  }
+  void initialize_target() ;
+  void initialize_system() ;
   void clear();
   void handle();
   const ESP3DValuesDescription* get_description(ESP3DValuesIndex index);

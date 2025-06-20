@@ -23,8 +23,8 @@ add_compile_options(-DDISABLE_COLOR_LOG=${DISABLE_COLOR_LOG})
 # ===========================================
 
 # Use the Snapshot API of LVGL to dump screens to the SD card
-set(LV_USE_SNAPSHOT 0)
-add_compile_options(-DLV_USE_SNAPSHOT=${LV_USE_SNAPSHOT})
+set(ESP3D_USE_SNAPSHOT 0)
+add_compile_options(-DESP3D_USE_SNAPSHOT=${ESP3D_USE_SNAPSHOT})
 
 # ===========================================
 # Telnet Configuration

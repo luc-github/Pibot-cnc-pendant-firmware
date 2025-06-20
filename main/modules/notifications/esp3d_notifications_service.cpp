@@ -138,9 +138,10 @@ bool ESP3DNotificationsService::sendMSG(const char* title,
 #if ESP3D_HTTP_FEATURE
   esp3dWsWebUiService.pushNotification(formated_message.c_str());
 #endif  // ESP3D_HTTP_FEATURE
+#if ESP3D_HAS_STATUS_BAR
   esp3dTftValues.set_string_value(ESP3DValuesIndex::status_bar_label,
                                   formated_message.c_str());
-
+#endif  // ESP3D_HAS_STATUS_BAR
   if (_started) {
     switch (_notificationType) {
       case ESP3DNotificationType::pushover:
